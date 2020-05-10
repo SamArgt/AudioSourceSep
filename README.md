@@ -1,4 +1,4 @@
-# Stats_Msc_Project-Audio_Source_Sep
+# Statistics MSs Project: Audio Source Separation
 Statistics MSc Project (2020): Audio Source Separation
 
 
