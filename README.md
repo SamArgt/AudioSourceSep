@@ -2,7 +2,7 @@
 Statistics MSc Project (2020): Audio Source Separation
 
 
-## preprocessing
+## pipeline
 Functions and Scripts to load and preprocess the data:
 - Generating equal length sequences from raw audio
 - mel spectrograms transformation

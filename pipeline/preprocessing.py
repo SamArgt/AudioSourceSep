@@ -1,8 +1,9 @@
+import tensorflow as tf
 from scipy.io import wavfile
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
+from librosa.feature import melspectrogram
 import os
 import numpy as np
-import tensorflw as tf
 import re
 
 
@@ -10,7 +11,7 @@ def load_wav(path, length_sec, stride=None):
     """
     Load wav file from path
     Cut the audio in windows
-    Return an iterator
+    Return a generator
 
     path (str) : path of the wav file
     length_sec (float, int) : size of the window in seconds
@@ -19,7 +20,7 @@ def load_wav(path, length_sec, stride=None):
 
     Outputs:
     tensorflow TimeseriesGenerator of size (1,rate*length_sec, 2) (stereo)
-    rate
+    rate of the wav file
     """
     rate, song = wavfile.read(path)
     song = np.array(song)
@@ -70,6 +71,61 @@ def load_wav_tf(path, length_sec, stride=None):
     return dataset
 
 
+def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
+                              n_mels=128):
+    """
+    Take as input a generator of raw audio: tuple of array of shape ((length, 2), _)
+    Compute the mel spectrogram for each array
+
+    Inputs:
+    song_gen: tensorflow TimeseriesGenerator
+    n_fft (int): window size of the STFT
+    sr (int): sampling rate of the raw audio
+    hop_length (int): jump between each window of the STFT
+    n_mel (int): number of mel frequencies
+
+    Outputs:
+    Array of shape (N, 2, n_mel, length/hop_length)
+    where N is the number of array in the iterator
+     and length the length of each array
+    """
+    N = len(song_gen)
+    length = song_gen[0][0].shape[1]
+    time_length = int(np.round(length / hop_length, 0))
+    mel_spectrograms = np.zeros((N, 2, n_mels, time_length))
+    for i, (song, _) in enumerate(song_gen):
+        song = song.reshape((-1, 2))
+        song_left = np.asfortranarray(song[:, 0])
+        song_right = np.asfortranarray(song[:, 1])
+        mel_spect_left = melspectrogram(y=np.asfortranarray(song_left), sr=sr, S=None, n_fft=n_fft,
+                                        hop_length=hop_length, win_length=None, window='hann', center=True,
+                                        pad_mode='reflect', power=2.0, n_mels=n_mels)
+        mel_spect_right = melspectrogram(y=np.asfortranarray(song_right), sr=sr, S=None, n_fft=n_fft,
+                                         hop_length=hop_length, win_length=None, window='hann', center=True,
+                                         pad_mode='reflect', power=2.0, n_mels=n_mels)
+
+        mel_spectrograms[i, :, :, :] = np.array(
+            [mel_spect_left, mel_spect_right])
+
+    return mel_spectrograms
+
+
+def save_mel_spectrograms(mel_spectrograms, filename):
+    """
+    Save all the spectrograms as npy file
+
+    Inputs:
+    mel_spectrograms: array of shape (N, 2, n_mel, time_length)
+    filename (str): pathname or name to which the data is saved.
+
+    Save N spectrograms with names: "filename_i"
+    with i =  0,1,...,N and j = 0 or 1
+    """
+    for i, spect in enumerate(mel_spectrograms):
+        np.save(filename + '_{}'.format(i), spect)
+    return len(mel_spectrograms)
+
+
 def load_spec(directory):
     """
     Load spectrograms from one directory into a tensorflow datasets
@@ -97,7 +153,6 @@ def load_spec_tf(directory):
     Prepare them into a tensorflow dataset
     """
     path = os.path.abspath(directory)
-    npy_files = []
     dataset = None
     for root, dirs, files in os.walk(path):
         current_path = os.path.join(path, root)
