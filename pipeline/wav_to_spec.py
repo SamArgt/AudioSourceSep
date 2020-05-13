@@ -76,10 +76,14 @@ def main():
                           for f in files if re.match(".*(.)wav$", f)]
 
     for wav_file in wav_files:
+        # load the wav file
         song_gen, rate = load_wav(wav_file, length_sec, stride)
+
+        # compute the spectrograms
         melspectrograms = mel_spectrograms_from_gen(
             song_gen, rate, n_fft, hop_length, n_mels)
-        # dirpath for the current wav file
+
+        # save the spectrograms
         wav_file_relpath = os.path.relpath(wav_file, input_dirpath)
         temp_output_dirpath = os.path.join(output_dirpath, wav_file_relpath)
         temp_output_dirpath = temp_output_dirpath[:-4]

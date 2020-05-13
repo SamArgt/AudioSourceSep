@@ -85,14 +85,14 @@ def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
     n_mel (int): number of mel frequencies
 
     Outputs:
-    Array of shape (N, 2, n_mel, length/hop_length)
+    Array of shape (N, n_mel, length/hop_length, 2)
     where N is the number of array in the iterator
      and length the length of each array
     """
     N = len(song_gen)
     length = song_gen[0][0].shape[1]
     time_length = int(np.round(length / hop_length, 0))
-    mel_spectrograms = np.zeros((N, 2, n_mels, time_length))
+    mel_spectrograms = np.zeros((N, n_mels, time_length, 2))
     for i, (song, _) in enumerate(song_gen):
         song = song.reshape((-1, 2))
         song_left = np.asfortranarray(song[:, 0])
@@ -104,8 +104,11 @@ def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
                                          hop_length=hop_length, win_length=None, window='hann', center=True,
                                          pad_mode='reflect', power=2.0, n_mels=n_mels)
 
-        mel_spectrograms[i, :, :, :] = np.array(
-            [mel_spect_left, mel_spect_right])
+        mel_spect_left = mel_spect_left.reshape((n_mels, time_length, 1))
+        mel_spect_right = mel_spect_right.reshape((n_mels, time_length, 1))
+
+        mel_spectrograms[i, :, :, :] = np.concatenate(
+            [mel_spect_left, mel_spect_right], axis=-1)
 
     return mel_spectrograms
 
@@ -115,7 +118,7 @@ def save_mel_spectrograms(mel_spectrograms, filename):
     Save all the spectrograms as npy file
 
     Inputs:
-    mel_spectrograms: array of shape (N, 2, n_mel, time_length)
+    mel_spectrograms: array
     filename (str): pathname or name to which the data is saved.
 
     Save N spectrograms with names: "filename_i"
