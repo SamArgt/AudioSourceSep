@@ -9,7 +9,7 @@ tfk = tf.keras
 class ShiftAndLogScaleConvNet(tfk.layers.Layer):
 
     """
-    Convolutional Neural Networks 
+    Convolutional Neural Networks
     Return shift and log scale for Affine Coupling Layer
 
     input shape (list): (batch_size, H, W, C)
@@ -80,6 +80,20 @@ class AffineCouplingLayer(tfb.Bijector):
 
 
 class RealNVP(tfk.Model):
+
+	"""
+	Real NVP flow:
+		2 affine coupling layers
+		Permute the channel before each layer
+
+	event_shape (list of int): shape of the data
+	n_filters: number of filters in the hidden layers of the
+		shif and log scale networks
+	batch_norm (Boolean): wether or not to use batch normalization
+		after each affine coupling layer
+	"""
+
+
     def __init__(self, event_shape, n_filters, batch_norm):
         super(RealNVP, self).__init__()
 
