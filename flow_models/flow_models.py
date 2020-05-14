@@ -275,35 +275,30 @@ class RealNVPBijector(tfb.Bijector):
         self.bijector = tfb.Chain(
             [self.real_nvp_block_2, self.real_nvp_block_1])
 
-    # !!!!!! CAREFUL !!!!!!!
-    # Tensorflow Transformed distribution compute X=g(Z) where Z is the base distribution
-    # In the papers (Glow and RealNVP): f is defined (instead of g=f^(-1)).
-    # I implemented the bijectors in order to build f
-    # In this last bijector: Need to inverse foward and inverse functions
     def _forward(self, x):
-        return self.bijector.inverse(x)
+        return self.bijector.forward(x)
 
     def _inverse(self, y):
-        return self.bijector.forward(y)
+        return self.bijector.inverse(y)
 
     def _inverse_log_det_jacobian(self, y):
-        return self.bijector.forward_log_det_jacobian(y, event_ndims=3)
+        return self.bijector.inverse_log_det_jacobian(y, event_ndims=3)
 
     def _forward_event_shape_tensor(self, input_shape):
         H, W, C = input_shape
-        return (H * 4, W * 4, C // 16)
+        return (H // 4, W // 4, C * 16)
 
     def _forward_event_shape(self, input_shape):
         H, W, C = input_shape
-        return (H * 4, W * 4, C // 16)
+        return (H // 4, W // 4, C * 16)
 
     def _inverse_event_shape_tensor(self, output_shape):
         H, W, C = output_shape
-        return (H // 4, W // 4, C * 16)
+        return (H * 4, W * 4, C // 16)
 
     def _inverse_event_shape(self, output_shape):
         H, W, C = output_shape
-        return (H // 4, W // 4, C * 16)
+        return (H * 4, W * 4, C // 16)
 
 
 class RealNVPFlowModel(tfk.Model):
@@ -312,14 +307,20 @@ class RealNVPFlowModel(tfk.Model):
     Build a tensorflow keras Model from a real nvp bijector
     """
 
-    def __init__(self, input_shape, shift_and_log_scale_layer, n_filters_base, batch_norm=False):
+    def __init__(self, input_shape, shift_and_log_scale_layer,
+                 n_filters_base, batch_norm=False):
         super(RealNVPFlowModel, self).__init__()
 
-        self.bijector = RealNVPBijector(
-            input_shape, shift_and_log_scale_layer, n_filters_base, batch_norm=False)
         H, W, C = input_shape
         base_distr_shape = (H // 4, W // 4, C * 16)
-        self.flow = tfd.TransformedDistribution(tfd.Normal(0., 1.), bijector=self.bijector,
+
+        # Need to take the invert
+        self.bijector = tfb.Invert(RealNVPBijector(
+            input_shape, shift_and_log_scale_layer,
+            n_filters_base, batch_norm=False))
+
+        self.flow = tfd.TransformedDistribution(tfd.Normal(0., 1.),
+                                                bijector=self.bijector,
                                                 event_shape=base_distr_shape)
 
     def call(self, inputs):
