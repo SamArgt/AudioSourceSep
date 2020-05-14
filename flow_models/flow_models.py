@@ -6,13 +6,13 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-class ShiftAndLogScaleConvNet(tfk.layers.Layer):
+class ShiftAndLogScaleConvNetGlow(tfk.layers.Layer):
 
     """
     Convolutional Neural Networks
     Return shift and log scale for Affine Coupling Layer
 
-    input shape (list): (batch_size, H, W, C)
+    input shape (list): (H, W, C)
     n_filters (int): Number of filters in the hidden layers
 
     Architecture of the networks
@@ -22,7 +22,7 @@ class ShiftAndLogScaleConvNet(tfk.layers.Layer):
     """
 
     def __init__(self, input_shape, n_filters, data_format='channels_last'):
-        super(ShiftAndLogScaleConvNet, self).__init__()
+        super(ShiftAndLogScaleConvNetGlow, self).__init__()
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape, data_format=data_format,
                                        activation='relu', padding='same')
@@ -39,7 +39,7 @@ class ShiftAndLogScaleConvNet(tfk.layers.Layer):
         return log_s, t
 
 
-class AffineCouplingLayer(tfb.Bijector):
+class AffineCouplingLayerSplit(tfb.Bijector):
 
     """
     Affine Coupling Layer (Bijector):
@@ -51,20 +51,22 @@ class AffineCouplingLayer(tfb.Bijector):
     y = concat(x1, x2)
     """
 
-    def __init__(self, shift_and_log_scale_fn):
-        super(AffineCouplingLayer, self).__init__(forward_min_event_ndims=3)
+    def __init__(self, shift_and_log_scale_fn, split_axis=-1):
+        super(AffineCouplingLayerGlow, self).__init__(
+            forward_min_event_ndims=3)
         self.shift_and_log_scale_fn = shift_and_log_scale_fn
+        self.split_axis = split_axis
 
     def _forward(self, x):
-        x1, x2 = tf.split(x, num_or_size_splits=2, axis=-1)
+        x1, x2 = tf.split(x, num_or_size_splits=2, axis=self.split_axis)
         log_s, t = self.shift_and_log_scale_fn(x2)
         y1 = x1
         y2 = tf.exp(log_s) * x2 + t
-        y = tf.concat([y1, y2], axis=-1)
+        y = tf.concat([y1, y2], axis=self.split_axis)
         return y
 
     def _inverse(self, y):
-        y1, y2 = tf.split(y, 2, -1)
+        y1, y2 = tf.split(y, 2, self.split_axis)
         log_s, t = self.shift_and_log_scale_fn(y2)
         x1 = y1
         x2 = (y2 - t) / tf.exp(log_s)
@@ -72,8 +74,79 @@ class AffineCouplingLayer(tfb.Bijector):
         return x
 
     def _inverse_log_det_jacobian(self, y):
-        y1, y2 = tf.split(y, 2, -1)
+        y1, y2 = tf.split(y, 2, self.split_axis)
         log_s, _ = self.shift_and_log_scale_fn(y2)
+        s = tf.exp(log_s)
+        log_det = tf.math.log(tf.abs(s))
+        return -tf.reduce_sum(log_det, [1, 2, 3])
+
+
+class AffineCouplingLayerMasked(tfb.Bijector):
+    """
+    Affine Coupling Layer (bijector) using binary masked
+    as described in Real NVP
+
+    Parameters:
+        event_shape (list): dimension of the input data
+        shift_anf_log_scale_fn: NN returning log scale and shift
+        masking (str): either 'channel' or 'checkboard'
+
+    Perform coupling layer with a binary masked b:
+    forward:
+        x = b * y + ((1-b) * y - t) * tf.exp(-log_s)
+    inverse:
+        y = b * x + (1-b) * (x * tf.exp(log_s) + t)
+    log_det:
+        Sum of tf.math.log(tf.abs(s))
+
+    """
+
+    def __init__(self, event_shape, shift_and_log_scale_fn, masking='channel'):
+        super(AffineCouplingLayerMasked, self).__init__(
+            forward_min_event_ndims=3)
+        self.shift_and_log_scale_fn = shift_and_log_scale_fn
+        self.binary_masked = self.binary_masked_fn(event_shape, masking)
+
+    @staticmethod
+    def binary_masked_fn(input_shape, masking):
+        if masking == 'channel':
+            assert(input_shape[-1] % 2 == 0)
+            sub_shape = input_shape
+            sub_shape[-1] = sub_shape[-1] // 2
+            binary_masked = np.concatenate([np.ones(sub_shape),
+                                            np.zeros(sub_shape)],
+                                           axis=-1)
+        if masking == 'checkboard':
+            column_odd = [k % 2 for k in range(input_shape[-2])]
+            column_even = [(k + 1) % 2 for k in range(input_shape[-2])]
+            binary_masked = np.zeros((input_shape[-3], input_shape[-2]))
+            for j in range(input_shape[-2]):
+                if j % 2:
+                    binary_masked[:, j] = column_even
+                else:
+                    binary_masked[:, j] = column_odd
+            binary_masked = binary_masked.reshape(
+                list(binary_masked.shape) + [1])
+            binary_masked = np.repeat(binary_masked, input_shape[-1], axis=-1)
+
+        binary_masked = binary_masked.reshape([1] + list(binary_masked.shape))
+        return binary_masked
+
+    def _forward(self, x):
+        b = np.repeat(self.binary_masked, x.shape[0], axis=0)
+        log_s, t = self.shift_and_log_scale_fn(x * b)
+        y = b * x + (1 - b) * (x * tf.exp(log_s) + t)
+        return y
+
+    def _inverse(self, y):
+        b = np.repeat(self.binary_masked, y.shape[0], axis=0)
+        log_s, t = self.shift_and_log_scale_fn(y * b)
+        x = b * y + ((1 - b) * y - t) * tf.exp(-log_s)
+        return x
+
+    def _inverse_log_det_jacobian(self, y):
+        b = np.repeat(self.binary_masked, y.shape[0], axis=0)
+        log_s, _ = self.shift_and_log_scale_fn(y * b)
         s = tf.exp(log_s)
         log_det = tf.math.log(tf.abs(s))
         return -tf.reduce_sum(log_det, [1, 2, 3])
@@ -81,18 +154,17 @@ class AffineCouplingLayer(tfb.Bijector):
 
 class RealNVP(tfk.Model):
 
-	"""
-	Real NVP flow:
-		2 affine coupling layers
-		Permute the channel before each layer
+    """
+    Real NVP flow:
+        2 affine coupling layers
+        Permute the channel before each layer
 
-	event_shape (list of int): shape of the data
-	n_filters: number of filters in the hidden layers of the
-		shif and log scale networks
-	batch_norm (Boolean): wether or not to use batch normalization
-		after each affine coupling layer
-	"""
-
+    event_shape (list of int): shape of the data
+    n_filters: number of filters in the hidden layers of the
+        shif and log scale networks
+    batch_norm (Boolean): wether or not to use batch normalization
+        after each affine coupling layer
+    """
 
     def __init__(self, event_shape, n_filters, batch_norm):
         super(RealNVP, self).__init__()
