@@ -12,7 +12,7 @@ class ShiftAndLogScaleConvNetGlow(tfk.layers.Layer):
     Convolutional Neural Networks
     Return shift and log scale for Affine Coupling Layer
 
-    input shape (list): (H, W, C)
+    input shape (list): (H, W, C) input dimension of the network
     n_filters (int): Number of filters in the hidden layers
 
     Architecture of the networks
@@ -101,17 +101,18 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
     """
 
-    def __init__(self, event_shape, shift_and_log_scale_fn, masking='channel'):
+    def __init__(self, event_shape, shift_and_log_scale_fn, masking='channel', mask_state=0):
         super(AffineCouplingLayerMasked, self).__init__(
             forward_min_event_ndims=3)
         self.shift_and_log_scale_fn = shift_and_log_scale_fn
-        self.binary_masked = self.binary_masked_fn(event_shape, masking)
+        self.binary_masked = self.binary_masked_fn(
+            event_shape, masking, mask_state)
 
     @staticmethod
-    def binary_masked_fn(input_shape, masking):
+    def binary_masked_fn(input_shape, masking, mask_state):
         if masking == 'channel':
             assert(input_shape[-1] % 2 == 0)
-            sub_shape = input_shape
+            sub_shape = np.copy(input_shape)
             sub_shape[-1] = sub_shape[-1] // 2
             binary_masked = np.concatenate([np.ones(sub_shape),
                                             np.zeros(sub_shape)],
@@ -130,7 +131,10 @@ class AffineCouplingLayerMasked(tfb.Bijector):
             binary_masked = np.repeat(binary_masked, input_shape[-1], axis=-1)
 
         binary_masked = binary_masked.reshape([1] + list(binary_masked.shape))
-        return binary_masked
+        if mask_state:
+            return binary_masked
+        else:
+            return 1 - binary_masked
 
     def _forward(self, x):
         b = np.repeat(self.binary_masked, x.shape[0], axis=0)
@@ -141,7 +145,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
     def _inverse(self, y):
         b = np.repeat(self.binary_masked, y.shape[0], axis=0)
         log_s, t = self.shift_and_log_scale_fn(y * b)
-        x = b * y + ((1 - b) * y - t) * tf.exp(-log_s)
+        x = b * y + (1 - b) * ((y - t) * tf.exp(-log_s))
         return x
 
     def _inverse_log_det_jacobian(self, y):
