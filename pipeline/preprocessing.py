@@ -1,7 +1,7 @@
 import tensorflow as tf
-from scipy.io import wavfile
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 from librosa.feature import melspectrogram
+import librosa
 import os
 import numpy as np
 import re
@@ -19,10 +19,10 @@ def load_wav(path, length_sec, stride=None):
         if stride is None: build non overlapping window
 
     Outputs:
-    tensorflow TimeseriesGenerator of size (1,rate*length_sec, 2) (stereo)
+    tensorflow TimeseriesGenerator of size (1, rate*length_sec) (mono)
     rate of the wav file
     """
-    rate, song = wavfile.read(path)
+    song, rate = librosa.core.load(path, sr=None, mono=True)
     song = np.array(song)
     LENGTH = int(rate * length_sec)
     if stride is None:
@@ -74,7 +74,8 @@ def load_wav_tf(path, length_sec, stride=None):
 def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
                               n_mels=128):
     """
-    Take as input a generator of raw audio: tuple of array of shape ((length, 2), _)
+    Take as input a generator of raw audio:
+        tuple of array of shape ((1, length), _)
     Compute the mel spectrogram for each array
 
     Inputs:
@@ -85,30 +86,22 @@ def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
     n_mel (int): number of mel frequencies
 
     Outputs:
-    Array of shape (N, n_mel, length/hop_length, 2)
+    Array of shape (N, n_mel, length/hop_length)
     where N is the number of array in the iterator
      and length the length of each array
     """
     N = len(song_gen)
     length = song_gen[0][0].shape[1]
     time_length = int(np.round(length / hop_length, 0))
-    mel_spectrograms = np.zeros((N, n_mels, time_length, 2))
+    mel_spectrograms = np.zeros((N, n_mels, time_length))
     for i, (song, _) in enumerate(song_gen):
-        song = song.reshape((-1, 2))
-        song_left = np.asfortranarray(song[:, 0])
-        song_right = np.asfortranarray(song[:, 1])
-        mel_spect_left = melspectrogram(y=np.asfortranarray(song_left), sr=sr, S=None, n_fft=n_fft,
+
+        song = song.reshape(-1)
+        mel_spect = melspectrogram(y=np.asfortranarray(song), sr=sr, S=None, n_fft=n_fft,
                                         hop_length=hop_length, win_length=None, window='hann', center=True,
                                         pad_mode='reflect', power=2.0, n_mels=n_mels)
-        mel_spect_right = melspectrogram(y=np.asfortranarray(song_right), sr=sr, S=None, n_fft=n_fft,
-                                         hop_length=hop_length, win_length=None, window='hann', center=True,
-                                         pad_mode='reflect', power=2.0, n_mels=n_mels)
 
-        mel_spect_left = mel_spect_left.reshape((n_mels, time_length, 1))
-        mel_spect_right = mel_spect_right.reshape((n_mels, time_length, 1))
-
-        mel_spectrograms[i, :, :, :] = np.concatenate(
-            [mel_spect_left, mel_spect_right], axis=-1)
+        mel_spectrograms[i, :, :] = mel_spect
 
     return mel_spectrograms
 
