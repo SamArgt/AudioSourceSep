@@ -38,7 +38,6 @@ class ShiftAndLogScaleConvNetGlow(tfk.layers.Layer):
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         return log_s, t
 
-
 class AffineCouplingLayerSplit(tfb.Bijector):
 
     """
@@ -48,11 +47,11 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     log(s), t = shift_and_log_scale_fn(x2)
     y2 = exp(log(s)) * x2 + t
     y1 = x1
-    y = concat(x1, x2)
+    y = concat(y1, y2)
     """
 
     def __init__(self, shift_and_log_scale_fn, split_axis=-1):
-        super(AffineCouplingLayerGlow, self).__init__(
+        super(AffineCouplingLayerSplit, self).__init__(
             forward_min_event_ndims=3)
         self.shift_and_log_scale_fn = shift_and_log_scale_fn
         self.split_axis = split_axis
@@ -156,53 +155,172 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         return -tf.reduce_sum(log_det, [1, 2, 3])
 
 
-class RealNVP(tfk.Model):
-
+class Squeeze(tfb.Reshape):
     """
-    Real NVP flow:
-        2 affine coupling layers
-        Permute the channel before each layer
-
-    event_shape (list of int): shape of the data
-    n_filters: number of filters in the hidden layers of the
-        shif and log scale networks
-    batch_norm (Boolean): wether or not to use batch normalization
-        after each affine coupling layer
+    Squeezing operation as described in Real NVP
     """
 
-    def __init__(self, event_shape, n_filters, batch_norm):
-        super(RealNVP, self).__init__()
+    def __init__(self, event_shape_in):
+        H, W, C = event_shape_in
+        assert(H % 2 == 0)
+        assert(W % 2 == 0)
 
-        NN_input_shape = [event_shape[0], event_shape[1], event_shape[2] // 2]
+        self.event_shape_out = (H // 2, W // 2, 4 * C)
 
-        # defining the bijector
-        # block 1
-        permutation = np.random.permutation(event_shape[-1])
-        self.permute_1 = tfb.Permute(permutation, axis=-1)
-        self.shift_and_log_scale_1 = ShiftAndLogScaleConvNet(
-            NN_input_shape, n_filters)
-        self.real_nvp_1 = AffineCouplingLayer(self.shift_and_log_scale_1)
+        super(Squeeze, self).__init__(self.event_shape_out,
+                                      event_shape_in)
 
-        # block 2
-        permutation = np.random.permutation(event_shape[-1])
-        self.permute_2 = tfb.Permute(permutation, axis=-1)
-        self.shift_and_log_scale_2 = ShiftAndLogScaleConvNet(
-            NN_input_shape, n_filters)
-        self.real_nvp_2 = AffineCouplingLayer(self.shift_and_log_scale_2)
 
-        if batch_norm:
-            self.batch_norm_1 = tfb.BatchNormalization()
-            self.batch_norm_2 = tfb.BatchNormalization()
-            self.chain = [self.batch_norm_2, self.real_nvp_2, self.permute_2,
-                          self.batch_norm_1, self.real_nvp_1, self.permute_1]
+class RealNVPStep(tfb.Bijector):
+    """
+    Real NVP Step: 3 affine coupling layers with alternate masking
 
-        else:
-            self.chain = [self.real_nvp_2, self.permute_2,
-                          self.real_nvp_1, self.permute_1]
+    Parameter:
+        event_shape
+        shift_and_log_scale_layer:
+            tf.keras.layers -> needs to be instantiate
+    """
 
-        self.bijector = tfb.Chain(self.chain)
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_filters, masking):
+        super(RealNVPStep, self).__init__(forward_min_event_ndims=3)
+
+        self.shift_and_log_scale_1 = shift_and_log_scale_layer(
+            event_shape, n_filters)
+        self.coupling_layer_1 = AffineCouplingLayerMasked(
+            event_shape, self.shift_and_log_scale_1, masking, 0)
+
+        self.shift_and_log_scale_2 = shift_and_log_scale_layer(
+            event_shape, n_filters)
+        self.coupling_layer_2 = AffineCouplingLayerMasked(
+            event_shape, self.shift_and_log_scale_2, masking, 1)
+
+        self.shift_and_log_scale_3 = shift_and_log_scale_layer(
+            event_shape, n_filters)
+        self.coupling_layer_3 = AffineCouplingLayerMasked(
+            event_shape, self.shift_and_log_scale_3, masking, 0)
+
+        self.bijector = tfb.Chain(
+            [self.coupling_layer_3, self.coupling_layer_2, self.coupling_layer_1])
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, x):
+        return self.bijector.inverse(x)
+
+    def _inverse_log_det_jacobian(self, x):
+        return self.bijector.inverse_log_det_jacobian(x, event_ndims=3)
+
+
+class RealNVPBlock(tfb.Bijector):
+    """
+    Real NVP Block : 
+    real nvp step (checkboard) -> squeezing -> real nvp step (channel)
+
+    Parameter:
+        event_shape
+        shift_and_log_scale_layer:
+            tf.keras.layers -> needs to be instantiate
+    """
+
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_filters, batch_norm=False):
+        super(RealNVPBlock, self).__init__(forward_min_event_ndims=3)
+
+        self.coupling_step_1 = RealNVPStep(event_shape, shift_and_log_scale_layer,
+                                           n_filters, 'checkboard')
+        self.squeeze = Squeeze(event_shape)
+        self.event_shape_out = self.squeeze.event_shape_out
+        self.coupling_step_2 = RealNVPStep(self.event_shape_out,
+                                           shift_and_log_scale_layer, n_filters, 'channel')
+
+        self.bijector = tfb.Chain(
+            [self.coupling_step_2, self.squeeze, self.coupling_step_1])
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, x):
+        return self.bijector.inverse(x)
+
+    def _inverse_log_det_jacobian(self, x):
+        return self.bijector.inverse_log_det_jacobian(x, event_ndims=3)
+
+    def _forward_event_shape_tensor(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _forward_event_shape(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _inverse_event_shape_tensor(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
+
+    def _inverse_event_shape(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
+
+
+class RealNVPBijector(tfb.Bijector):
+    def __init__(self, input_shape, shift_and_log_scale_layer, n_filters_base, batch_norm=False):
+        super(RealNVPBijector, self).__init__(forward_min_event_ndims=3)
+
+        self.real_nvp_block_1 = RealNVPBlock(input_shape, shift_and_log_scale_layer,
+                                             n_filters_base, batch_norm)
+        self.real_nvp_block_2 = RealNVPBlock(self.real_nvp_block_1.event_shape_out,
+                                             shift_and_log_scale_layer,
+                                             2 * n_filters_base, batch_norm)
+
+        self.bijector = tfb.Chain(
+            [self.real_nvp_block_2, self.real_nvp_block_1])
+
+    # !!!!!! CAREFUL !!!!!!!
+    # Tensorflow Transformed distribution compute X=g(Z) where Z is the base distribution
+    # In the papers (Glow and RealNVP): f is defined (instead of g=f^(-1)).
+    # I implemented the bijector to build f
+    # In this last bijector: Need to inverse foward and inverse functions
+    def _forward(self, x):
+        return self.bijector.inverse(x)
+
+    def _inverse(self, y):
+        return self.bijector.forward(y)
+
+    def _inverse_log_det_jacobian(self, y):
+        return self.bijector.forward_log_det_jacobian(y, event_ndims=3)
+
+    def _forward_event_shape_tensor(self, input_shape):
+        H, W, C = input_shape
+        return (H * 4, W * 4, C // 16)
+
+    def _forward_event_shape(self, input_shape):
+        H, W, C = input_shape
+        return (H * 4, W * 4, C // 16)
+
+    def _inverse_event_shape_tensor(self, output_shape):
+        H, W, C = output_shape
+        return (H // 4, W // 4, C * 16)
+
+    def _inverse_event_shape(self, output_shape):
+        H, W, C = output_shape
+        return (H // 4, W // 4, C * 16)
+
+
+class RealNVPFlowModel(tfk.Model):
+
+    """
+    Build a tensorflow keras Model from a real nvp bijector
+    """
+
+    def __init__(self, input_shape, shift_and_log_scale_layer, n_filters_base, batch_norm=False):
+        super(RealNVPFlowModel, self).__init__()
+
+        self.bijector = RealNVPBijector(
+            input_shape, shift_and_log_scale_layer, n_filters_base, batch_norm=False)
+        H, W, C = input_shape
+        base_distr_shape = (H // 4, W // 4, C * 16)
         self.flow = tfd.TransformedDistribution(tfd.Normal(0., 1.), bijector=self.bijector,
-                                                event_shape=event_shape)
+                                                event_shape=base_distr_shape)
 
     def call(self, inputs):
         return self.flow.bijector.forward(inputs)

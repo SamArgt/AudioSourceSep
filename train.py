@@ -13,13 +13,14 @@ tfk = tf.keras
 BATCH_SIZE = 16
 
 dataset = pipeline.load_spec_tf("melSpecData")
-print('shape of the spectrograms: ', list(
-    dataset.take(1).as_numpy_iterator())[0].shape)
-print(len(list(dataset.map(lambda x: 1).as_numpy_iterator())), ' sectrograms')
+spect_shape = list(dataset.take(1).as_numpy_iterator())[0].shape
+print('shape of the spectrograms: ', spect_shape)
+print(len(list(dataset.map(lambda x: 1).as_numpy_iterator())), ' spectrograms')
 dataset = dataset.map(lambda x: tf.dtypes.cast(x, tf.float32))
+dataset = dataset.map(lambda x: tf.reshape(x, list(spect_shape) + [1]))
 dataset = dataset.batch(BATCH_SIZE)
-print("shape of 1 element of the dataset: ", list(
-    dataset.take(1).as_numpy_iterator())[0].shape)
+print("shape of 1 element of the dataset: ",
+      list(dataset.take(1).as_numpy_iterator())[0].shape)
 
 
 # Preparing Flow Model

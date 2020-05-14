@@ -28,7 +28,7 @@ class TestAffineCouplingLayers(unittest.TestCase):
         cls.inputs = tf.random.normal([cls.batch_size] + cls.event_shape)
         cls.NN = ShiftAndLogScaleConvNetGlow(
             input_shape=cls.NN_input_shape, n_filters=16)
-        cls.layer = AffineCouplingLayerGlow(cls.NN)
+        cls.layer = AffineCouplingLayerSplit(cls.NN)
 
     def test_forward_inverse_shape(self):
         self.assertEqual(self.layer.forward(self.inputs).shape,
