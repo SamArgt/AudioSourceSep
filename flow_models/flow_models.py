@@ -278,7 +278,7 @@ class RealNVPBijector(tfb.Bijector):
     # !!!!!! CAREFUL !!!!!!!
     # Tensorflow Transformed distribution compute X=g(Z) where Z is the base distribution
     # In the papers (Glow and RealNVP): f is defined (instead of g=f^(-1)).
-    # I implemented the bijector to build f
+    # I implemented the bijectors in order to build f
     # In this last bijector: Need to inverse foward and inverse functions
     def _forward(self, x):
         return self.bijector.inverse(x)
