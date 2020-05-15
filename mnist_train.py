@@ -23,11 +23,15 @@ ds = ds.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
 
 # Build Flow
 data_shape = [28, 28, 1]  # (H, W, C)
-base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-bijector = tfb.Invert(RealNVPBijector(
-    [28, 28, 1], ShiftAndLogScaleConvNetGlow, 32))
+#base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
+base_distr_shape = (28, 28, 1)
+#bijector = tfb.Invert(RealNVPBijector(
+#    [28, 28, 1], ShiftAndLogScaleConvNetGlow, 32))
+shift_and_log_scale = ShiftAndLogScaleConvNetGlow((28,28,1), 32)
+bijector = AffineCouplingLayerMasked((28,28,1),shift_and_log_scale, masking='checkboard')
+inv_bijector = tfb.Invert(bijector)
 flow = tfd.TransformedDistribution(tfd.Normal(
-    0., 1.), bijector, event_shape=base_distr_shape)
+    0., 1.), inv_bijector, event_shape=base_distr_shape)
 print("flow sample shape: ", flow.sample(1).shape)
 print_summary(flow)
 
@@ -43,9 +47,9 @@ def train_step(X):
     optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
     return loss
 
-
 optimizer = tf.keras.optimizers.Adam()
-NUM_EPOCHS = 10
+NUM_EPOCHS = 100
+print("Start Training on {} epochs".format(NUM_EPOCHS))
 train_loss_results = []
 for epoch in range(NUM_EPOCHS):
     epoch_loss_avg = tf.keras.metrics.Mean()
@@ -63,3 +67,9 @@ for epoch in range(NUM_EPOCHS):
 
     print("Epoch {:03d}: Loss: {:.3f}".format(
         epoch, epoch_loss_avg.result()))
+
+to_save = input('Save sample: Y/N')
+if to_save == 'Y':
+    samples = flow.sample(10)
+    samples_np = samples.numpy()
+    np.save('samples', samples_np)
