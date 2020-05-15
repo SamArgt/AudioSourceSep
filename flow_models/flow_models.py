@@ -168,13 +168,13 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         b = np.repeat(self.binary_mask, x.shape[0], axis=0)
         log_s, _ = self.shift_and_log_scale_fn(x * b)
         log_det = log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis = [1, 2, 3])
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
     def _inverse_log_det_jacobian(self, y):
         b = np.repeat(self.binary_mask, y.shape[0], axis=0)
         log_s, _ = self.shift_and_log_scale_fn(y * b)
         log_det = -log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis = [1, 2, 3])
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
 class Squeeze(tfb.Reshape):

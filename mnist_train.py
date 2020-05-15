@@ -68,7 +68,7 @@ for epoch in range(NUM_EPOCHS):
     print("Epoch {:03d}: Loss: {:.3f}".format(
         epoch, epoch_loss_avg.result()))
 
-to_save = input('Save sample: Y/N')
+to_save = input('Save sample: Y/N ')
 if to_save == 'Y':
     samples = flow.sample(10)
     samples_np = samples.numpy()
