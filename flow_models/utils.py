@@ -1,0 +1,51 @@
+import numpy as np
+
+
+def print_summary(flow):
+    """
+    Print a summary of the trainable varaibles of a flow model
+
+    """
+
+    print('_' * 100)
+    print('Network \t Layer \t Shape \t\t\t\t\t\t #parameters')
+    print('=' * 100)
+    total_count = 0
+    curr_network_name = ''
+    curr_layer_name = ''
+    curr_print_shape = ''
+    curr_count = 0
+    not_first_print = False
+
+    for elt in flow.trainable_variables:
+        name = elt.name
+        names = name.split('/')
+        network_name = names[-3]
+        layer_name = names[-2]
+        kernel_bias = names[-1].split(':')[0]
+        shape = elt.shape
+        count = np.prod(shape)
+
+        if layer_name == curr_layer_name:
+            curr_print_shape += ' | ' + kernel_bias + ' ' + str(shape)
+            curr_count += count
+        else:
+            if total_count != 0:
+                print('\t', curr_layer_name, '\t',
+                      curr_print_shape, '\t\t', curr_count)
+            curr_layer_name = layer_name
+            curr_print_shape = kernel_bias + ' ' + str(shape)
+            curr_count = count
+            if network_name != curr_network_name:
+                if not_first_print is True:
+                    print('_' * 100)
+                else:
+                    not_first_print = True
+                print(network_name)
+                curr_network_name = network_name
+
+        total_count += count
+
+    print('\t', curr_layer_name, '\t', curr_print_shape, '\t\t', curr_count)
+    print('=' * 100)
+    print("Total Trainable Variables: ", total_count)
