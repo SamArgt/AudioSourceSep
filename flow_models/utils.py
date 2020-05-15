@@ -20,7 +20,10 @@ def print_summary(flow):
     for elt in flow.trainable_variables:
         name = elt.name
         names = name.split('/')
-        network_name = names[-3]
+        if len(names) >= 3:
+            network_name = names[-3]
+        else:
+            network_name = ''
         layer_name = names[-2]
         kernel_bias = names[-1].split(':')[0]
         shape = elt.shape
@@ -31,7 +34,7 @@ def print_summary(flow):
             curr_count += count
         else:
             if total_count != 0:
-                print('\t', curr_layer_name, '\t',
+                print('\t', curr_layer_name, '\t\t',
                       curr_print_shape, '\t\t', curr_count)
             curr_layer_name = layer_name
             curr_print_shape = kernel_bias + ' ' + str(shape)
@@ -46,6 +49,6 @@ def print_summary(flow):
 
         total_count += count
 
-    print('\t', curr_layer_name, '\t', curr_print_shape, '\t\t', curr_count)
+    print('\t', curr_layer_name, '\t\t', curr_print_shape, '\t\t', curr_count)
     print('=' * 100)
     print("Total Trainable Variables: ", total_count)
