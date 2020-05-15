@@ -299,32 +299,3 @@ class RealNVPBijector(tfb.Bijector):
     def _inverse_event_shape(self, output_shape):
         H, W, C = output_shape
         return (H * 4, W * 4, C // 16)
-
-
-class RealNVPFlowModel(tfk.Model):
-
-    """
-    Build a tensorflow keras Model from a real nvp bijector
-    """
-
-    def __init__(self, input_shape, shift_and_log_scale_layer,
-                 n_filters_base, batch_norm=False):
-        super(RealNVPFlowModel, self).__init__()
-
-        H, W, C = input_shape
-        base_distr_shape = (H // 4, W // 4, C * 16)
-
-        # Need to take the invert
-        self.bijector = tfb.Invert(RealNVPBijector(
-            input_shape, shift_and_log_scale_layer,
-            n_filters_base, batch_norm=False))
-
-        self.flow = tfd.TransformedDistribution(tfd.Normal(0., 1.),
-                                                bijector=self.bijector,
-                                                event_shape=base_distr_shape)
-
-    def call(self, inputs):
-        return self.flow.bijector.forward(inputs)
-
-    def sample(self, n):
-        return self.flow.sample(n)
