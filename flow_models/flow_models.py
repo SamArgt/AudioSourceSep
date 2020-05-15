@@ -36,6 +36,8 @@ class ShiftAndLogScaleConvNetGlow(tfk.layers.Layer):
         x = self.conv2(x)
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
+        # !! Without the hyperbolic tangeant activation: Get positive log_prob !!
+        log_s = tfk.activations.tanh(log_s)
         return log_s, t
 
 class AffineCouplingLayerSplit(tfb.Bijector):
@@ -75,8 +77,7 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _inverse_log_det_jacobian(self, y):
         y1, y2 = tf.split(y, 2, self.split_axis)
         log_s, _ = self.shift_and_log_scale_fn(y2)
-        s = tf.exp(log_s)
-        log_det = tf.math.log(tf.abs(s))
+        log_det = log_s
         return -tf.reduce_sum(log_det, [1, 2, 3])
 
 
@@ -147,12 +148,17 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         x = b * y + (1 - b) * ((y - t) * tf.exp(-log_s))
         return x
 
+    def _forward_log_det_jacobian(self, x):
+        b = np.repeat(self.binary_masked, x.shape[0], axis=0)
+        log_s, _ = self.shift_and_log_scale_fn(x * b)
+        log_det = log_s * (1 - b)
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
+
     def _inverse_log_det_jacobian(self, y):
         b = np.repeat(self.binary_masked, y.shape[0], axis=0)
         log_s, _ = self.shift_and_log_scale_fn(y * b)
-        s = tf.exp(log_s)
-        log_det = tf.math.log(tf.abs(s))
-        return -tf.reduce_sum(log_det, [1, 2, 3])
+        log_det = -log_s * (1 - b)
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
 class Squeeze(tfb.Reshape):
