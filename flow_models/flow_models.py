@@ -21,37 +21,38 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     splitting along the channel dimension to obtain log(s) and t
     """
 
-    def __init__(self, input_shape, n_filters, data_format='channels_last'):
-        super(ShiftAndLogScaleResNet, self).__init__()
+    def __init__(self, input_shape, n_filters, data_format='channels_last', dtype=tf.float32):
+        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype)
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape,
                                        data_format=data_format,
-                                       activation='relu', padding='same')
-        self.batch_norm_1 = tfk.layers.BatchNormalization()
-        self.activation_1 = tfk.layers.Activation('relu')
+                                       activation='relu', padding='same', dtype=dtype)
+        self.batch_norm_1 = tfk.layers.BatchNormalization(dtype=dtype)
+        self.activation_1 = tfk.layers.Activation('relu', dtype=dtype)
 
         self.conv2 = tfk.layers.Conv2D(
             filters=n_filters, kernel_size=1, activation='relu',
-            padding='same')
-        self.batch_norm_2 = tfk.layers.BatchNormalization()
-        self.activation_2 = tfk.layers.Activation('relu')
+            padding='same', dtype=dtype)
+        self.batch_norm_2 = tfk.layers.BatchNormalization(dtype=dtype)
+        self.activation_2 = tfk.layers.Activation('relu', dtype=dtype)
 
         self.conv3 = tfk.layers.Conv2D(
-            filters=2 * input_shape[-1], kernel_size=3, padding='same')
-        self.activation_log_s = tfk.layers.Activation('tanh')
+            filters=2 * input_shape[-1], kernel_size=3, padding='same', dtype=dtype)
+        self.activation_log_s = tfk.layers.Activation('tanh', dtype=dtype)
 
     def call(self, inputs):
+        # if dtype = tf.float64, batch norm layers return an error
         x = self.conv1(inputs)
-        x = self.batch_norm_1(x)
+        #x = self.batch_norm_1(x)
         x = self.activation_1(x)
         x = self.conv2(x)
-        x = self.batch_norm_2(x)
+        #x = self.batch_norm_2(x)
         x = self.activation_2(x)
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
         # Get positive log_prob !!
-        # For this bijector at least...
+        # For the AffineCouplingLayer at least...
         log_s = self.activation_log_s(log_s)
         return log_s, t
 
@@ -117,15 +118,15 @@ class AffineCouplingLayerMasked(tfb.Bijector):
     """
 
     def __init__(self, event_shape, shift_and_log_scale_fn,
-                 masking='channel', mask_state=0):
+                 masking='channel', mask_state=0, dtype=tf.float32):
         super(AffineCouplingLayerMasked, self).__init__(
             forward_min_event_ndims=3)
         self.shift_and_log_scale_fn = shift_and_log_scale_fn
         self.binary_mask = self.binary_mask_fn(
-            event_shape, masking, mask_state)
+            event_shape, masking, mask_state, dtype)
 
     @staticmethod
-    def binary_mask_fn(input_shape, masking, mask_state):
+    def binary_mask_fn(input_shape, masking, mask_state, dtype):
         if masking == 'channel':
             assert(input_shape[-1] % 2 == 0)
             sub_shape = np.copy(input_shape)
@@ -148,9 +149,9 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
         binary_mask = binary_mask.reshape([1] + list(binary_mask.shape))
         if mask_state:
-            return tf.cast(binary_mask, tf.float32)
+            return tf.cast(binary_mask, dtype)
         else:
-            return tf.cast((1 - binary_mask), tf.float32)
+            return tf.cast((1 - binary_mask), dtype)
 
     def _forward(self, x):
         b = np.repeat(self.binary_mask, x.shape[0], axis=0)
@@ -204,23 +205,23 @@ class RealNVPStep(tfb.Bijector):
     """
 
     def __init__(self, event_shape, shift_and_log_scale_layer,
-                 n_filters, masking):
+                 n_filters, masking, dtype=tf.float32):
         super(RealNVPStep, self).__init__(forward_min_event_ndims=3)
 
         self.shift_and_log_scale_1 = shift_and_log_scale_layer(
-            event_shape, n_filters)
+            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_1 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_1, masking, 0)
+            event_shape, self.shift_and_log_scale_1, masking, 0, dtype=dtype)
 
         self.shift_and_log_scale_2 = shift_and_log_scale_layer(
-            event_shape, n_filters)
+            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_2 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_2, masking, 1)
+            event_shape, self.shift_and_log_scale_2, masking, 1, dtype=dtype)
 
         self.shift_and_log_scale_3 = shift_and_log_scale_layer(
-            event_shape, n_filters)
+            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_3 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_3, masking, 0)
+            event_shape, self.shift_and_log_scale_3, masking, 0, dtype=dtype)
 
         self.bijector = tfb.Chain(
             [self.coupling_layer_3,

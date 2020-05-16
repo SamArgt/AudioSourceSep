@@ -62,7 +62,7 @@ def shift_and_log_scale_toy(x):
     return log_s, t
 
 
-def shift_and_log_scale_layer_toy(event_shape, n_filters):
+def shift_and_log_scale_layer_toy(event_shape, n_filters, dtype):
     return shift_and_log_scale_toy
 
 
