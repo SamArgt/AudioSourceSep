@@ -43,10 +43,10 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     def call(self, inputs):
         # if dtype = tf.float64, batch norm layers return an error
         x = self.conv1(inputs)
-        #x = self.batch_norm_1(x)
+        x = self.batch_norm_1(x)
         x = self.activation_1(x)
         x = self.conv2(x)
-        #x = self.batch_norm_2(x)
+        x = self.batch_norm_2(x)
         x = self.activation_2(x)
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
@@ -109,11 +109,11 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
     Perform coupling layer with a binary masked b:
     forward:
-        x = b * y + ((1-b) * y - t) * tf.exp(-log_s)
-    inverse:
         y = b * x + (1-b) * (x * tf.exp(log_s) + t)
+    inverse:
+        x = b * y + ((1-b) * y - t) * tf.exp(-log_s)
     log_det:
-        Sum of log_s
+        Sum of log_s * (1 - b)
 
     """
 
@@ -124,6 +124,31 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         self.shift_and_log_scale_fn = shift_and_log_scale_fn
         self.binary_mask = self.binary_mask_fn(
             event_shape, masking, mask_state, dtype)
+        self.tensor_dtype = dtype
+
+    def _forward(self, x):
+        b = tf.repeat(self.binary_mask, x.shape[0], axis=0)
+        log_s, t = self.shift_and_log_scale_fn(x * b)
+        y = b * x + (1 - b) * (x * tf.exp(log_s) + t)
+        return y
+
+    def _inverse(self, y):
+        b = tf.repeat(self.binary_mask, y.shape[0], axis=0)
+        log_s, t = self.shift_and_log_scale_fn(y * b)
+        x = b * y + (1 - b) * ((y - t) * tf.exp(-log_s))
+        return x
+
+    def _forward_log_det_jacobian(self, x):
+        b = tf.repeat(self.binary_mask, x.shape[0], axis=0)
+        log_s, _ = self.shift_and_log_scale_fn(x * b)
+        log_det = log_s * (1 - b)
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
+
+    def _inverse_log_det_jacobian(self, y):
+        b = tf.repeat(self.binary_mask, y.shape[0], axis=0)
+        log_s, _ = self.shift_and_log_scale_fn(y * b)
+        log_det = -log_s * (1 - b)
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
     @staticmethod
     def binary_mask_fn(input_shape, masking, mask_state, dtype):
@@ -152,30 +177,6 @@ class AffineCouplingLayerMasked(tfb.Bijector):
             return tf.cast(binary_mask, dtype)
         else:
             return tf.cast((1 - binary_mask), dtype)
-
-    def _forward(self, x):
-        b = np.repeat(self.binary_mask, x.shape[0], axis=0)
-        log_s, t = self.shift_and_log_scale_fn(x * b)
-        y = b * x + (1 - b) * (x * tf.exp(log_s) + t)
-        return y
-
-    def _inverse(self, y):
-        b = np.repeat(self.binary_mask, y.shape[0], axis=0)
-        log_s, t = self.shift_and_log_scale_fn(y * b)
-        x = b * y + (1 - b) * ((y - t) * tf.exp(-log_s))
-        return x
-
-    def _forward_log_det_jacobian(self, x):
-        b = np.repeat(self.binary_mask, x.shape[0], axis=0)
-        log_s, _ = self.shift_and_log_scale_fn(x * b)
-        log_det = log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis=[1, 2, 3])
-
-    def _inverse_log_det_jacobian(self, y):
-        b = np.repeat(self.binary_mask, y.shape[0], axis=0)
-        log_s, _ = self.shift_and_log_scale_fn(y * b)
-        log_det = -log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
 class Squeeze(tfb.Reshape):
