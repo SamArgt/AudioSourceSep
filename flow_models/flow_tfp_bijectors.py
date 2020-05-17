@@ -306,17 +306,17 @@ class RealNVPBijector(tfb.Bijector):
 
     def _forward(self, x):
         output1 = self.real_nvp_block_1.forward(x)
-        z1, h1 = tf.split(output1, axis=-1)
+        z1, h1 = tf.split(output1, 2, axis=-1)
         N, H, W, C = z1.shape
-        z1 = z1.reshape((N, H // 2, W // 2, 4 * C))
+        z1 = tf.reshape(z1, (N, H // 2, W // 2, 4 * C))
         z2 = self.real_nvp_block_2.forward(h1)
         return tf.concat((z1, z2), axis=-1)
 
     def _inverse(self, y):
-        z1, z2 = tf.split(y, axis=-1)
+        z1, z2 = tf.split(y, 2, axis=-1)
         h1 = self.real_nvp_block_2.inverse(z2)
         N, H, W, C = z1.shape
-        z1 = z1.reshape((N, 2 * H, 2 * W, C // 2))
+        z1 = tf.reshape(z1, (N, H * 2, W * 2, C // 4))
         output1 = tf.concat((z1, h1), axis=-1)
         return self.real_nvp_block_1.inverse(output1)
 
@@ -324,7 +324,7 @@ class RealNVPBijector(tfb.Bijector):
         output1 = self.real_nvp_block_1.forward(y)
         log_det_1 = self.real_nvp_block_1.forward_log_det_jacobian(
             y, event_ndims=3)
-        z1, h1 = tf.split(output1, axis=-1)
+        z1, h1 = tf.split(output1, 2, axis=-1)
         log_det_2 = self.real_nvp_block_2.forward_log_det_jacobian(
             h1, event_ndims=3)
         return log_det_1 + log_det_2
