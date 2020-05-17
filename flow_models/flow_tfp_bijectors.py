@@ -117,11 +117,12 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
     """
 
-    def __init__(self, event_shape, shift_and_log_scale_fn,
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_filters,
                  masking='channel', mask_state=0, dtype=tf.float32):
         super(AffineCouplingLayerMasked, self).__init__(
             forward_min_event_ndims=3)
-        self.shift_and_log_scale_fn = shift_and_log_scale_fn
+        self.shift_and_log_scale_fn = shift_and_log_scale_layer(
+            event_shape, n_filters, dtype=dtype)
         self.binary_mask = self.binary_mask_fn(
             event_shape, masking, mask_state, dtype)
         self.tensor_dtype = dtype
@@ -209,20 +210,14 @@ class RealNVPStep(tfb.Bijector):
                  n_filters, masking, dtype=tf.float32):
         super(RealNVPStep, self).__init__(forward_min_event_ndims=3)
 
-        self.shift_and_log_scale_1 = shift_and_log_scale_layer(
-            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_1 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_1, masking, 0, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
-        self.shift_and_log_scale_2 = shift_and_log_scale_layer(
-            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_2 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_2, masking, 1, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
-        self.shift_and_log_scale_3 = shift_and_log_scale_layer(
-            event_shape, n_filters, dtype=dtype)
         self.coupling_layer_3 = AffineCouplingLayerMasked(
-            event_shape, self.shift_and_log_scale_3, masking, 0, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
         self.bijector = tfb.Chain(
             [self.coupling_layer_3,

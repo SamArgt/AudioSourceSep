@@ -1,10 +1,8 @@
-import os
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 import tensorflow_datasets as tfds
 from flow_models import layers
-from flow_models import models
+from flow_models import flow_tfk_models
 from flow_models import utils
 tfk = tf.keras
 
@@ -24,20 +22,21 @@ ds = ds.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
 # Build Flow
 data_shape = [28, 28, 1]  # (H, W, C)
 
-bijector_cls = layers.RealNVPStep
-bijector_args = {'event_shape':data_shape, 'shift_and_log_scale_layer': layers.ShiftAndLogScaleResNet,
-'n_filters':32, 'masking':'checkboard'}
-flow = models.Flow(bijector_cls, data_shape, **bijector_args)
+bijector_cls = layers.RealNVPStep_tfk
+bijector_args = {'event_shape': data_shape, 'shift_and_log_scale_layer': layers.ShiftAndLogScaleResNet,
+                 'n_filters': 32, 'masking': 'checkboard'}
+flow = flow_tfk_models.Flow(bijector_cls, data_shape, **bijector_args)
 
-sample = tf.random.normal([1]+data_shape)
+sample = tf.random.normal([1] + data_shape)
 flow(sample)
 
 utils.print_summary(flow)
 
 # Custom Training Loop
 
-#loss function
-loss_fn = models.get_loss_function(flow)
+# loss function
+loss_fn = flow_tfk_models.get_loss_function(flow)
+
 
 @tf.function  # Adding the tf.function makes it about 10 times faster!!!
 def train_step(x):
@@ -47,6 +46,7 @@ def train_step(x):
         gradients = tape.gradient(loss, flow.trainable_variables)
     optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
     return loss
+
 
 optimizer = tf.keras.optimizers.Adam()
 NUM_EPOCHS = 100

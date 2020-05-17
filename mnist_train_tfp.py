@@ -1,9 +1,9 @@
-import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 import tensorflow_datasets as tfds
-from flow_models import *
+from flow_models import flow_tfp_bijectors
+from flow_models import utils
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -23,17 +23,20 @@ ds = ds.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
 
 # Build Flow
 data_shape = [28, 28, 1]  # (H, W, C)
-#base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-base_distr_shape = (28, 28, 1)
+base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
 
-#shift_and_log_scale = ShiftAndLogScaleConvNetGlow((28,28,1), 32)
-bijector = RealNVPStep((28,28,1), ShiftAndLogScaleConvNetGlow, 4, masking='checkboard')
+shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
+n_filters_base = 32
+
+
+bijector = flow_tfp_bijectors.RealNVPBijector(
+    (28, 28, 1), shift_and_log_scale_layer, n_filters_base)
 inv_bijector = tfb.Invert(bijector)
 
 flow = tfd.TransformedDistribution(tfd.Normal(
     0., 1.), inv_bijector, event_shape=base_distr_shape)
 print("flow sample shape: ", flow.sample(1).shape)
-print_summary(flow)
+utils.print_summary(flow)
 
 # Custom Training Loop
 
@@ -46,6 +49,7 @@ def train_step(X):
         gradients = tape.gradient(loss, flow.trainable_variables)
     optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
     return loss
+
 
 optimizer = tf.keras.optimizers.Adam()
 NUM_EPOCHS = 10

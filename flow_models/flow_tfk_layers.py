@@ -3,7 +3,7 @@ import numpy as np
 tfk = tf.keras
 
 
-class ShiftAndLogScaleResNet(tfk.layers.Layer):
+class ShiftAndLogScaleResNet_tfk(tfk.layers.Layer):
 
     """
     Convolutional Neural Networks
@@ -19,7 +19,7 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     """
 
     def __init__(self, input_shape, n_filters, data_format='channels_last', dtype=tf.float32):
-        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype)
+        super(ShiftAndLogScaleResNet_tfk, self).__init__(dtype=dtype)
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape,
                                        data_format=data_format,
@@ -40,10 +40,10 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     def call(self, inputs):
         # if dtype = tf.float64, batch norm layers return an error
         x = self.conv1(inputs)
-        #x = self.batch_norm_1(x)
+        x = self.batch_norm_1(x)
         x = self.activation_1(x)
         x = self.conv2(x)
-        #x = self.batch_norm_2(x)
+        x = self.batch_norm_2(x)
         x = self.activation_2(x)
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
@@ -54,7 +54,7 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         return log_s, t
 
 
-class AffineCouplingLayerMasked(tfk.layers.Layer):
+class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
     """
     Affine Coupling Layer (bijector) using binary masked
     as described in Real NVP
@@ -67,7 +67,6 @@ class AffineCouplingLayerMasked(tfk.layers.Layer):
     Perform coupling layer with a binary masked b:
     forward:
         y = b * x + (1-b) * (x * tf.exp(log_s) + t)
-        
     inverse:
         x = b * y + ((1-b) * (y - t)) * tf.exp(-log_s)
     log_det:
@@ -77,7 +76,7 @@ class AffineCouplingLayerMasked(tfk.layers.Layer):
 
     def __init__(self, event_shape, shift_and_log_scale_layer, n_filters,
                  masking='channel', mask_state=0, dtype=tf.float32):
-        super(AffineCouplingLayerMasked, self).__init__()
+        super(AffineCouplingLayerMasked_tfk, self).__init__()
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(event_shape, n_filters, dtype=dtype)
         self.binary_mask = tf.Variable(self.binary_mask_fn(
             event_shape, masking, mask_state, dtype), trainable=False, dtype=dtype)
@@ -145,7 +144,7 @@ class AffineCouplingLayerMasked(tfk.layers.Layer):
             return tf.cast((1 - binary_mask), dtype)
 
 
-class RealNVPStep(tfk.layers.Layer):
+class RealNVPStep_tfk(tfk.layers.Layer):
     """
     Real NVP Step: 3 affine coupling layers with alternate masking
 
@@ -157,15 +156,15 @@ class RealNVPStep(tfk.layers.Layer):
 
     def __init__(self, event_shape, shift_and_log_scale_layer,
                  n_filters, masking, dtype=tf.float32):
-        super(RealNVPStep, self).__init__()
+        super(RealNVPStep_tfk, self).__init__()
 
-        self.coupling_layer_1 = AffineCouplingLayerMasked(
+        self.coupling_layer_1 = AffineCouplingLayerMasked_tfk(
             event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
-        self.coupling_layer_2 = AffineCouplingLayerMasked(
+        self.coupling_layer_2 = AffineCouplingLayerMasked_tfk(
             event_shape, shift_and_log_scale_layer, n_filters, masking, 1, dtype=dtype)
 
-        self.coupling_layer_3 = AffineCouplingLayerMasked(
+        self.coupling_layer_3 = AffineCouplingLayerMasked_tfk(
             event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
     def _forward(self, x):
