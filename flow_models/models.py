@@ -1,13 +1,14 @@
+import numpy as np
 import tensorflow as tf
 tfk = tf.keras
 
 
 class Flow(tfk.Model):
-    def __init__(self, bijector_cls, event_shape, dtype=tf.float32, **kwargs):
+    def __init__(self, bijector_cls, data_shape, **kwargs):
         super(Flow, self).__init__()
-        self.event_shape = list(event_shape)
+        self.event_shape = list(data_shape)
         self.bijector = bijector_cls(**kwargs)
-        self.tensor_dtype = dtype
+        self.tensor_dtype = tf.float32
 
     def call(self, inputs):
         return self.bijector(inputs)
