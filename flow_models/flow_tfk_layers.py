@@ -48,8 +48,7 @@ class ShiftAndLogScaleResNet_tfk(tfk.layers.Layer):
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
-        # Get positive log_prob !!
-        # For the AffineCouplingLayer at least...
+        # Get positive nan !!
         log_s = self.activation_log_s(log_s)
         return log_s, t
 
@@ -77,7 +76,8 @@ class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
     def __init__(self, event_shape, shift_and_log_scale_layer, n_filters,
                  masking='channel', mask_state=0, dtype=tf.float32):
         super(AffineCouplingLayerMasked_tfk, self).__init__()
-        self.shift_and_log_scale_fn = shift_and_log_scale_layer(event_shape, n_filters, dtype=dtype)
+        self.shift_and_log_scale_fn = shift_and_log_scale_layer(
+            event_shape, n_filters, dtype=dtype)
         self.binary_mask = tf.Variable(self.binary_mask_fn(
             event_shape, masking, mask_state, dtype), trainable=False, dtype=dtype)
         self.tensor_dtype = dtype
@@ -190,3 +190,120 @@ class RealNVPStep_tfk(tfk.layers.Layer):
         x = self.coupling_layer_2(x)
         x = self.coupling_layer_3(x)
         return x
+
+
+class Squeeze_tfk(tfk.layers.Layer):
+    """
+    Squeezing operation as described in Real NVP
+    """
+
+    def __init__(self, event_shape_in):
+        H, W, C = event_shape_in
+        assert(H % 2 == 0)
+        assert(W % 2 == 0)
+        self.event_shape_in = list(event_shape_in)
+        self.event_shape_out = [H // 2, W // 2, 4 * C]
+
+        super(Squeeze_tfk, self).__init__()
+
+    def _forward(self, x):
+        return x.reshape([x.shape[0]] + self.event_shape_out)
+
+    def _inverse(self, x):
+        return x.reshape([x.shape[0]] + self.event_shape_in)
+
+    def call(self, x):
+        return x.reshape([x.shape[0]] + self.event_shape_out)
+
+
+class RealNVPBlock_tfk(tfk.layers.Layer):
+    """
+    Real NVP Block :
+    real nvp step (checkboard) -> squeezing -> real nvp step (channel)
+
+    Parameter:
+        event_shape
+        shift_and_log_scale_layer:
+            tf.keras.layers -> needs to be instantiate
+    """
+
+    def __init__(self, event_shape, shift_and_log_scale_layer,
+                 n_filters, batch_norm=False):
+        super(RealNVPBlock_tfk, self).__init__()
+
+        self.coupling_step_1 = RealNVPStep_tfk(event_shape,
+                                               shift_and_log_scale_layer,
+                                               n_filters, 'checkboard')
+        self.squeeze = Squeeze_tfk(event_shape)
+        self.event_shape_out = self.squeeze.event_shape_out
+        self.coupling_step_2 = RealNVPStep_tfk(self.event_shape_out,
+                                               shift_and_log_scale_layer,
+                                               n_filters, 'channel')
+
+    def _forward(self, x):
+        output1 = self.coupling_step_1._forward(x)
+        output1_reshape = self.squeeze._forward(output1)
+        return self.coupling_step_2._forward(output1_reshape)
+
+    def _inverse(self, y):
+        output1_reshape = self.coupling_step_2._inverse(y)
+        output1 = self.squeeze._inverse(output1_reshape)
+        return self.coupling_step_1._inverse(output1)
+
+    def _forward_log_det_jacobian(self, x):
+        output1 = self.coupling_step_1._forward(x)
+        log_det_1 = self.coupling_step_1._forward_log_det_jacobian(x)
+        output1_reshape = self.squeeze._forward(output1)
+        log_det_2 = self.coupling_step_2._forward_log_det_jacobian(
+            output1_reshape)
+        return log_det_1 + log_det_2
+
+    def call(self, x):
+        x = self.coupling_step_1(x)
+        x = self.squeeze(x)
+        x = self.coupling_step_2(x)
+        return x
+
+
+class RealNVPBijector_tfk(tfk.layers.Layer):
+    def __init__(self, input_shape, shift_and_log_scale_layer,
+                 n_filters_base, batch_norm=False):
+        super(RealNVPBijector_tfk, self).__init__()
+
+        self.real_nvp_block_1 = RealNVPBlock_tfk(input_shape,
+                                                 shift_and_log_scale_layer,
+                                                 n_filters_base, batch_norm)
+        self.real_nvp_block_2 = RealNVPBlock_tfk(self.real_nvp_block_1.event_shape_out,
+                                                 shift_and_log_scale_layer,
+                                                 2 * n_filters_base, batch_norm)
+
+    def _forward(self, x):
+        output1 = self.real_nvp_block_1._forward(x)
+        z1, h1 = tf.split(output1, axis=-1)
+        N, H, W, C = z1.shape
+        z1 = z1.reshape((N, H // 2, W // 2, 4 * C))
+        z2 = self.real_nvp_block_2._forward(h1)
+        return tf.concat((z1, z2), axis=-1)
+
+    def _inverse(self, y):
+        z1, z2 = tf.split(y, axis=-1)
+        h1 = self.real_nvp_block_2._inverse(z2)
+        N, H, W, C = z1.shape
+        z1 = z1.reshape((N, 2 * H, 2 * W, C // 2))
+        output1 = tf.concat((z1, h1), axis=-1)
+        return self.real_nvp_block_1._inverse(output1)
+
+    def _forward_log_det_jacobian(self, y):
+        output1 = self.real_nvp_block_1._forward(y)
+        log_det_1 = self.real_nvp_block_1._forward_log_det_jacobian(y)
+        z1, h1 = tf.split(output1, axis=-1)
+        log_det_2 = self.real_nvp_block_2._forward_log_det_jacobian(h1)
+        return log_det_1 + log_det_2
+
+    def call(self, x):
+        output1 = self.real_nvp_block_1(x)
+        z1, h1 = tf.split(output1, axis=-1)
+        N, H, W, C = z1.shape
+        z1 = z1.reshape((N, H // 2, W // 2, 4 * C))
+        z2 = self.real_nvp_block_2(h1)
+        return tf.concat((z1, z2), axis=-1)

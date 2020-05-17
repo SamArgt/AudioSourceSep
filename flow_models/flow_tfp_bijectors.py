@@ -51,8 +51,7 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
-        # Get positive log_prob !!
-        # For the AffineCouplingLayer at least...
+        # Get nan !!
         log_s = self.activation_log_s(log_s)
         return log_s, t
 
@@ -298,21 +297,37 @@ class RealNVPBijector(tfb.Bijector):
         self.real_nvp_block_1 = RealNVPBlock(input_shape,
                                              shift_and_log_scale_layer,
                                              n_filters_base, batch_norm)
-        self.real_nvp_block_2 = RealNVPBlock(self.real_nvp_block_1.event_shape_out,
+
+        H1, W1, C1 = self.real_nvp_block_1.event_shape_out
+
+        self.real_nvp_block_2 = RealNVPBlock([H1, W1, C1 // 2],
                                              shift_and_log_scale_layer,
                                              2 * n_filters_base, batch_norm)
 
-        self.bijector = tfb.Chain(
-            [self.real_nvp_block_2, self.real_nvp_block_1])
-
     def _forward(self, x):
-        return self.bijector.forward(x)
+        output1 = self.real_nvp_block_1.forward(x)
+        z1, h1 = tf.split(output1, axis=-1)
+        N, H, W, C = z1.shape
+        z1 = z1.reshape((N, H // 2, W // 2, 4 * C))
+        z2 = self.real_nvp_block_2.forward(h1)
+        return tf.concat((z1, z2), axis=-1)
 
     def _inverse(self, y):
-        return self.bijector.inverse(y)
+        z1, z2 = tf.split(y, axis=-1)
+        h1 = self.real_nvp_block_2.inverse(z2)
+        N, H, W, C = z1.shape
+        z1 = z1.reshape((N, 2 * H, 2 * W, C // 2))
+        output1 = tf.concat((z1, h1), axis=-1)
+        return self.real_nvp_block_1.inverse(output1)
 
-    def _inverse_log_det_jacobian(self, y):
-        return self.bijector.inverse_log_det_jacobian(y, event_ndims=3)
+    def _forward_log_det_jacobian(self, y):
+        output1 = self.real_nvp_block_1.forward(y)
+        log_det_1 = self.real_nvp_block_1.forward_log_det_jacobian(
+            y, event_ndims=3)
+        z1, h1 = tf.split(output1, axis=-1)
+        log_det_2 = self.real_nvp_block_2.forward_log_det_jacobian(
+            h1, event_ndims=3)
+        return log_det_1 + log_det_2
 
     def _forward_event_shape_tensor(self, input_shape):
         H, W, C = input_shape
