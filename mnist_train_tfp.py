@@ -52,18 +52,14 @@ def train_step(X):
 
 
 optimizer = tf.keras.optimizers.Adam()
-NUM_EPOCHS = 10
-print("Start Training on {} epochs".format(NUM_EPOCHS))
+NUM_EPOCHS = 2
+print("Start  Training on {} epochs".format(NUM_EPOCHS))
 train_loss_results = []
 for epoch in range(NUM_EPOCHS):
     epoch_loss_avg = tf.keras.metrics.Mean()
 
     for batch in ds.as_numpy_iterator():
         loss = train_step(batch)
-        if loss < 0:
-            print("NEGATIVE LOSS")
-            print(loss)
-            break
         epoch_loss_avg.update_state(loss)
 
     # End epoch
