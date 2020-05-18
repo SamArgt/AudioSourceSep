@@ -95,6 +95,9 @@ def main():
     training_time = t1 - t0
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
+    np.save('loss_history', np.array(loss_history))
+    print('loss history saved')
+
     samples = flow.sample(9)
     samples_np = samples.numpy()
     np.save('samples', samples_np)
