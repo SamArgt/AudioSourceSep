@@ -365,7 +365,7 @@ class RealNVPBijector2(tfb.Bijector):
 
         self.real_nvp_step = RealNVPStep([H2, W2, C2 // 2],
                                          shift_and_log_scale_layer,
-                                         2 * n_filters_base, batch_norm)
+                                         2 * n_filters_base, masking='checkboard')
 
     def _forward(self, x):
         output1 = self.real_nvp_block_1.forward(x)
