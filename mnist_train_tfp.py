@@ -72,12 +72,18 @@ def main():
     print("Start  Training on {} epochs".format(N_EPOCHS))
     t0 = time.time()
     train_loss_results = []
+    loss_history = []
+    count = 0
     for epoch in range(N_EPOCHS):
         epoch_loss_avg = tf.keras.metrics.Mean()
 
         for batch in ds:
             loss = train_step(batch)
             epoch_loss_avg.update_state(loss)
+            count += 1
+            if count == 100:
+                loss_history.append(loss)
+                count = 0
 
         # End epoch
         train_loss_results.append(epoch_loss_avg.result())
