@@ -207,13 +207,13 @@ class Squeeze_tfk(tfk.layers.Layer):
         super(Squeeze_tfk, self).__init__()
 
     def _forward(self, x):
-        return x.reshape([x.shape[0]] + self.event_shape_out)
+        return tf.reshape(x, [x.shape[0]] + self.event_shape_out)
 
     def _inverse(self, x):
-        return x.reshape([x.shape[0]] + self.event_shape_in)
+        return tf.reshape(x, [x.shape[0]] + self.event_shape_in)
 
     def call(self, x):
-        return x.reshape([x.shape[0]] + self.event_shape_out)
+        return tf.reshape(x, [x.shape[0]] + self.event_shape_out)
 
 
 class RealNVPBlock_tfk(tfk.layers.Layer):

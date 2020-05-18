@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from flow_models import layers
+from flow_models import flow_tfk_layers
 from flow_models import flow_tfk_models
 from flow_models import utils
 import argparse
@@ -43,9 +43,9 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
 
-    bijector_cls = layers.RealNVPBijector_tfk
-    bijector_args = {'event_shape': data_shape, 'shift_and_log_scale_layer': layers.ShiftAndLogScaleResNet,
-                     'n_filters': 32, 'masking': 'checkboard'}
+    bijector_cls = flow_tfk_layers.RealNVPBijector_tfk
+    bijector_args = {'input_shape': data_shape, 'shift_and_log_scale_layer': flow_tfk_layers.ShiftAndLogScaleResNet_tfk,
+                     'n_filters_base': 32}
     flow = flow_tfk_models.Flow(bijector_cls, data_shape, **bijector_args)
 
     sample = tf.random.normal([1] + data_shape)
