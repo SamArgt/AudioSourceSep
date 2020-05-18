@@ -30,8 +30,6 @@ def main():
     except FileExistsError:
         os.chdir(output_dirpath)
 
-    os.chdir(output_dirpath)
-
     N_EPOCHS = int(args.N_EPOCHS)
 
     # Construct a tf.data.Dataset
