@@ -75,7 +75,7 @@ def main():
     for epoch in range(N_EPOCHS):
         epoch_loss_avg = tf.keras.metrics.Mean()
 
-        for batch in ds.as_numpy_iterator():
+        for batch in ds:
             loss = train_step(batch)
             epoch_loss_avg.update_state(loss)
 

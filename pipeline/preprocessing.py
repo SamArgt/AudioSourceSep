@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 from librosa.feature import melspectrogram
 import librosa
 import os
@@ -7,7 +6,7 @@ import numpy as np
 import re
 
 
-def load_wav(path, length_sec, stride=None):
+def load_wav(path, length_sec):
     """
     Load wav file from path
     Cut the audio in windows
@@ -15,32 +14,24 @@ def load_wav(path, length_sec, stride=None):
 
     path (str) : path of the wav file
     length_sec (float, int) : size of the window in seconds
-    stride (int) : stride between each window
-        if stride is None: build non overlapping window
 
     Outputs:
-    tensorflow TimeseriesGenerator of size (1, rate*length_sec) (mono)
-    rate of the wav file
+    tensorflow dataset
     """
     song, rate = librosa.core.load(path, sr=None, mono=True)
     song = np.array(song)
     LENGTH = int(rate * length_sec)
-    if stride is None:
-        STRIDE = int(LENGTH)
-    else:
-        STRIDE = int(stride)
-    song_gen = TimeseriesGenerator(
-        song, targets=song, length=LENGTH, stride=STRIDE, batch_size=1)
-    return song_gen, rate
+    song_ds = tf.data.Dataset.from_tensor_slices(song)
+    song_ds = song_ds.batch(LENGTH, drop_remainder=True)
+    return song_ds, rate
 
 
-def load_wav_tf(path, length_sec, stride=None):
+def load_multiple_wav(path, length_sec):
     """
     Load multiple wav files and prepare them to a tensorflow dataset
 
     path: directory of the wav files (can contain sub-directory)
     length_sec: length in second to frame the tracks
-    stride: stride between each frame
 
     Output:
     tf.data.Dataset
@@ -53,73 +44,73 @@ def load_wav_tf(path, length_sec, stride=None):
             wav_files += [os.path.join(current_path, f)
                           for f in files if re.match(".*(.)wav$", f)]
 
-    def gen():
-        for i in range(song_gen.__len__()):
-            yield(song_gen[i][0][0])
     dataset = None
     for wav_file in wav_files:
-        song_gen, rate = load_wav(wav_file, length_sec, stride)
-        temp_dataset = tf.data.Dataset.from_generator(
-            gen, output_types=np.float64)
+        song_ds, rate = load_wav(wav_file, length_sec)
         if dataset is None:
-            dataset = temp_dataset
+            dataset = song_ds
         else:
-            dataset = dataset.concatenate(temp_dataset)
+            dataset = dataset.concatenate(song_ds)
 
     print("{} wav files loaded".format(len(wav_files)))
 
     return dataset
 
 
-def mel_spectrograms_from_gen(song_gen, sr, n_fft=2048, hop_length=512,
-                              n_mels=128):
+def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
+                             n_mels=128):
     """
-    Take as input a generator of raw audio:
-        tuple of array of shape ((1, length), _)
-    Compute the mel spectrogram for each array
+    Take as input a dataset of raw audio:
+
+    Compute the mel spectrogram for each element
 
     Inputs:
-    song_gen: tensorflow TimeseriesGenerator
+    song_ds: tensorflow dataset
     n_fft (int): window size of the STFT
     sr (int): sampling rate of the raw audio
     hop_length (int): jump between each window of the STFT
     n_mel (int): number of mel frequencies
 
     Outputs:
-    Array of shape (N, n_mel, length/hop_length)
-    where N is the number of array in the iterator
-     and length the length of each array
+    tensorflow datasets
     """
-    N = len(song_gen)
-    length = song_gen[0][0].shape[1]
-    time_length = int(np.round(length / hop_length, 0))
-    mel_spectrograms = np.zeros((N, n_mels, time_length))
-    for i, (song, _) in enumerate(song_gen):
 
-        song = song.reshape(-1)
-        mel_spect = melspectrogram(y=np.asfortranarray(song), sr=sr, S=None, n_fft=n_fft,
-                                        hop_length=hop_length, win_length=None, window='hann', center=True,
-                                        pad_mode='reflect', power=2.0, n_mels=n_mels)
+    def get_mel_spectrograms_fn(sr, n_fft=n_fft, hop_length=hop_length,
+                                n_mels=n_mels):
 
-        mel_spectrograms[i, :, :] = mel_spect
+        def get_mel_spectrograms(x):
+            mel_spect = melspectrogram(y=np.asfortranarray(x), sr=sr, S=None, n_fft=n_fft,
+                                       hop_length=hop_length, win_length=None, window='hann', center=True,
+                                       pad_mode='reflect', power=2.0, n_mels=n_mels)
+            return mel_spect
 
-    return mel_spectrograms
+        return get_mel_spectrograms
+
+    map_fn = get_mel_spectrograms_fn(sr, n_fft=n_fft, hop_length=hop_length,
+                                     n_mels=n_mels)
+
+    spect_dataset = song_ds.map(
+        lambda x: tf.py_function(map_fn, inp=[x], Tout=tf.float32))
+
+    return spect_dataset
 
 
-def save_mel_spectrograms(mel_spectrograms, filename):
+def save_mel_spectrograms(mel_spectrograms_ds, filename):
     """
     Save all the spectrograms as npy file
 
     Inputs:
-    mel_spectrograms: array
+    mel_spectrograms: tensorflow dataset
     filename (str): pathname or name to which the data is saved.
 
     Save N spectrograms with names: "filename_i"
     with i =  0,1,...,N and j = 0 or 1
     """
-    for i, spect in enumerate(mel_spectrograms):
-        np.save(filename + '_{}'.format(i), spect)
-    return len(mel_spectrograms)
+    count = 0
+    for i, spect in enumerate(mel_spectrograms_ds):
+        np.save(filename + '_{}'.format(i), np.array(spect))
+        count += 1
+    return count
 
 
 def load_spec(directory):
@@ -138,7 +129,7 @@ def load_spec(directory):
         return tf.constant(np.load(t.numpy()))
 
     dataset = dataset.map(lambda x: tf.py_function(
-        func=load_npy_fn, inp=[x], Tout=tf.float64))
+        func=load_npy_fn, inp=[x], Tout=tf.float32))
 
     return dataset
 
@@ -161,3 +152,92 @@ def load_spec_tf(directory):
                     dataset = dataset.concatenate(temp_dataset)
 
     return dataset
+
+
+def _float_feature(value):
+    """Returns a float_list from a float / double list/array/tensor"""
+    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+
+def serialize_example(array):
+    """
+    Creates a tf.Example message ready to be written to a file.
+
+    Parameters:
+      array: array
+          audio (raw or spectrograms)
+    Returns:
+     a tf.Example object
+    """
+    feature = {
+        'array': _float_feature(np.reshape(array, -1)),
+    }
+
+    # Create a Features message using tf.train.Example.
+
+    example_proto = tf.train.Example(
+        features=tf.train.Features(feature=feature))
+    return example_proto.SerializeToString()
+
+
+def tf_serialize_example(array):
+    tf_string = tf.py_function(
+        serialize_example,
+        [array],
+        tf.string)
+    return tf.reshape(tf_string, ())
+
+
+def save_tf_records(dataset, filename, write_shape=True):
+    """
+    Save a tensorflow dataset as a tf records
+
+    Parameters:
+        dataset: tensorflow dataset
+        It should be a dataset of tensors
+
+        filename: str
+        filename to save the tf.records
+
+        write_shape: bool
+        if True, write the shape of the tensors into a text file
+    """
+
+    serialized_dataset = dataset.map(tf_serialize_example)
+    writer = tf.data.experimental.TFRecordWriter(filename)
+    writer.write(serialized_dataset)
+
+    if write_shape:
+        shape = list(dataset.take(1).as_numpy_iterator())[0].shape
+        with open(filename + '_shape.txt', 'w') as f:
+            f.write(str(shape))
+
+    print('TFrecord saved')
+    return 0
+
+
+def load_tf_records(filenames, shape, dtype=tf.float32):
+    """
+    Load tf.records into a tensorflow dataset
+
+    Parameters:
+        filenames: list of the tf.records filenames
+        shape: list of int
+            shape of the tensors to be loaded
+
+    Returns:
+        tensorflow dataset
+    """
+    feature_description = {
+        'array': tf.io.FixedLenFeature(shape=shape, dtype=dtype)
+    }
+
+    def _parse_function(example_proto):
+        # Parse the input `tf.Example` proto using the dictionary above.
+        return tf.io.parse_single_example(example_proto, feature_description)
+
+    raw_dataset = tf.data.TFRecordDataset(filenames)
+    parsed_dataset = raw_dataset.map(_parse_function)
+    parsed_dataset = parsed_dataset.map(lambda x: x['array'])
+
+    return parsed_dataset

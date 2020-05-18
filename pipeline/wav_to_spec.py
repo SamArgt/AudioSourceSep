@@ -30,11 +30,6 @@ def main():
             length_sec = 5
         else:
             length_sec = float(length_sec)
-        stride = input('Stride of the window (default rate * length_sec): ')
-        if stride == '':
-            stride = None
-        else:
-            stride = int(stride)
         n_fft = input('Window size for the STFT (default 2048): ')
         if n_fft == '':
             n_fft = 2048
@@ -51,16 +46,12 @@ def main():
         else:
             n_mels = int(n_mels)
     else:
-        length_sec, stride, n_fft, hop_length, n_mels = args.params.split(',')
+        length_sec, n_fft, hop_length, n_mels = args.params.split(',')
         length_sec = float(length_sec)
-        if stride == 'None':
-            stride = None
-        else:
-            stride = int(stride)
         n_fft, hop_length, n_mels = int(n_fft), int(hop_length), int(n_mels)
 
-    print("Mel Spectrograms parameters: \n length_sec={} \n stride={} \n n_fft={} \n hop length={} \n n mels={}"
-          .format(length_sec, stride, n_fft, hop_length, n_mels))
+    print("\nMel Spectrograms parameters: \n length_sec={} \n n_fft={} \n hop length={} \n n mels={}"
+          .format(length_sec, n_fft, hop_length, n_mels))
     print('\n')
 
     t0 = time.time()
@@ -77,12 +68,12 @@ def main():
 
     for wav_file in wav_files:
         # load the wav file
-        song_gen, rate = load_wav(wav_file, length_sec, stride)
-
+        song_ds, rate = load_wav(wav_file, length_sec)
+        print('{} Loaded...'.format(wav_file))
         # compute the spectrograms
-        melspectrograms = mel_spectrograms_from_gen(
-            song_gen, rate, n_fft, hop_length, n_mels)
-
+        melspectrograms_ds = mel_spectrograms_from_ds(
+            song_ds, rate, n_fft, hop_length, n_mels)
+        print("\t Mel Spectrograms computed...")
         # save the spectrograms
         wav_file_relpath = os.path.relpath(wav_file, input_dirpath)
         temp_output_dirpath = os.path.join(output_dirpath, wav_file_relpath)
@@ -93,12 +84,12 @@ def main():
             os.makedirs(temp_output_dirpath)
         except FileExistsError:
             pass
-        N = save_mel_spectrograms(melspectrograms, wav_file_output)
+        N = save_mel_spectrograms(melspectrograms_ds, wav_file_output)
 
-        print("File {} saved into {} spectrograms".format(wav_file_relpath, N))
+        print("\tSaved into {} spectrograms".format(N))
     print("-" * 40)
     deltaT = np.round(time.time() - t0, 2)
-    print("{} wav files transformed into spectrograms in {} seconds.".format(
+    print("{} wav files saved as spectrograms in {} seconds.".format(
         len(wav_files), deltaT))
 
 
