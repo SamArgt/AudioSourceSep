@@ -1,0 +1,258 @@
+2020-05-18 13:32:05.624257: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcuda.so.1
+2020-05-18 13:32:08.923377: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 0 with properties: 
+pciBusID: 0000:3b:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:08.924163: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 1 with properties: 
+pciBusID: 0000:5e:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:08.924875: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 2 with properties: 
+pciBusID: 0000:86:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:08.925637: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 3 with properties: 
+pciBusID: 0000:d8:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:08.925906: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2020-05-18 13:32:08.927499: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2020-05-18 13:32:08.929447: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcufft.so.10
+2020-05-18 13:32:08.929753: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcurand.so.10
+2020-05-18 13:32:08.931665: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusolver.so.10
+2020-05-18 13:32:08.932764: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusparse.so.10
+2020-05-18 13:32:08.936733: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2020-05-18 13:32:08.942374: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1703] Adding visible gpu devices: 0, 1, 2, 3
+2020-05-18 13:32:08.943848: I tensorflow/core/platform/cpu_feature_guard.cc:143] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 AVX512F FMA
+2020-05-18 13:32:08.989456: I tensorflow/core/platform/profile_utils/cpu_utils.cc:102] CPU Frequency: 2100000000 Hz
+2020-05-18 13:32:08.993398: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x7fe4ec000b20 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2020-05-18 13:32:08.993451: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+2020-05-18 13:32:09.680322: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x3a52040 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2020-05-18 13:32:09.680409: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): GeForce RTX 2080 Ti, Compute Capability 7.5
+2020-05-18 13:32:09.680433: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (1): GeForce RTX 2080 Ti, Compute Capability 7.5
+2020-05-18 13:32:09.680451: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (2): GeForce RTX 2080 Ti, Compute Capability 7.5
+2020-05-18 13:32:09.680468: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (3): GeForce RTX 2080 Ti, Compute Capability 7.5
+2020-05-18 13:32:09.684230: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 0 with properties: 
+pciBusID: 0000:3b:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:09.686550: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 1 with properties: 
+pciBusID: 0000:5e:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:09.688840: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 2 with properties: 
+pciBusID: 0000:86:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:09.691081: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 3 with properties: 
+pciBusID: 0000:d8:00.0 name: GeForce RTX 2080 Ti computeCapability: 7.5
+coreClock: 1.545GHz coreCount: 68 deviceMemorySize: 10.76GiB deviceMemoryBandwidth: 573.69GiB/s
+2020-05-18 13:32:09.691140: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2020-05-18 13:32:09.691162: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2020-05-18 13:32:09.691183: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcufft.so.10
+2020-05-18 13:32:09.691203: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcurand.so.10
+2020-05-18 13:32:09.691222: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusolver.so.10
+2020-05-18 13:32:09.691242: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusparse.so.10
+2020-05-18 13:32:09.691261: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2020-05-18 13:32:09.702686: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1703] Adding visible gpu devices: 0, 1, 2, 3
+2020-05-18 13:32:09.702730: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2020-05-18 13:32:09.707865: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1102] Device interconnect StreamExecutor with strength 1 edge matrix:
+2020-05-18 13:32:09.707888: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1108]      0 1 2 3 
+2020-05-18 13:32:09.707898: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1121] 0:   N N N N 
+2020-05-18 13:32:09.707905: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1121] 1:   N N N N 
+2020-05-18 13:32:09.707913: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1121] 2:   N N N N 
+2020-05-18 13:32:09.707920: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1121] 3:   N N N N 
+2020-05-18 13:32:09.712743: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1247] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10203 MB memory) -> physical GPU (device: 0, name: GeForce RTX 2080 Ti, pci bus id: 0000:3b:00.0, compute capability: 7.5)
+2020-05-18 13:32:09.714256: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1247] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:1 with 10203 MB memory) -> physical GPU (device: 1, name: GeForce RTX 2080 Ti, pci bus id: 0000:5e:00.0, compute capability: 7.5)
+2020-05-18 13:32:09.715701: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1247] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:2 with 10203 MB memory) -> physical GPU (device: 2, name: GeForce RTX 2080 Ti, pci bus id: 0000:86:00.0, compute capability: 7.5)
+2020-05-18 13:32:09.717211: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1247] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:3 with 10203 MB memory) -> physical GPU (device: 3, name: GeForce RTX 2080 Ti, pci bus id: 0000:d8:00.0, compute capability: 7.5)
+2020-05-18 13:32:10.724455: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2020-05-18 13:32:12.181774: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2020-05-18 13:32:12.689588: W tensorflow/python/util/util.cc:329] Sets are not currently considered sequences, but this may change in the future, so consider avoiding using them.
+TensorFlow version: 2.2.0
+Eager execution: True
+flow sample shape:  (1, 28, 28, 1)
+____________________________________________________________________________________________________
+Network 	 Layer 	 Shape 						 #parameters
+====================================================================================================
+shift_and_log_scale_res_net
+	 conv2d 		 kernel (3, 3, 1, 32) | bias (32,) 		 320
+	 batch_normalization 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_1 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_1 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_2 		 kernel (3, 3, 32, 2) | bias (2,) 		 578
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_1
+	 conv2d_3 		 kernel (3, 3, 1, 32) | bias (32,) 		 320
+	 batch_normalization_2 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_4 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_3 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_5 		 kernel (3, 3, 32, 2) | bias (2,) 		 578
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_2
+	 conv2d_6 		 kernel (3, 3, 1, 32) | bias (32,) 		 320
+	 batch_normalization_4 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_7 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_5 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_8 		 kernel (3, 3, 32, 2) | bias (2,) 		 578
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_3
+	 conv2d_9 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_6 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_10 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_7 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_11 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_4
+	 conv2d_12 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_8 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_13 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_9 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_14 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_5
+	 conv2d_15 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_10 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_16 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_11 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_17 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_6
+	 conv2d_18 		 kernel (3, 3, 2, 64) | bias (64,) 		 1216
+	 batch_normalization_12 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_19 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_13 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_20 		 kernel (3, 3, 64, 4) | bias (4,) 		 2308
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_7
+	 conv2d_21 		 kernel (3, 3, 2, 64) | bias (64,) 		 1216
+	 batch_normalization_14 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_22 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_15 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_23 		 kernel (3, 3, 64, 4) | bias (4,) 		 2308
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_8
+	 conv2d_24 		 kernel (3, 3, 2, 64) | bias (64,) 		 1216
+	 batch_normalization_16 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_25 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_17 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_26 		 kernel (3, 3, 64, 4) | bias (4,) 		 2308
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_9
+	 conv2d_27 		 kernel (3, 3, 8, 64) | bias (64,) 		 4672
+	 batch_normalization_18 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_28 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_19 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_29 		 kernel (3, 3, 64, 16) | bias (16,) 		 9232
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_10
+	 conv2d_30 		 kernel (3, 3, 8, 64) | bias (64,) 		 4672
+	 batch_normalization_20 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_31 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_21 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_32 		 kernel (3, 3, 64, 16) | bias (16,) 		 9232
+____________________________________________________________________________________________________
+shift_and_log_scale_res_net_11
+	 conv2d_33 		 kernel (3, 3, 8, 64) | bias (64,) 		 4672
+	 batch_normalization_22 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_34 		 kernel (1, 1, 64, 64) | bias (64,) 		 4160
+	 batch_normalization_23 		 gamma (64,) | beta (64,) 		 128
+	 conv2d_35 		 kernel (3, 3, 64, 16) | bias (16,) 		 9232
+====================================================================================================
+Total Trainable Variables:  99066
+Start  Training on 100 epochs
+Epoch 000: Loss: -1205.618
+Epoch 001: Loss: -1553.117
+Epoch 002: Loss: -1583.886
+Epoch 003: Loss: -1763.270
+Epoch 004: Loss: -1653.640
+Epoch 005: Loss: -1563.786
+Epoch 006: Loss: -1728.951
+Epoch 007: Loss: -1537.016
+Epoch 008: Loss: -1831.610
+Epoch 009: Loss: -1803.021
+Epoch 010: Loss: -1842.338
+Epoch 011: Loss: -1783.571
+Epoch 012: Loss: -1750.843
+Epoch 013: Loss: -1593.049
+Epoch 014: Loss: -1812.217
+Epoch 015: Loss: -1888.724
+Epoch 016: Loss: -1578.191
+Epoch 017: Loss: -1664.652
+Epoch 018: Loss: -1578.339
+Epoch 019: Loss: -1621.411
+Epoch 020: Loss: -1499.676
+Epoch 021: Loss: -1686.990
+Epoch 022: Loss: -1693.174
+Epoch 023: Loss: -1811.538
+Epoch 024: Loss: -1483.288
+Epoch 025: Loss: -1643.229
+Epoch 026: Loss: -1503.851
+Epoch 027: Loss: -1594.589
+Epoch 028: Loss: -1693.868
+Epoch 029: Loss: -1616.193
+Epoch 030: Loss: -1650.394
+Epoch 031: Loss: -1631.218
+Epoch 032: Loss: -1761.217
+Epoch 033: Loss: -1602.144
+Epoch 034: Loss: -1799.094
+Epoch 035: Loss: -1796.663
+Epoch 036: Loss: -1673.143
+Epoch 037: Loss: -1700.502
+Epoch 038: Loss: -1583.740
+Epoch 039: Loss: -1228.251
+Epoch 040: Loss: -1544.762
+Epoch 041: Loss: -1656.042
+Epoch 042: Loss: -1652.687
+Epoch 043: Loss: -1505.240
+Epoch 044: Loss: -1709.382
+Epoch 045: Loss: -1587.726
+Epoch 046: Loss: -1747.587
+Epoch 047: Loss: -1686.716
+Epoch 048: Loss: -1731.575
+Epoch 049: Loss: -1746.065
+Epoch 050: Loss: -1572.776
+Epoch 051: Loss: -1582.979
+Epoch 052: Loss: -1741.627
+Epoch 053: Loss: -1610.077
+Epoch 054: Loss: -1741.451
+Epoch 055: Loss: -1754.130
+Epoch 056: Loss: -1722.413
+Epoch 057: Loss: -1753.857
+Epoch 058: Loss: -1785.078
+Epoch 059: Loss: -1657.177
+Epoch 060: Loss: -1796.519
+Epoch 061: Loss: -1701.709
+Epoch 062: Loss: -1809.860
+Epoch 063: Loss: -1772.928
+Epoch 064: Loss: -1629.568
+Epoch 065: Loss: -1743.332
+Epoch 066: Loss: -1830.494
+Epoch 067: Loss: -1777.087
+Epoch 068: Loss: -1798.610
+Epoch 069: Loss: -1680.328
+Epoch 070: Loss: -1606.333
+Epoch 071: Loss: -1801.685
+Epoch 072: Loss: -1851.232
+Epoch 073: Loss: -1702.978
+Epoch 074: Loss: -1767.095
+Epoch 075: Loss: -1833.216
+Epoch 076: Loss: -1607.053
+Epoch 077: Loss: -1808.037
+Epoch 078: Loss: -1705.586
+Epoch 079: Loss: -1442.699
+Epoch 080: Loss: -1102.148
+Epoch 081: Loss: -1466.196
+Epoch 082: Loss: -1730.179
+Epoch 083: Loss: -1733.581
+Epoch 084: Loss: -1750.155
+Epoch 085: Loss: -1800.676
+Epoch 086: Loss: -1716.997
+Epoch 087: Loss: -1822.236
+Epoch 088: Loss: -1751.371
+Epoch 089: Loss: -1801.998
+Epoch 090: Loss: -1806.695
+Epoch 091: Loss: -1589.604
+Epoch 092: Loss: -1665.642
+Epoch 093: Loss: -1620.156
+Epoch 094: Loss: -1701.846
+Epoch 095: Loss: -1769.399
+Epoch 096: Loss: -1795.219
+Epoch 097: Loss: -1652.723
+Epoch 098: Loss: -1525.081
+Epoch 099: Loss: -1747.714
+Training time:  6764.98  seconds
+9 samples saved
