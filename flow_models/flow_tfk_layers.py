@@ -168,7 +168,7 @@ class RealNVPStep_tfk(tfk.layers.Layer):
             event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
     def _forward(self, x):
-        output1 = self._forward.coupling_layer_1._forwardward(x)
+        output1 = self._forward.coupling_layer_1._forward(x)
         output2 = self._forward.coupling_layer_2._forward(output1)
         return self._forward.coupling_layer_3._forward(output2)
 
@@ -273,7 +273,10 @@ class RealNVPBijector_tfk(tfk.layers.Layer):
         self.real_nvp_block_1 = RealNVPBlock_tfk(input_shape,
                                                  shift_and_log_scale_layer,
                                                  n_filters_base, batch_norm)
-        self.real_nvp_block_2 = RealNVPBlock_tfk(self.real_nvp_block_1.event_shape_out,
+
+        H1, W1, C1 = self.real_nvp_block_1.event_shape_out
+
+        self.real_nvp_block_2 = RealNVPBlock_tfk([H1, W1, C1 // 2],
                                                  shift_and_log_scale_layer,
                                                  2 * n_filters_base, batch_norm)
 
@@ -281,7 +284,7 @@ class RealNVPBijector_tfk(tfk.layers.Layer):
         output1 = self.real_nvp_block_1._forward(x)
         z1, h1 = tf.split(output1, 2, axis=-1)
         N, H, W, C = z1.shape
-        z1 = tf.reshape(z1, (N, H // 2, W // 2, 4 * C))
+        z1 = tf.reshape(z1, (N, H // 2, W // 2, C * 4))
         z2 = self.real_nvp_block_2._forward(h1)
         return tf.concat((z1, z2), axis=-1)
 
@@ -304,6 +307,6 @@ class RealNVPBijector_tfk(tfk.layers.Layer):
         output1 = self.real_nvp_block_1(x)
         z1, h1 = tf.split(output1, 2, axis=-1)
         N, H, W, C = z1.shape
-        z1 = tf.reshape(z1, (N, H // 2, W // 2, 4 * C))
+        z1 = tf.reshape(z1, (N, H // 2, W // 2, C * 4))
         z2 = self.real_nvp_block_2(h1)
         return tf.concat((z1, z2), axis=-1)
