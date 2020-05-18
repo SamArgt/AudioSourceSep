@@ -349,7 +349,7 @@ class RealNVPBijector(tfb.Bijector):
 class RealNVPBijector2(tfb.Bijector):
     def __init__(self, input_shape, shift_and_log_scale_layer,
                  n_filters_base, batch_norm=False):
-        super(RealNVPBijector, self).__init__(forward_min_event_ndims=3)
+        super(RealNVPBijector2, self).__init__(forward_min_event_ndims=3)
 
         self.real_nvp_block_1 = RealNVPBlock(input_shape,
                                              shift_and_log_scale_layer,
