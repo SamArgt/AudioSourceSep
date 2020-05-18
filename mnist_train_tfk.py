@@ -23,12 +23,14 @@ def main():
                         help='number of epochs to train')
     args = parser.parse_args()
     output_dirpath = args.OUTPUT
-    
+
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
     except FileExistsError:
         os.chdir(output_dirpath)
+
+    os.chdir(output_dirpath)
 
     N_EPOCHS = int(args.N_EPOCHS)
 
@@ -42,11 +44,12 @@ def main():
 
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
-    base_distr_shape = [7, 7, 16] # (H//4, W//4, C*16)
+    base_distr_shape = [7, 7, 16]  # (H//4, W//4, C*16)
     bijector_cls = flow_tfk_layers.RealNVPBijector_tfk
     bijector_args = {'input_shape': data_shape, 'shift_and_log_scale_layer': flow_tfk_layers.ShiftAndLogScaleResNet_tfk,
                      'n_filters_base': 32}
-    flow = flow_tfk_models.Flow(bijector_cls, data_shape, base_distr_shape, **bijector_args)
+    flow = flow_tfk_models.Flow(
+        bijector_cls, data_shape, base_distr_shape, **bijector_args)
 
     sample = tf.random.normal([1] + data_shape)
     flow(sample)

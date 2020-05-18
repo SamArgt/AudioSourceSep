@@ -23,7 +23,7 @@ def main():
     parser.add_argument('N_EPOCHS', type=str,
                         help='number of epochs to train')
     args = parser.parse_args()
-    output_dirpath = os.path.abspath(args.OUTPUT)
+    output_dirpath = args.OUTPUT
 
     try:
         os.mkdir(output_dirpath)
@@ -31,6 +31,7 @@ def main():
     except FileExistsError:
         os.chdir(output_dirpath)
 
+    os.chdir(output_dirpath)
 
     N_EPOCHS = args.N_EPOCHS
 
