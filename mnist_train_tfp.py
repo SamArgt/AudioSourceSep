@@ -31,7 +31,7 @@ def main():
     except FileExistsError:
         os.chdir(output_dirpath)
 
-    N_EPOCHS = args.N_EPOCHS
+    N_EPOCHS = int(args.N_EPOCHS)
 
     # Construct a tf.data.Dataset
     ds = tfds.load('mnist', split='train', shuffle_files=True)
