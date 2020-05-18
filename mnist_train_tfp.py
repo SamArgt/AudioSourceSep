@@ -28,7 +28,6 @@ base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
 shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
 n_filters_base = 32
 
-
 bijector = flow_tfp_bijectors.RealNVPBijector(
     (28, 28, 1), shift_and_log_scale_layer, n_filters_base)
 inv_bijector = tfb.Invert(bijector)
@@ -52,7 +51,7 @@ def train_step(X):
 
 
 optimizer = tf.keras.optimizers.Adam()
-NUM_EPOCHS = 2
+NUM_EPOCHS = 100
 print("Start  Training on {} epochs".format(NUM_EPOCHS))
 train_loss_results = []
 for epoch in range(NUM_EPOCHS):
@@ -68,8 +67,6 @@ for epoch in range(NUM_EPOCHS):
     print("Epoch {:03d}: Loss: {:.3f}".format(
         epoch, epoch_loss_avg.result()))
 
-to_save = input('Save sample: Y/N')
-if to_save == 'Y':
-    samples = flow.sample(10)
-    samples_np = samples.numpy()
-    np.save('samples', samples_np)
+samples = flow.sample(9)
+samples_np = samples.numpy()
+np.save('samples_realnvp', samples_np)
