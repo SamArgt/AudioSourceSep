@@ -48,7 +48,7 @@ def main():
     shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
     n_filters_base = 32
 
-    bijector = flow_tfp_bijectors.RealNVPBijector(
+    bijector = flow_tfp_bijectors.RealNVPBijector2(
         data_shape, shift_and_log_scale_layer, n_filters_base)
     inv_bijector = tfb.Invert(bijector)
 
