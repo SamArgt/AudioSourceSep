@@ -444,7 +444,7 @@ class ActNorm(tfb.Bijector):
         assert(self.C == minibatch_C)
 
         mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
-        std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2])
+        std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
         scale_init = 1 / std_init
         shift_init = - mean_init / std_init
 
@@ -457,7 +457,7 @@ class ActNorm(tfb.Bijector):
         return x * self.scale + self.shift
 
     def _inverse(self, y):
-        return (y - self.shift) / self.scale
+        return (y - self.shift) / (self.scale + tf.constant(10**(-8), dtype=tf.float32))
 
     def _forward_log_det_jacobian(self, x):
         log_det = self.H * self.W * \
