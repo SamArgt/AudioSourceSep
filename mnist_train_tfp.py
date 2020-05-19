@@ -43,7 +43,7 @@ def main():
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
-    ds = ds.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+    ds = ds.shuffle(1024).batch(128).prefetch(tf.data.experimental.AUTOTUNE)
 
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)

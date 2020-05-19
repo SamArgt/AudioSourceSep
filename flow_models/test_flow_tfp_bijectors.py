@@ -3,47 +3,46 @@ import unittest
 import tensorflow as tf
 import numpy as np
 
-
 class TestShiftAndLogScaleResNet(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(cls):
-    cls.input_shape = [64, 64, 3]
-    cls.batch_size = 32
-    cls.inputs = tf.random.normal([cls.batch_size] + cls.input_shape)
-    cls.NN = ShiftAndLogScaleResNet(
-        input_shape=cls.input_shape, n_filters=16)
+    @classmethod
+    def setUpClass(cls):
+        cls.input_shape = [64, 64, 3]
+        cls.batch_size = 32
+        cls.inputs = tf.random.normal([cls.batch_size] + cls.input_shape)
+        cls.NN = ShiftAndLogScaleResNet(
+            input_shape=cls.input_shape, n_filters=16)
 
-  def test_output_shape(self):
-    log_s, t = self.NN(self.inputs)
-    self.assertEqual(log_s.shape, self.inputs.shape)
-    self.assertEqual(t.shape, self.inputs.shape)
+    def test_output_shape(self):
+        log_s, t = self.NN(self.inputs)
+        self.assertEqual(log_s.shape, self.inputs.shape)
+        self.assertEqual(t.shape, self.inputs.shape)
 
 
 def make_test_case_bijector(bijector_class, inputs, expected_log_det, **kwargs):
-  class TestBijector(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-      cls.inputs = inputs
-      cls.bijector = bijector_class(**kwargs)
-      cls.expected_log_det = expected_log_det
+    class TestBijector(unittest.TestCase):
+        @classmethod
+        def setUpClass(cls):
+            cls.inputs = inputs
+            cls.bijector = bijector_class(**kwargs)
+            cls.expected_log_det = expected_log_det
 
-    def test_inversibility(self):
-      outputs = self.bijector.forward(self.inputs)
-      inv_outputs = self.bijector.inverse(outputs)
-      is_equal = np.all(self.inputs == inv_outputs)
-      self.assertTrue(is_equal)
+        def test_inversibility(self):
+            outputs = self.bijector.forward(self.inputs)
+            inv_outputs = self.bijector.inverse(outputs)
+            is_equal = np.all(self.inputs == inv_outputs)
+            self.assertTrue(is_equal)
 
-    def test_log_det(self):
-      bij_forward_log_det = self.bijector.forward_log_det_jacobian(
-          self.inputs, event_ndims=3).numpy()[0]
-      outputs = self.bijector.forward(self.inputs)
-      bij_inv_log_det = self.bijector.inverse_log_det_jacobian(
-          outputs, event_ndims=3).numpy()[0]
-      self.assertEqual(bij_forward_log_det, -bij_inv_log_det)
-      self.assertEqual(bij_forward_log_det, self.expected_log_det)
+        def test_log_det(self):
+            bij_forward_log_det = self.bijector.forward_log_det_jacobian(
+                self.inputs, event_ndims=3).numpy()[0]
+            outputs = self.bijector.forward(self.inputs)
+            bij_inv_log_det = self.bijector.inverse_log_det_jacobian(
+                outputs, event_ndims=3).numpy()[0]
+            self.assertEqual(bij_forward_log_det, -bij_inv_log_det)
+            self.assertEqual(bij_forward_log_det, self.expected_log_det)
 
-  return TestBijector
+    return TestBijector
 
 
 global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2
@@ -57,26 +56,26 @@ INPUTS_2 = tf.random.normal([1] + EVENT_SHAPE_2)
 
 
 def shift_and_log_scale_toy(x):
-  log_s = EXPECTED_LOG_DET * tf.ones(x.shape, dtype=tf.float32)
-  t = tf.ones(x.shape, dtype=tf.float32)
-  return log_s, t
+    log_s = EXPECTED_LOG_DET * tf.ones(x.shape, dtype=tf.float32)
+    t = tf.ones(x.shape, dtype=tf.float32)
+    return log_s, t
 
 
-def shift_and_log_scale_layer_toy(event_shape, n_filters, dtype):
-  return shift_and_log_scale_toy
+def shift_and_log_scale_layer_toy(event_shape, n_hidden_units, dtype=tf.float32):
+    return shift_and_log_scale_toy
 
 
 affine_coupling_layers_checkboard_args = {"event_shape": EVENT_SHAPE,
                                           "shift_and_log_scale_layer": shift_and_log_scale_layer_toy,
-                                          'n_filters': 2, "masking": "checkboard"}
+                                          'n_hidden_units': 2, "masking": "checkboard"}
 
 affine_coupling_layers_channel_args = {"event_shape": EVENT_SHAPE_2,
                                        "shift_and_log_scale_layer": shift_and_log_scale_layer_toy,
-                                       'n_filters': 2, "masking": "channel"}
+                                       'n_hidden_units': 2, "masking": "channel"}
 
 real_nvp_step_checkboard_args = {'event_shape': EVENT_SHAPE,
                                  'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
-                                 'n_filters': 2, 'masking': 'checkboard'}
+                                 'n_hidden_units': 2, 'masking': 'checkboard'}
 
 real_nvp_block_args = {'event_shape': EVENT_SHAPE,
                        'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,

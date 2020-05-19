@@ -6,6 +6,30 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+class ShiftAndLofScaleDenseNet(tfk.layers.Layer):
+
+    def __init__(self, input_shape, units):
+        super(ShiftAndLofScaleDenseNet, self).__init__()
+
+        self.dense1 = tfk.layers.Dense(
+            units, activation='relu', input_shape=input_shape)
+        self.dense2 = tfk.layers.Dense(units, activation='relu')
+        self.dense3 = tfk.layers.Dense(units, activation='relu')
+        self.dense4 = tfk.layers.Dense(units, activation='relu')
+        self.dense5 = tfk.layers.Dense(input_shape[0] * 2, activation=None)
+        self.activation_log_s = tfk.layers.Activation('tanh')
+
+    def call(self, x):
+        x = self.dense1(x)
+        x = self.dense2(x)
+        x = self.dense3(x)
+        x = self.dense4(x)
+        x = self.dense5(x)
+        log_s, t = tf.split(x, 2, axis=-1)
+        log_s = self.activation_log_s(log_s)
+        return log_s, t
+
+
 class ShiftAndLogScaleResNet(tfk.layers.Layer):
 
     """
@@ -55,46 +79,6 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         log_s = self.activation_log_s(log_s)
         return log_s, t
 
-class AffineCouplingLayerSplit(tfb.Bijector):
-
-    """
-    Affine Coupling Layer (Bijector):
-    input should be 4 dimensionals: (batch_size, H, W, C)
-    x1, x2 = split(x) # splitting along the channel dimension
-    log(s), t = shift_and_log_scale_fn(x2)
-    y2 = exp(log(s)) * x2 + t
-    y1 = x1
-    y = concat(y1, y2)
-    """
-
-    def __init__(self, shift_and_log_scale_fn, split_axis=-1):
-        super(AffineCouplingLayerSplit, self).__init__(
-            forward_min_event_ndims=3)
-        self.shift_and_log_scale_fn = shift_and_log_scale_fn
-        self.split_axis = split_axis
-
-    def _forward(self, x):
-        x1, x2 = tf.split(x, num_or_size_splits=2, axis=self.split_axis)
-        log_s, t = self.shift_and_log_scale_fn(x2)
-        y1 = x1
-        y2 = tf.exp(log_s) * x2 + t
-        y = tf.concat([y1, y2], axis=self.split_axis)
-        return y
-
-    def _inverse(self, y):
-        y1, y2 = tf.split(y, 2, self.split_axis)
-        log_s, t = self.shift_and_log_scale_fn(y2)
-        x1 = y1
-        x2 = (y2 - t) / tf.exp(log_s)
-        x = tf.concat([x1, x2], axis=-1)
-        return x
-
-    def _inverse_log_det_jacobian(self, y):
-        y1, y2 = tf.split(y, 2, self.split_axis)
-        log_s, _ = self.shift_and_log_scale_fn(y2)
-        log_det = log_s
-        return -tf.reduce_sum(log_det, [1, 2, 3])
-
 
 class AffineCouplingLayerMasked(tfb.Bijector):
     """
@@ -103,8 +87,10 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
     Parameters:
         event_shape (list): dimension of the input data
-        shift_anf_log_scale_fn: NN returning log scale and shift
-        masking (str): either 'channel' or 'checkboard'
+        shift_anf_log_scale_layer: tfk.layers.Layer class
+        n_hidden_units : number of hidden units in the shift_and_log_scale layer
+            if shift_anf_log_scale_layer is a ConvNet: number of filters in the hidden layers
+            if it is a DenseNet: number of units in the hidden layers
 
     Perform coupling layer with a binary masked b:
     forward:
@@ -116,12 +102,12 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
     """
 
-    def __init__(self, event_shape, shift_and_log_scale_layer, n_filters,
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units,
                  masking='channel', mask_state=0, dtype=tf.float32):
         super(AffineCouplingLayerMasked, self).__init__(
-            forward_min_event_ndims=3)
+            forward_min_event_ndims=0)
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            event_shape, n_filters, dtype=dtype)
+            event_shape, n_hidden_units)
         self.binary_mask = self.binary_mask_fn(
             event_shape, masking, mask_state, dtype)
         self.tensor_dtype = dtype
@@ -142,13 +128,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         b = tf.repeat(self.binary_mask, x.shape[0], axis=0)
         log_s, _ = self.shift_and_log_scale_fn(x * b)
         log_det = log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis=[1, 2, 3])
-
-    def _inverse_log_det_jacobian(self, y):
-        b = tf.repeat(self.binary_mask, y.shape[0], axis=0)
-        log_s, _ = self.shift_and_log_scale_fn(y * b)
-        log_det = -log_s * (1 - b)
-        return tf.reduce_sum(log_det, axis=[1, 2, 3])
+        return log_det
 
     @staticmethod
     def binary_mask_fn(input_shape, masking, mask_state, dtype):
@@ -160,6 +140,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
                                           np.zeros(sub_shape)],
                                          axis=-1)
         if masking == 'checkboard':
+            assert(len(input_shape) == 3)
             column_odd = [k % 2 for k in range(input_shape[-2])]
             column_even = [(k + 1) % 2 for k in range(input_shape[-2])]
             binary_mask = np.zeros((input_shape[-3], input_shape[-2]))
@@ -200,23 +181,26 @@ class RealNVPStep(tfb.Bijector):
     Real NVP Step: 3 affine coupling layers with alternate masking
 
     Parameter:
-        event_shape
-        shift_and_log_scale_layer:
-            tf.keras.layers -> needs to be instantiate
+        event_shape: list of int
+        shift_and_log_scale_layer: tfk.layers.Layer class
+        n_hidden_units : number of hidden units in the shift_and_log_scale layer
+            if shift_anf_log_scale_layer is a ConvNet: number of filters in the hidden layers
+            if it is a DenseNet: number of units in the hidden layers
+
     """
 
     def __init__(self, event_shape, shift_and_log_scale_layer,
-                 n_filters, masking, dtype=tf.float32):
-        super(RealNVPStep, self).__init__(forward_min_event_ndims=3)
+                 n_hidden_units, masking, dtype=tf.float32):
+        super(RealNVPStep, self).__init__(forward_min_event_ndims=0)
 
         self.coupling_layer_1 = AffineCouplingLayerMasked(
-            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_hidden_units, masking, 0, dtype=dtype)
 
         self.coupling_layer_2 = AffineCouplingLayerMasked(
-            event_shape, shift_and_log_scale_layer, n_filters, masking, 1, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_hidden_units, masking, 1, dtype=dtype)
 
         self.coupling_layer_3 = AffineCouplingLayerMasked(
-            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_hidden_units, masking, 0, dtype=dtype)
 
         self.bijector = tfb.Chain(
             [self.coupling_layer_3,
@@ -230,18 +214,19 @@ class RealNVPStep(tfb.Bijector):
         return self.bijector.inverse(x)
 
     def _forward_log_det_jacobian(self, x):
-        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
+        return self.bijector._forward_log_det_jacobian(x)
 
 
 class RealNVPBlock(tfb.Bijector):
     """
     Real NVP Block :
     real nvp step (checkboard) -> squeezing -> real nvp step (channel)
+    This bijector accepts only 3 dimensionals event_shape
 
     Parameter:
-        event_shape
-        shift_and_log_scale_layer:
-            tf.keras.layers -> needs to be instantiate
+        event_shape: list of int [H, W, C]
+        shift_and_log_scale_layer: layer class
+
     """
 
     def __init__(self, event_shape, shift_and_log_scale_layer,
@@ -287,6 +272,17 @@ class RealNVPBlock(tfb.Bijector):
 
 
 class RealNVPBijector(tfb.Bijector):
+
+    """
+    Real NVP Bijector :
+    2 real NVP Blocks with a multiscale architecture as described in  the Real NVP paper
+    This bijector accepts only 3 dimensionals event_shape
+
+    Parameter:
+        event_shape: list of int [H, W, C]
+        shift_and_log_scale_layer: layer class
+    """
+
     def __init__(self, input_shape, shift_and_log_scale_layer,
                  n_filters_base, batch_norm=False):
         super(RealNVPBijector, self).__init__(forward_min_event_ndims=3)
@@ -344,6 +340,17 @@ class RealNVPBijector(tfb.Bijector):
 
 
 class RealNVPBijector2(tfb.Bijector):
+    """
+    Real NVP Bijector :
+    2 real NVP Blocks + additionnal Real NVP Step
+        with a multiscale architecture as described in  the Real NVP paper
+    This bijector accepts only 3 dimensionals event_shape
+
+    Parameter:
+        event_shape: list of int [H, W, C]
+        shift_and_log_scale_layer: layer class
+    """
+
     def __init__(self, input_shape, shift_and_log_scale_layer,
                  n_filters_base, batch_norm=False):
         super(RealNVPBijector2, self).__init__(forward_min_event_ndims=3)

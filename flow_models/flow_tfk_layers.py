@@ -125,6 +125,7 @@ class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
                                           np.zeros(sub_shape)],
                                          axis=-1)
         if masking == 'checkboard':
+            assert(len(input_shape) == 3)
             column_odd = [k % 2 for k in range(input_shape[-2])]
             column_even = [(k + 1) % 2 for k in range(input_shape[-2])]
             binary_mask = np.zeros((input_shape[-3], input_shape[-2]))
