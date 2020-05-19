@@ -213,7 +213,7 @@ class RealNVPStep(tfb.Bijector):
             event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
 
         self.coupling_layer_2 = AffineCouplingLayerMasked(
-            event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
+            event_shape, shift_and_log_scale_layer, n_filters, masking, 1, dtype=dtype)
 
         self.coupling_layer_3 = AffineCouplingLayerMasked(
             event_shape, shift_and_log_scale_layer, n_filters, masking, 0, dtype=dtype)
@@ -231,9 +231,6 @@ class RealNVPStep(tfb.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
-
-    def _inverse_log_det_jacobian(self, x):
-        return self.bijector.inverse_log_det_jacobian(x, event_ndims=3)
 
 
 class RealNVPBlock(tfb.Bijector):
@@ -269,8 +266,8 @@ class RealNVPBlock(tfb.Bijector):
     def _inverse(self, x):
         return self.bijector.inverse(x)
 
-    def _inverse_log_det_jacobian(self, x):
-        return self.bijector.inverse_log_det_jacobian(x, event_ndims=3)
+    def _forward_log_det_jacobian(self, x):
+        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
 
     def _forward_event_shape_tensor(self, input_shape):
         H, W, C = input_shape
