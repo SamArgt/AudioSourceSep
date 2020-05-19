@@ -45,7 +45,7 @@ def make_test_case_bijector(bijector_class, inputs, expected_log_det, **kwargs):
     return TestBijector
 
 
-global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2
+global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2, MINIBATCH
 EVENT_SHAPE = [2, 2, 1]
 EVENT_SHAPE_1 = [4, 4, 1]
 EVENT_SHAPE_2 = [2, 2, 2]
@@ -53,6 +53,8 @@ EXPECTED_LOG_DET = np.log(2, dtype=np.float32)
 INPUTS = tf.random.normal([1] + EVENT_SHAPE)
 INPUTS_1 = tf.random.normal([1] + EVENT_SHAPE_1)
 INPUTS_2 = tf.random.normal([1] + EVENT_SHAPE_2)
+MINIBATCH = tf.concat((2 * tf.ones((1, 2, 2, 1), dtype=tf.float32),
+                       tf.ones((1, 2, 2, 1), dtype=tf.float32)), axis=0)
 
 
 def shift_and_log_scale_toy(x):
@@ -84,6 +86,9 @@ real_nvp_block_args = {'event_shape': EVENT_SHAPE,
 real_nvp_bijector_args = {'input_shape': EVENT_SHAPE_1,
                           'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
                           'n_filters_base': 2}
+
+act_norm_args = {'event_shape': EVENT_SHAPE,
+                 'minibatch': MINIBATCH}
 
 
 # One affine coupling layer with checkboard: Input dimension (2, 2, 1) ->
@@ -124,6 +129,14 @@ class TestRealNVPBlock(make_test_case_bijector(RealNVPBlock, INPUTS,
 class TestRealNVPBijector(make_test_case_bijector(RealNVPBijector, INPUTS_1,
                                                   expected_log_det=72 * EXPECTED_LOG_DET,
                                                   **real_nvp_bijector_args)):
+    pass
+
+
+# ActNorm layer: minibatch built such that scale_init = 2
+# input_dim (2, 2, 1) -> expected_log_det = 2 * 2 *(1 * log(2))
+class TestActNorm(make_test_case_bijector(ActNorm, INPUTS,
+                                          expected_log_det=4 * EXPECTED_LOG_DET,
+                                          **act_norm_args)):
     pass
 
 
