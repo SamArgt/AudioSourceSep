@@ -30,7 +30,7 @@ def main():
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    #sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
