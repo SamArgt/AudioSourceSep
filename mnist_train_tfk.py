@@ -7,13 +7,11 @@ from flow_models import utils
 import argparse
 import time
 import os
+import sys
 tfk = tf.keras
 
 
 def main():
-
-    print("TensorFlow version: {}".format(tf.__version__))
-    print("Eager execution: {}".format(tf.executing_eagerly()))
 
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
@@ -30,6 +28,12 @@ def main():
     except FileExistsError:
         os.chdir(output_dirpath)
 
+    log_file = open('out.log', 'w')
+    sys.stdout = log_file
+
+    print("TensorFlow version: {}".format(tf.__version__))
+    print("Eager execution: {}".format(tf.executing_eagerly()))
+
     N_EPOCHS = int(args.N_EPOCHS)
 
     # Construct a tf.data.Dataset
@@ -43,7 +47,7 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = [7, 7, 16]  # (H//4, W//4, C*16)
-    bijector_cls = flow_tfk_layers.RealNVPBijector_tfk
+    bijector_cls = flow_tfk_layers.RealNVPBijector2_tfk
     bijector_args = {'input_shape': data_shape, 'shift_and_log_scale_layer': flow_tfk_layers.ShiftAndLogScaleResNet_tfk,
                      'n_filters_base': 32}
     flow = flow_tfk_models.Flow(
@@ -73,16 +77,18 @@ def main():
     print("Start Training on {} epochs".format(N_EPOCHS))
     t0 = time.time()
     train_loss_results = []
+    count = 0
+    loss_history = []
     for epoch in range(N_EPOCHS):
         epoch_loss_avg = tf.keras.metrics.Mean()
 
         for batch in ds:
             loss = train_step(batch)
-            if loss < 0:
-                print("NEGATIVE LOSS")
-                print(loss)
-                break
             epoch_loss_avg.update_state(loss)
+            count += 1
+            if count == 100:
+                loss_history.append(loss)
+                count = 0
 
         # End epoch
         train_loss_results.append(epoch_loss_avg.result())
@@ -94,10 +100,15 @@ def main():
     training_time = t1 - t0
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
+    np.save('loss_history', np.array(loss_history))
+    print('loss history saved')
+
     samples = flow.sample(9)
     samples_np = samples.numpy()
     np.save('samples', samples_np)
     print("9 samples saved")
+
+    log_file.close()
 
 
 if __name__ == '__main__':
