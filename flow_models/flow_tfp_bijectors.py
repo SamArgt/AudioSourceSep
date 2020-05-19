@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
+import scipy
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -479,24 +480,47 @@ class Invertible1x1Conv(tfb.Bijector):
         super(Invertible1x1Conv, self).__init__(forward_min_event_ndims=3)
         self.height, self.width, self.C = event_shape
 
-        w_init = np.linalg.qr(np.random.randn(self.C, self.C))[0]
-        self.W = tf.Variable(initial_value=w_init,
-                             name=name + '/W', dtype=tf.float32)
+        np_w = np.linalg.qr(np.random.randn(self.C, self.C))[0]
+        self.w_shape = [self.C, self.C]
+
+        np_p, np_l, np_u = scipy.linalg.lu(np_w)
+        np_s = np.diag(np_u)
+        np_sign_s = np.sign(np_s)
+        np_log_s = np.log(abs(np_s))
+        np_u = np.triu(np_u, k=1)
+
+        self.P = tf.Variable(initial_value=np_p, name=name + '/P', trainable=False, dtype=tf.float32)
+        self.L = tf.Variable(name=name + "/L", initial_value=np_l, dtype=tf.float32)
+        self.Sign_s = tf.Variable(
+            name=name + "/sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
+        self.Log_s = tf.Variable(name=name + "/log_S", initial_value=np_log_s, dtype=tf.float32)
+        # S = tf.get_variable("S", initializer=np_s)
+        self.U = tf.Variable(name=name + "/U", initial_value=np_u, dtype=tf.float32)
 
     def _forward(self, x):
-        w = tf.reshape(self.W, [1, 1, self.C, self.C])
+        l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
+        L = self.L * l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
+        u = self.U * np.transpose(l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        w = tf.matmul(self.P, tf.matmul(L, u))
+        w = tf.reshape(w, [1, 1, self.C, self.C])
         y = tf.nn.conv2d(x, filters=w, strides=[1, 1, 1, 1], padding='SAME')
         return y
 
     def _inverse(self, y):
-        w_inv = tf.linalg.inv(self.W)
+        l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
+        L = self.L * l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
+        u = self.U * np.transpose(l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        u_inv = tf.linalg.inv(u)
+        l_inv = tf.linalg.inv(L)
+        p_inv = tf.linalg.inv(self.P)
+        w_inv = tf.matmul(u_inv, tf.matmul(l_inv, p_inv))
         w_inv = tf.reshape(w_inv, [1, 1, self.C, self. C])
         x = tf.nn.conv2d(y, w_inv, [1, 1, 1, 1], 'SAME')
         return x
 
     def _forward_log_det_jacobian(self, x):
         log_det = self.height * self.width * \
-            tf.math.log(abs(tf.linalg.det(self.W)))
+            tf.reduce_sum(self.Log_s)
         return tf.repeat(log_det, x.shape[0], axis=0)
 
 
