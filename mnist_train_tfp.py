@@ -7,14 +7,12 @@ from flow_models import utils
 import argparse
 import time
 import os
+import sys
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
 
 def main():
-
-    print("TensorFlow version: {}".format(tf.__version__))
-    print("Eager execution: {}".format(tf.executing_eagerly()))
 
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
@@ -30,6 +28,12 @@ def main():
         os.chdir(output_dirpath)
     except FileExistsError:
         os.chdir(output_dirpath)
+
+    log_file = open('out.log', 'w')
+    sys.stdout = log_file
+
+    print("TensorFlow version: {}".format(tf.__version__))
+    print("Eager execution: {}".format(tf.executing_eagerly()))
 
     N_EPOCHS = int(args.N_EPOCHS)
 
@@ -102,6 +106,8 @@ def main():
     samples_np = samples.numpy()
     np.save('samples', samples_np)
     print("9 samples saved")
+
+    log_file.close()
 
 
 if __name__ == '__main__':
