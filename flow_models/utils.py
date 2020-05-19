@@ -20,12 +20,21 @@ def print_summary(flow):
     for elt in flow.trainable_variables:
         name = elt.name
         names = name.split('/')
-        if len(names) >= 3:
-            network_name = names[-3]
-        else:
-            network_name = ''
-        layer_name = names[-2]
         kernel_bias = names[-1].split(':')[0]
+
+        if len(names) == 1:
+            network_name = ''
+            layer_name = kernel_bias
+        elif len(names) > 3:
+            network_name = '/'.join([names[-4], names[-3]])
+            layer_name = names[-2]
+        elif len(names) >= 3:
+            network_name = names[-3]
+            layer_name = names[-2]
+        else:
+            layer_name = names[-2]
+            network_name = ''
+
         shape = elt.shape
         count = np.prod(shape)
 
@@ -39,7 +48,7 @@ def print_summary(flow):
             curr_layer_name = layer_name
             curr_print_shape = kernel_bias + ' ' + str(shape)
             curr_count = count
-            if network_name != curr_network_name:
+            if (network_name != curr_network_name) or network_name == '':
                 if not_first_print is True:
                     print('_' * 100)
                 else:

@@ -221,7 +221,7 @@ class RealNVPBlock(tfb.Bijector):
     """
     Real NVP Block :
     real nvp step (checkboard) -> squeezing -> real nvp step (channel)
-    This bijector accepts only 3 dimensionals event_shape
+    !! This bijector accepts only 3 dimensionals event_shape !!
 
     Parameter:
         event_shape: list of int [H, W, C]
@@ -276,7 +276,7 @@ class RealNVPBijector(tfb.Bijector):
     """
     Real NVP Bijector :
     2 real NVP Blocks with a multiscale architecture as described in  the Real NVP paper
-    This bijector accepts only 3 dimensionals event_shape
+    !! This bijector accepts only 3 dimensionals event_shape !!
 
     Parameter:
         event_shape: list of int [H, W, C]
@@ -313,10 +313,10 @@ class RealNVPBijector(tfb.Bijector):
         output1 = tf.concat((z1, h1), axis=-1)
         return self.real_nvp_block_1.inverse(output1)
 
-    def _forward_log_det_jacobian(self, y):
-        output1 = self.real_nvp_block_1.forward(y)
+    def _forward_log_det_jacobian(self, x):
+        output1 = self.real_nvp_block_1.forward(x)
         log_det_1 = self.real_nvp_block_1.forward_log_det_jacobian(
-            y, event_ndims=3)
+            x, event_ndims=3)
         z1, h1 = tf.split(output1, 2, axis=-1)
         log_det_2 = self.real_nvp_block_2.forward_log_det_jacobian(
             h1, event_ndims=3)
@@ -344,7 +344,7 @@ class RealNVPBijector2(tfb.Bijector):
     Real NVP Bijector :
     2 real NVP Blocks + additionnal Real NVP Step
         with a multiscale architecture as described in  the Real NVP paper
-    This bijector accepts only 3 dimensionals event_shape
+    !! This bijector accepts only 3 dimensionals event_shape !!
 
     Parameter:
         event_shape: list of int [H, W, C]
@@ -404,6 +404,216 @@ class RealNVPBijector2(tfb.Bijector):
         log_det_3 = self.real_nvp_step.forward_log_det_jacobian(
             h2, event_ndims=3)
         return log_det_1 + log_det_2 + log_det_3
+
+    def _forward_event_shape_tensor(self, input_shape):
+        H, W, C = input_shape
+        return (H // 4, W // 4, C * 16)
+
+    def _forward_event_shape(self, input_shape):
+        H, W, C = input_shape
+        return (H // 4, W // 4, C * 16)
+
+    def _inverse_event_shape_tensor(self, output_shape):
+        H, W, C = output_shape
+        return (H * 4, W * 4, C // 16)
+
+    def _inverse_event_shape(self, output_shape):
+        H, W, C = output_shape
+        return (H * 4, W * 4, C // 16)
+
+
+class ActNorm(tfb.Bijector):
+    """
+    Activation Normalization layer as described in the Glow paper
+    The post_actnorm activations per channel have zero mean and unit variance
+    !! This bijector accepts only 3 dimensionals event_shape !!
+
+    Parameters:
+        event_shape: [H, W, C]
+        minibatch: [N, H, W, C]
+    """
+
+    def __init__(self, event_shape, minibatch, name='ActNorm'):
+        super(ActNorm, self).__init__(forward_min_event_ndims=3)
+
+        self.H, self.W, self.C = event_shape
+        _, minibatch_H, minibatch_W, minibatch_C = minibatch.shape
+        assert(self.H == minibatch_H)
+        assert(self.W == minibatch_W)
+        assert(self.C == minibatch_C)
+
+        mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
+        std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2])
+        scale_init = 1 / std_init
+        shift_init = - mean_init / std_init
+
+        self.scale = tf.Variable(
+            initial_value=scale_init, name=name + '/scale')
+        self.shift = tf.Variable(
+            initial_value=shift_init, name=name + '/shift')
+
+    def _forward(self, x):
+        return x * self.scale + self.shift
+
+    def _inverse(self, y):
+        return (y - self.shift) / self.scale
+
+    def _forward_log_det_jacobian(self, x):
+        log_det = self.H * self.W * \
+            tf.reduce_sum(tf.math.log(tf.abs(self.scale)))
+        return tf.repeat(log_det, x.shape[0], axis=0)
+
+
+class Invertible1x1Conv(tfb.Bijector):
+
+    """
+    Invertible 1x1 Convolution as described in the Glow paper
+    !! This bijector accepts only 3 dimensionals input !!
+
+    Parameters:
+        event_shape: [H, W, C]
+
+    """
+
+    def __init__(self, event_shape, name='inv1x1conv'):
+        super(Invertible1x1Conv, self).__init__(forward_min_event_ndims=3)
+        self.height, self.width, self.C = event_shape
+
+        w_init = np.linalg.qr(np.random.randn(self.C, self.C))[0]
+        self.W = tf.Variable(initial_value=w_init,
+                             name=name + '/W', dtype=tf.float32)
+
+    def _forward(self, x):
+        w = tf.reshape(self.W, [1, 1, self.C, self.C])
+        y = tf.nn.conv2d(x, filters=w, strides=[1, 1, 1, 1], padding='SAME')
+        return y
+
+    def _inverse(self, y):
+        w_inv = tf.linalg.inv(self.W)
+        w_inv = tf.reshape(w_inv, [1, 1, self.C, self. C])
+        x = tf.nn.conv2d(y, w_inv, [1, 1, 1, 1], 'SAME')
+        return x
+
+    def _forward_log_det_jacobian(self, x):
+        log_det = self.height * self.width * \
+            tf.math.log(abs(tf.linalg.det(self.W)))
+        return tf.repeat(log_det, x.shape[0], axis=0)
+
+
+class GlowStep(tfb.Bijector):
+
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name='glowStep'):
+
+        super(GlowStep, self).__init__(forward_min_event_ndims=3)
+
+        self.actnorm = ActNorm(event_shape, minibatch, name=name + '/ActNorm')
+        self.inv1x1conv = Invertible1x1Conv(
+            event_shape, name=name + '/inv1x1conv')
+        self.coupling_layer = AffineCouplingLayerMasked(event_shape, shift_and_log_scale_layer,
+                                                        n_hidden_units)
+        self.bijector = tfb.Chain(
+            [self.coupling_layer, self.inv1x1conv, self.actnorm])
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, y):
+        return self.bijector.inverse(y)
+
+    def _forward_log_det_jacobian(self, x):
+        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
+
+
+class GlowBlock(tfb.Bijector):
+
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name='glowBlock'):
+
+        super(GlowBlock, self).__init__(forward_min_event_ndims=3)
+
+        self.squeeze = Squeeze(event_shape)
+        self.event_shape_out = self.squeeze.event_shape_out
+        minibatch_reshaped = self.squeeze.forward(minibatch)
+        self.glow_steps = []
+        for k in range(K):
+            self.glow_steps.append(GlowStep(self.event_shape_out,
+                                            shift_and_log_scale_layer,
+                                            n_hidden_units, minibatch_reshaped,
+                                            name=name + '/' + 'glowStep' + str(k)))
+
+        self.chain = self.glow_steps + [self.squeeze]
+        self.bijector = tfb.Chain(self.chain)
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, y):
+        return self.bijector.inverse(y)
+
+    def _forward_log_det_jacobian(self, x):
+        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
+
+    def _forward_event_shape_tensor(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _forward_event_shape(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _inverse_event_shape_tensor(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
+
+    def _inverse_event_shape(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
+
+
+class GlowBijector_2blocks(tfb.Bijector):
+
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch):
+
+        super(GlowBijector_2blocks, self).__init__(forward_min_event_ndims=3)
+
+        H, W, C = event_shape
+        self.glow_block1 = GlowBlock(K, event_shape,
+                                     shift_and_log_scale_layer,
+                                     n_hidden_units, minibatch,
+                                     name='glowBlock1')
+        H1, W1, C1 = self.glow_block1.event_shape_out
+        N, _, _, _ = minibatch.shape
+        minibatch_reshape = tf.reshape(minibatch, [N] + [H1, W1, C1])
+        _, minibatch_split = tf.split(minibatch_reshape, 2, axis=-1)
+
+        self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
+                                     shift_and_log_scale_layer,
+                                     n_hidden_units, minibatch_split,
+                                     name='glowBlock2')
+
+    def _forward(self, x):
+        output1 = self.glow_block1.forward(x)
+        z1, h1 = tf.split(output1, 2, axis=-1)
+        N, H, W, C = z1.shape
+        z1 = tf.reshape(z1, (N, H // 2, W // 2, 4 * C))
+        z2 = self.glow_block2.forward(h1)
+        return tf.concat((z1, z2), axis=-1)
+
+    def _inverse(self, y):
+        z1, z2 = tf.split(y, 2, axis=-1)
+        h1 = self.glow_block2.inverse(z2)
+        N, H, W, C = z1.shape
+        z1 = tf.reshape(z1, (N, H * 2, W * 2, C // 4))
+        output1 = tf.concat((z1, h1), axis=-1)
+        return self.glow_block1.inverse(output1)
+
+    def _forward_log_det_jacobian(self, x):
+        output1 = self.glow_block1.forward(x)
+        log_det_1 = self.glow_block1.forward_log_det_jacobian(
+            x, event_ndims=3)
+        z1, h1 = tf.split(output1, 2, axis=-1)
+        log_det_2 = self.glow_block2.forward_log_det_jacobian(
+            h1, event_ndims=3)
+        return log_det_1 + log_det_2
 
     def _forward_event_shape_tensor(self, input_shape):
         H, W, C = input_shape
