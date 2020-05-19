@@ -494,7 +494,6 @@ class Invertible1x1Conv(tfb.Bijector):
         self.Sign_s = tf.Variable(
             name=name + "/sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
         self.Log_s = tf.Variable(name=name + "/log_S", initial_value=np_log_s, dtype=tf.float32)
-        # S = tf.get_variable("S", initializer=np_s)
         self.U = tf.Variable(name=name + "/U", initial_value=np_u, dtype=tf.float32)
 
     def _forward(self, x):
