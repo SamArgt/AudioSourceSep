@@ -44,16 +44,18 @@ def main():
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
     ds = ds.shuffle(1024).batch(128).prefetch(tf.data.experimental.AUTOTUNE)
+    minibatch = list(ds.take(1).as_numpy_iterator())[0]
 
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
+    K = 16
 
     shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
     n_filters_base = 32
 
-    bijector = flow_tfp_bijectors.RealNVPBijector2(
-        data_shape, shift_and_log_scale_layer, n_filters_base)
+    bijector = flow_tfp_bijectors.GlowBijector_2blocks(
+        K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
     inv_bijector = tfb.Invert(bijector)
 
     flow = tfd.TransformedDistribution(tfd.Normal(
