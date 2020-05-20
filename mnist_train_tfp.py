@@ -2,7 +2,9 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 import tensorflow_datasets as tfds
-from flow_models import flow_tfp_bijectors
+from flow_models import flow_tfk_layers
+from flow_models import flow_glow
+from flow_models import flow_real_nvp
 from flow_models import utils
 import argparse
 import time
@@ -51,10 +53,10 @@ def main():
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
     K = 5
 
-    shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
+    shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
     n_filters_base = 32
 
-    bijector = flow_tfp_bijectors.GlowBijector_2blocks(
+    bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
     inv_bijector = tfb.Invert(bijector)
 

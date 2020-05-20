@@ -3,7 +3,31 @@ import numpy as np
 tfk = tf.keras
 
 
-class ShiftAndLogScaleResNet_tfk(tfk.layers.Layer):
+class ShiftAndLofScaleDenseNet(tfk.layers.Layer):
+
+    def __init__(self, input_shape, units):
+        super(ShiftAndLofScaleDenseNet, self).__init__()
+
+        self.dense1 = tfk.layers.Dense(
+            units, activation='relu', input_shape=input_shape)
+        self.dense2 = tfk.layers.Dense(units, activation='relu')
+        self.dense3 = tfk.layers.Dense(units, activation='relu')
+        self.dense4 = tfk.layers.Dense(units, activation='relu')
+        self.dense5 = tfk.layers.Dense(input_shape[0] * 2, activation=None)
+        self.activation_log_s = tfk.layers.Activation('tanh')
+
+    def call(self, x):
+        x = self.dense1(x)
+        x = self.dense2(x)
+        x = self.dense3(x)
+        x = self.dense4(x)
+        x = self.dense5(x)
+        log_s, t = tf.split(x, 2, axis=-1)
+        log_s = self.activation_log_s(log_s)
+        return log_s, t
+
+
+class ShiftAndLogScaleResNet(tfk.layers.Layer):
 
     """
     Convolutional Neural Networks
@@ -19,7 +43,7 @@ class ShiftAndLogScaleResNet_tfk(tfk.layers.Layer):
     """
 
     def __init__(self, input_shape, n_filters, data_format='channels_last', dtype=tf.float32):
-        super(ShiftAndLogScaleResNet_tfk, self).__init__(dtype=dtype)
+        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype)
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape,
                                        data_format=data_format,
@@ -48,7 +72,7 @@ class ShiftAndLogScaleResNet_tfk(tfk.layers.Layer):
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
-        # Get positive nan !!
+        # Get nan !!
         log_s = self.activation_log_s(log_s)
         return log_s, t
 
