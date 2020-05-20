@@ -67,6 +67,9 @@ def main():
     print("flow sample shape: ", flow.sample(1).shape)
     utils.print_summary(flow)
 
+    ckpt = tf.train.Checkpoint(variables=flow.trainable_variables)
+    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
+
     # Custom Training Loop
 
     @tf.function  # Adding the tf.function makes it about 10 times faster!!!
@@ -107,6 +110,10 @@ def main():
         print("Epoch {:03d}: Loss: {:.3f}".format(
             epoch, epoch_loss_avg.result()))
 
+        if epoch % 10 == 0:
+            manager.save()
+
+    manager.save()
     t1 = time.time()
     training_time = t1 - t0
     print("Training time: ", np.round(training_time, 2), ' seconds')
