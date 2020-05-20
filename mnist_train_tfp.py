@@ -32,7 +32,7 @@ def main():
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    #sys.stdout = log_file
+    sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -51,16 +51,17 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 10
+    K = 6
 
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 32
+    n_filters_base = 64
 
     bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
     inv_bijector = tfb.Invert(bijector)
 
-    print('Glow Bijector 2 Blocks: K = {} ; ShiftAndLogScaleResNet; n_filters = {}'.format(K, n_filters_base))
+    print('Glow Bijector 2 Blocks: K = {} ; ShiftAndLogScaleResNet; n_filters = {}'.format(
+        K, n_filters_base))
 
     flow = tfd.TransformedDistribution(tfd.Normal(
         0., 1.), inv_bijector, event_shape=base_distr_shape)
@@ -96,7 +97,7 @@ def main():
             loss = train_step(batch)
             epoch_loss_avg.update_state(loss)
             count += 1
-            if count == 100:
+            if count == 200:
                 if tf.math.is_nan(loss):
                     print('Nan Loss')
                     is_nan_loss = True
@@ -107,10 +108,9 @@ def main():
         # End epoch
         train_loss_results.append(epoch_loss_avg.result())
 
-        print("Epoch {:03d}: Loss: {:.3f}".format(
-            epoch, epoch_loss_avg.result()))
-
         if epoch % 10 == 0:
+            print("Epoch {:03d}: Loss: {:.3f}".format(
+                epoch, epoch_loss_avg.result()))
             manager.save()
 
     manager.save()
