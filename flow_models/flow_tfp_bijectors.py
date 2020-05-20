@@ -489,30 +489,35 @@ class Invertible1x1Conv(tfb.Bijector):
         np_log_s = np.log(abs(np_s))
         np_u = np.triu(np_u, k=1)
 
+        # Non Trainable Variable
         self.P = tf.Variable(initial_value=np_p, name=name + '/P', trainable=False, dtype=tf.float32)
-        self.L = tf.Variable(name=name + "/L", initial_value=np_l, dtype=tf.float32)
+        p_inv = tf.linalg.inv(self.P)
+        self.P_inv = tf.Variable(initial_value=p_inv, name=name + '/P_inv', trainable=False, dtype=tf.float32)
         self.Sign_s = tf.Variable(
             name=name + "/sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
+
+        # Trainable Variables
+        self.L = tf.Variable(name=name + "/L", initial_value=np_l, dtype=tf.float32)
         self.Log_s = tf.Variable(name=name + "/log_S", initial_value=np_log_s, dtype=tf.float32)
         self.U = tf.Variable(name=name + "/U", initial_value=np_u, dtype=tf.float32)
 
+        # Triangular mask
+        self.l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
+
     def _forward(self, x):
-        l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
-        L = self.L * l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
-        u = self.U * np.transpose(l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        L = self.L * self.l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
+        u = self.U * np.transpose(self.l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
         w = tf.matmul(self.P, tf.matmul(L, u))
         w = tf.reshape(w, [1, 1, self.C, self.C])
         y = tf.nn.conv2d(x, filters=w, strides=[1, 1, 1, 1], padding='SAME')
         return y
 
     def _inverse(self, y):
-        l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
-        L = self.L * l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
-        u = self.U * np.transpose(l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        L = self.L * self.l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
+        u = self.U * np.transpose(self.l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
         u_inv = tf.linalg.inv(u)
         l_inv = tf.linalg.inv(L)
-        p_inv = tf.linalg.inv(self.P)
-        w_inv = tf.matmul(u_inv, tf.matmul(l_inv, p_inv))
+        w_inv = tf.matmul(u_inv, tf.matmul(l_inv, self.P_inv))
         w_inv = tf.reshape(w_inv, [1, 1, self.C, self. C])
         x = tf.nn.conv2d(y, w_inv, [1, 1, 1, 1], 'SAME')
         return x
