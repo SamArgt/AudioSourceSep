@@ -54,7 +54,7 @@ def main():
     K = 6
 
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 64
+    n_filters_base = 128
 
     bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
