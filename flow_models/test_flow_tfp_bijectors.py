@@ -1,4 +1,4 @@
-from flow_tfp_bijectors import *
+from flow_models import *
 import unittest
 import tensorflow as tf
 import numpy as np

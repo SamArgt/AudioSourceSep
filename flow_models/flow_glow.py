@@ -40,13 +40,15 @@ class GlowBlock(tfb.Bijector):
 
         self.squeeze = Squeeze(event_shape)
         self.event_shape_out = self.squeeze.event_shape_out
-        minibatch_reshaped = self.squeeze.forward(minibatch)
+        minibatch_update = self.squeeze.forward(minibatch)
         self.glow_steps = []
         for k in range(K):
-            self.glow_steps.append(GlowStep(self.event_shape_out,
-                                            shift_and_log_scale_layer,
-                                            n_hidden_units, minibatch_reshaped,
-                                            name=name + '/' + 'glowStep' + str(k)))
+            glow_step = GlowStep(self.event_shape_out,
+                                 shift_and_log_scale_layer,
+                                 n_hidden_units, minibatch_update,
+                                 name=name + '/' + 'glowStep' + str(k))
+            minibatch_update = glow_step.forward(minibatch_update)
+            self.glow_steps.append(glow_step)
 
         self.chain = self.glow_steps + [self.squeeze]
         self.bijector = tfb.Chain(self.chain)
