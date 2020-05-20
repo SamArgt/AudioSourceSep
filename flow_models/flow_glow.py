@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 import scipy
-from flow_tfp_bijectors import *
+from .flow_tfp_bijectors import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
