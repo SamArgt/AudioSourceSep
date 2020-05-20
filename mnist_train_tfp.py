@@ -51,7 +51,7 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 5
+    K = 10
 
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
     n_filters_base = 32
