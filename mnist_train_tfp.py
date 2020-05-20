@@ -49,7 +49,7 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 16
+    K = 5
 
     shift_and_log_scale_layer = flow_tfp_bijectors.ShiftAndLogScaleResNet
     n_filters_base = 32
@@ -57,6 +57,8 @@ def main():
     bijector = flow_tfp_bijectors.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
     inv_bijector = tfb.Invert(bijector)
+
+    print('Glow Bijector 2 Blocks: K = {} ; ShiftAndLogScaleResNet; n_filters = {}'.format(K, n_filters_base))
 
     flow = tfd.TransformedDistribution(tfd.Normal(
         0., 1.), inv_bijector, event_shape=base_distr_shape)
