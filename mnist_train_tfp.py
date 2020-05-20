@@ -84,14 +84,20 @@ def main():
     train_loss_results = []
     loss_history = []
     count = 0
+    is_nan_loss = False
     for epoch in range(N_EPOCHS):
         epoch_loss_avg = tf.keras.metrics.Mean()
-
+        if is_nan_loss:
+            break
         for batch in ds:
             loss = train_step(batch)
             epoch_loss_avg.update_state(loss)
             count += 1
             if count == 100:
+                if tf.math.is_nan(loss):
+                    print('Nan Loss')
+                    is_nan_loss = True
+                    break
                 loss_history.append(loss)
                 count = 0
 
