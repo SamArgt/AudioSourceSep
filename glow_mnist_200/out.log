@@ -1,0 +1,342 @@
+TensorFlow version: 2.2.0
+Eager execution: True
+Glow Bijector 2 Blocks: K = 5 ; ShiftAndLogScaleResNet; n_filters = 32
+flow sample shape:  (1, 28, 28, 1)
+____________________________________________________________________________________________________
+Network 	 Layer 	 Shape 						 #parameters
+====================================================================================================
+glowBlock1/glowStep0
+	 ActNorm 		 scale (4,) | shift (4,) 		 8
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net
+	 conv2d 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_1 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_1 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_2 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+glowBlock1/glowStep0
+	 inv1x1conv 		 L (4, 4) | log_S (4,) | U (4, 4) 		 36
+____________________________________________________________________________________________________
+glowBlock1/glowStep1
+	 ActNorm 		 scale (4,) | shift (4,) 		 8
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_1
+	 conv2d_3 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_2 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_4 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_3 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_5 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+glowBlock1/glowStep1
+	 inv1x1conv 		 L (4, 4) | log_S (4,) | U (4, 4) 		 36
+____________________________________________________________________________________________________
+glowBlock1/glowStep2
+	 ActNorm 		 scale (4,) | shift (4,) 		 8
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_2
+	 conv2d_6 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_4 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_7 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_5 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_8 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+glowBlock1/glowStep2
+	 inv1x1conv 		 L (4, 4) | log_S (4,) | U (4, 4) 		 36
+____________________________________________________________________________________________________
+glowBlock1/glowStep3
+	 ActNorm 		 scale (4,) | shift (4,) 		 8
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_3
+	 conv2d_9 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_6 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_10 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_7 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_11 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+glowBlock1/glowStep3
+	 inv1x1conv 		 L (4, 4) | log_S (4,) | U (4, 4) 		 36
+____________________________________________________________________________________________________
+glowBlock1/glowStep4
+	 ActNorm 		 scale (4,) | shift (4,) 		 8
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_4
+	 conv2d_12 		 kernel (3, 3, 4, 32) | bias (32,) 		 1184
+	 batch_normalization_8 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_13 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_9 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_14 		 kernel (3, 3, 32, 8) | bias (8,) 		 2312
+____________________________________________________________________________________________________
+glowBlock1/glowStep4
+	 inv1x1conv 		 L (4, 4) | log_S (4,) | U (4, 4) 		 36
+____________________________________________________________________________________________________
+glowBlock2/glowStep0
+	 ActNorm 		 scale (8,) | shift (8,) 		 16
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_5
+	 conv2d_15 		 kernel (3, 3, 8, 32) | bias (32,) 		 2336
+	 batch_normalization_10 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_16 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_11 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_17 		 kernel (3, 3, 32, 16) | bias (16,) 		 4624
+____________________________________________________________________________________________________
+glowBlock2/glowStep0
+	 inv1x1conv 		 L (8, 8) | log_S (8,) | U (8, 8) 		 136
+____________________________________________________________________________________________________
+glowBlock2/glowStep1
+	 ActNorm 		 scale (8,) | shift (8,) 		 16
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_6
+	 conv2d_18 		 kernel (3, 3, 8, 32) | bias (32,) 		 2336
+	 batch_normalization_12 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_19 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_13 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_20 		 kernel (3, 3, 32, 16) | bias (16,) 		 4624
+____________________________________________________________________________________________________
+glowBlock2/glowStep1
+	 inv1x1conv 		 L (8, 8) | log_S (8,) | U (8, 8) 		 136
+____________________________________________________________________________________________________
+glowBlock2/glowStep2
+	 ActNorm 		 scale (8,) | shift (8,) 		 16
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_7
+	 conv2d_21 		 kernel (3, 3, 8, 32) | bias (32,) 		 2336
+	 batch_normalization_14 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_22 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_15 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_23 		 kernel (3, 3, 32, 16) | bias (16,) 		 4624
+____________________________________________________________________________________________________
+glowBlock2/glowStep2
+	 inv1x1conv 		 L (8, 8) | log_S (8,) | U (8, 8) 		 136
+____________________________________________________________________________________________________
+glowBlock2/glowStep3
+	 ActNorm 		 scale (8,) | shift (8,) 		 16
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_8
+	 conv2d_24 		 kernel (3, 3, 8, 32) | bias (32,) 		 2336
+	 batch_normalization_16 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_25 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_17 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_26 		 kernel (3, 3, 32, 16) | bias (16,) 		 4624
+____________________________________________________________________________________________________
+glowBlock2/glowStep3
+	 inv1x1conv 		 L (8, 8) | log_S (8,) | U (8, 8) 		 136
+____________________________________________________________________________________________________
+glowBlock2/glowStep4
+	 ActNorm 		 scale (8,) | shift (8,) 		 16
+____________________________________________________________________________________________________
+inverse/shift_and_log_scale_res_net_9
+	 conv2d_27 		 kernel (3, 3, 8, 32) | bias (32,) 		 2336
+	 batch_normalization_18 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_28 		 kernel (1, 1, 32, 32) | bias (32,) 		 1056
+	 batch_normalization_19 		 gamma (32,) | beta (32,) 		 64
+	 conv2d_29 		 kernel (3, 3, 32, 16) | bias (16,) 		 4624
+____________________________________________________________________________________________________
+glowBlock2/glowStep4
+	 inv1x1conv 		 L (8, 8) | log_S (8,) | U (8, 8) 		 136
+====================================================================================================
+Total Trainable Variables:  65100
+Start  Training on 200 epochs
+Epoch 000: Loss: 1622300033024.000
+Epoch 001: Loss: 56216907776.000
+Epoch 002: Loss: 27322859520.000
+Epoch 003: Loss: 16387864576.000
+Epoch 004: Loss: 11586098176.000
+Epoch 005: Loss: 8560452096.000
+Epoch 006: Loss: 6574795264.000
+Epoch 007: Loss: 5169538560.000
+Epoch 008: Loss: 4102290688.000
+Epoch 009: Loss: 3329613568.000
+Epoch 010: Loss: 2728553984.000
+Epoch 011: Loss: 2251979776.000
+Epoch 012: Loss: 1853792640.000
+Epoch 013: Loss: 1535037568.000
+Epoch 014: Loss: 1272726400.000
+Epoch 015: Loss: 1056200576.000
+Epoch 016: Loss: 877537792.000
+Epoch 017: Loss: 730522944.000
+Epoch 018: Loss: 608166400.000
+Epoch 019: Loss: 507405024.000
+Epoch 020: Loss: 423147072.000
+Epoch 021: Loss: 352916352.000
+Epoch 022: Loss: 294827424.000
+Epoch 023: Loss: 246900624.000
+Epoch 024: Loss: 206531808.000
+Epoch 025: Loss: 172686560.000
+Epoch 026: Loss: 144206448.000
+Epoch 027: Loss: 120172072.000
+Epoch 028: Loss: 99844704.000
+Epoch 029: Loss: 82666136.000
+Epoch 030: Loss: 68152320.000
+Epoch 031: Loss: 55827308.000
+Epoch 032: Loss: 45295120.000
+Epoch 033: Loss: 36365804.000
+Epoch 034: Loss: 28973532.000
+Epoch 035: Loss: 22911118.000
+Epoch 036: Loss: 18060560.000
+Epoch 037: Loss: 14237550.000
+Epoch 038: Loss: 11248164.000
+Epoch 039: Loss: 8909072.000
+Epoch 040: Loss: 7063361.000
+Epoch 041: Loss: 5609692.500
+Epoch 042: Loss: 4467129.000
+Epoch 043: Loss: 3571328.000
+Epoch 044: Loss: 2873261.250
+Epoch 045: Loss: 2329923.250
+Epoch 046: Loss: 1905136.250
+Epoch 047: Loss: 1568990.875
+Epoch 048: Loss: 1297606.125
+Epoch 049: Loss: 1074093.875
+Epoch 050: Loss: 887750.562
+Epoch 051: Loss: 731765.125
+Epoch 052: Loss: 601323.500
+Epoch 053: Loss: 492444.000
+Epoch 054: Loss: 401876.812
+Epoch 055: Loss: 326830.781
+Epoch 056: Loss: 264923.594
+Epoch 057: Loss: 213985.359
+Epoch 058: Loss: 172220.281
+Epoch 059: Loss: 138075.109
+Epoch 060: Loss: 110282.734
+Epoch 061: Loss: 87715.805
+Epoch 062: Loss: 69475.383
+Epoch 063: Loss: 54750.938
+Epoch 064: Loss: 42919.613
+Epoch 065: Loss: 33430.055
+Epoch 066: Loss: 25844.275
+Epoch 067: Loss: 19788.279
+Epoch 068: Loss: 14964.379
+Epoch 069: Loss: 11134.268
+Epoch 070: Loss: 8085.312
+Epoch 071: Loss: 5684.128
+Epoch 072: Loss: 3845.020
+Epoch 073: Loss: 2527.609
+Epoch 074: Loss: 1601.287
+Epoch 075: Loss: 924.552
+Epoch 076: Loss: 420.400
+Epoch 077: Loss: 52.517
+Epoch 078: Loss: -206.575
+Epoch 079: Loss: -383.366
+Epoch 080: Loss: -502.735
+Epoch 081: Loss: -585.584
+Epoch 082: Loss: -650.757
+Epoch 083: Loss: -701.987
+Epoch 084: Loss: -747.207
+Epoch 085: Loss: -786.924
+Epoch 086: Loss: -827.264
+Epoch 087: Loss: -865.820
+Epoch 088: Loss: -901.127
+Epoch 089: Loss: -945.236
+Epoch 090: Loss: -985.364
+Epoch 091: Loss: -941.475
+Epoch 092: Loss: -1079.294
+Epoch 093: Loss: -1128.471
+Epoch 094: Loss: -1177.801
+Epoch 095: Loss: -1199.951
+Epoch 096: Loss: -1296.303
+Epoch 097: Loss: -1368.492
+Epoch 098: Loss: -1455.055
+Epoch 099: Loss: -1564.371
+Epoch 100: Loss: -1713.937
+Epoch 101: Loss: -1897.409
+Epoch 102: Loss: -2099.480
+Epoch 103: Loss: -2266.636
+Epoch 104: Loss: -1594.295
+Epoch 105: Loss: -2218.087
+Epoch 106: Loss: -2452.126
+Epoch 107: Loss: -2493.604
+Epoch 108: Loss: -2251.433
+Epoch 109: Loss: -1947.068
+Epoch 110: Loss: -2582.777
+Epoch 111: Loss: -2934.488
+Epoch 112: Loss: -3061.038
+Epoch 113: Loss: -3163.703
+Epoch 114: Loss: -3226.203
+Epoch 115: Loss: -3313.540
+Epoch 116: Loss: -3365.779
+Epoch 117: Loss: -3419.170
+Epoch 118: Loss: -3458.945
+Epoch 119: Loss: -2046.139
+Epoch 120: Loss: -2263.230
+Epoch 121: Loss: -2961.345
+Epoch 122: Loss: -3215.216
+Epoch 123: Loss: -2548.675
+Epoch 124: Loss: -2817.869
+Epoch 125: Loss: -3329.489
+Epoch 126: Loss: -3395.250
+Epoch 127: Loss: -3438.969
+Epoch 128: Loss: -3472.307
+Epoch 129: Loss: -3497.655
+Epoch 130: Loss: -3517.359
+Epoch 131: Loss: -3506.319
+Epoch 132: Loss: -3569.355
+Epoch 133: Loss: -3591.377
+Epoch 134: Loss: -3608.366
+Epoch 135: Loss: -3486.146
+Epoch 136: Loss: -3625.701
+Epoch 137: Loss: -3664.411
+Epoch 138: Loss: -3676.887
+Epoch 139: Loss: -3697.471
+Epoch 140: Loss: -3660.898
+Epoch 141: Loss: -3646.865
+Epoch 142: Loss: -2368.127
+Epoch 143: Loss: -2462.323
+Epoch 144: Loss: -2552.156
+Epoch 145: Loss: -2603.160
+Epoch 146: Loss: -2644.948
+Epoch 147: Loss: -2675.401
+Epoch 148: Loss: -2358.394
+Epoch 149: Loss: -2619.122
+Epoch 150: Loss: -2711.215
+Epoch 151: Loss: -2735.169
+Epoch 152: Loss: -2750.232
+Epoch 153: Loss: -3128.408
+Epoch 154: Loss: -3302.978
+Epoch 155: Loss: -3242.442
+Epoch 156: Loss: -3339.958
+Epoch 157: Loss: -3356.649
+Epoch 158: Loss: -3349.508
+Epoch 159: Loss: -2703.047
+Epoch 160: Loss: -2951.550
+Epoch 161: Loss: -1983.141
+Epoch 162: Loss: -3000.289
+Epoch 163: Loss: -3216.860
+Epoch 164: Loss: -3286.640
+Epoch 165: Loss: -3456.302
+Epoch 166: Loss: -3690.682
+Epoch 167: Loss: -3768.433
+Epoch 168: Loss: -3817.831
+Epoch 169: Loss: -3739.712
+Epoch 170: Loss: -3852.443
+Epoch 171: Loss: -3899.493
+Epoch 172: Loss: -2698.445
+Epoch 173: Loss: -1964.090
+Epoch 174: Loss: -3293.980
+Epoch 175: Loss: -3753.224
+Epoch 176: Loss: -3875.861
+Epoch 177: Loss: -3932.492
+Epoch 178: Loss: -3945.655
+Epoch 179: Loss: -3997.204
+Epoch 180: Loss: -4033.753
+Epoch 181: Loss: -4069.774
+Epoch 182: Loss: -4091.875
+Epoch 183: Loss: -3536.517
+Epoch 184: Loss: -4094.815
+Epoch 185: Loss: -3940.316
+Epoch 186: Loss: -4139.408
+Epoch 187: Loss: -4151.606
+Epoch 188: Loss: -3976.171
+Epoch 189: Loss: -2171.947
+Epoch 190: Loss: -2719.026
+Epoch 191: Loss: -3574.809
+Epoch 192: Loss: -3754.323
+Epoch 193: Loss: -3816.308
+Epoch 194: Loss: -3848.233
+Epoch 195: Loss: -3871.946
+Epoch 196: Loss: -3838.720
+Epoch 197: Loss: -4014.624
+Epoch 198: Loss: -4148.593
+Epoch 199: Loss: -1660.422
+Training time:  3703.47  seconds
+loss history saved
+9 samples saved
