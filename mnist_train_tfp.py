@@ -55,16 +55,16 @@ def main():
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
-    batch_size = 256
+    batch_size = 200
     ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 32
+    K = 28
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 256
+    n_filters_base = 160
 
     # Build Flow
     bijector = flow_glow.GlowBijector_2blocks(
@@ -73,8 +73,8 @@ def main():
     flow = tfd.TransformedDistribution(tfd.Normal(
         0., 1.), inv_bijector, event_shape=base_distr_shape)
 
-    print('Glow Bijector 2 Blocks: K = {} ; ShiftAndLogScaleResNet; n_filters = {}'.format(
-        K, n_filters_base))
+    print('Glow Bijector 2 Blocks: K = {} \n ShiftAndLogScaleResNet \n n_filters = {} \n batch size : {}'.format(
+        K, n_filters_base, batch_size))
     print("flow sample shape: ", flow.sample(1).shape)
     utils.print_summary(flow)
 
