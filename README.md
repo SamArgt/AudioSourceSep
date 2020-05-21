@@ -17,10 +17,10 @@ Script to train a Normalizing Flow model using the keras implementation of the b
 
 
 ## pipeline
-Functions and Scripts to load and preprocess the data:
-- Generating equal length sequences from raw audio
-- mel spectrograms transformation
-- loading into tensorflow dataset type
+Set of functions to:
+- load wav files and spectrograms into tensorflow dataset
+- Compute and Save spectrograms from raw audio
+- Save dataset as TFRecords and Load TFRecords as dataset
 
 ## flow_models module
 Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.bijector.Bijector
