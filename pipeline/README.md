@@ -1,17 +1,3 @@
-### mnist_train_tfp.py
-
-Script to train a Normalizing Flow model on the MNIST dataset
-
-```bash
-python mnist_train_tfp.py OUPUT N_EPOCHS
-```
-OUTPUT: directory where to save the log, the loss history, the variables of the model and some samples
-N_EPOCHS: number of epochs to train the model
-
-### mnist_train_tfk.py
-(deprecated)
-Script to train a Normalizing Flow model using the keras implementation of the bijectors
-
 # Pipeline Module
 
 ### wav_to_spec.py
