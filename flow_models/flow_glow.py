@@ -91,9 +91,8 @@ class GlowBijector_2blocks(tfb.Bijector):
                                      n_hidden_units, minibatch,
                                      name='glowBlock1')
         H1, W1, C1 = self.glow_block1.event_shape_out
-        N, _, _, _ = minibatch.shape
-        minibatch_reshape = tf.reshape(minibatch, [N] + [H1, W1, C1])
-        _, minibatch_split = tf.split(minibatch_reshape, 2, axis=-1)
+        minibatch_update = self.glow_block1.forward(minibatch)
+        _, minibatch_split = tf.split(minibatch_update, 2, axis=-1)
 
         self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
                                      shift_and_log_scale_layer,
