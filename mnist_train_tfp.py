@@ -51,10 +51,10 @@ def main():
     # Build Flow
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 16
+    K = 32
 
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 64
+    n_filters_base = 128
 
     bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
@@ -68,7 +68,7 @@ def main():
     print("flow sample shape: ", flow.sample(1).shape)
     utils.print_summary(flow)
 
-    ckpt = tf.train.Checkpoint(variables=flow.trainable_variables)
+    ckpt = tf.train.Checkpoint(variables=flow.variables)
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
 
     # Custom Training Loop
