@@ -6,10 +6,16 @@ Statistics MSc Project (2020): Audio Source Separation
 Script to train a Normalizing Flow model on the MNIST dataset
 
 ```bash
-python mnist_train_tfp.py OUPUT N_EPOCHS
+python mnist_train_tfp.py OUTPUT --n_epochs N_EPOCHS
 ```
 OUTPUT: directory where to save the log, the loss history, the variables of the model and some samples
 N_EPOCHS: number of epochs to train the model
+
+The script uses Tensorboard to visualize the loss and samples during training. To launch tensorboard:
+```bash
+cd OUTPUT
+tensorboard --logdir tensorboard_logs\\gradient_tape 
+```
 
 ### mnist_train_tfk.py
 (deprecated)
