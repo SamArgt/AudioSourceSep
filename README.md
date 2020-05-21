@@ -16,7 +16,7 @@ N_EPOCHS: number of epochs to train the model
 Script to train a Normalizing Flow model using the keras implementation of the bijectors
 
 
-## pipeline
+## pipeline module
 Set of functions to:
 - load wav files and spectrograms into tensorflow dataset
 - Compute and Save spectrograms from raw audio
