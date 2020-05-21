@@ -40,14 +40,14 @@ class GlowBlock(tfb.Bijector):
 
         self.squeeze = Squeeze(event_shape)
         self.event_shape_out = self.squeeze.event_shape_out
-        minibatch_update = self.squeeze.forward(minibatch)
+        minibatch_updated = self.squeeze.forward(minibatch)
         self.glow_steps = []
         for k in range(K):
             glow_step = GlowStep(self.event_shape_out,
                                  shift_and_log_scale_layer,
-                                 n_hidden_units, minibatch_update,
+                                 n_hidden_units, minibatch_updated,
                                  name=name + '/' + 'glowStep' + str(k))
-            minibatch_update = glow_step.forward(minibatch_update)
+            minibatch_updated = glow_step.forward(minibatch_updated)
             self.glow_steps.append(glow_step)
 
         self.chain = self.glow_steps + [self.squeeze]
@@ -91,12 +91,12 @@ class GlowBijector_2blocks(tfb.Bijector):
                                      n_hidden_units, minibatch,
                                      name='glowBlock1')
         H1, W1, C1 = self.glow_block1.event_shape_out
-        minibatch_update = self.glow_block1.forward(minibatch)
-        _, minibatch_split = tf.split(minibatch_update, 2, axis=-1)
+        minibatch_updated = self.glow_block1.forward(minibatch)
+        _, minibatch_updated = tf.split(minibatch_updated, 2, axis=-1)
 
         self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_split,
+                                     n_hidden_units, minibatch_updated,
                                      name='glowBlock2')
 
     def _forward(self, x):
