@@ -17,6 +17,7 @@ n_mels: number of mel frequencies (default 128)
 
 ### preprocessing.py
 Set of functions to:
-- load wav files and spectrograms 
-- Create tensorflow dataset
-- Compute spectrograms
+- load wav files and spectrograms into tensorflow dataset
+- Compute spectrograms from raw audio
+- Save dataset as TFRecords and Load TFRecords as dataset
+
