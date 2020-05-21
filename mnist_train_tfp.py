@@ -55,16 +55,16 @@ def main():
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
-    batch_size = 128
+    batch_size = 256
     ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 24
+    K = 32
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 128
+    n_filters_base = 256
 
     # Build Flow
     bijector = flow_glow.GlowBijector_2blocks(
