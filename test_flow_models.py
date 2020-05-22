@@ -1,4 +1,7 @@
-from flow_models import *
+from flow_models.flow_tfp_bijectors import *
+from flow_models.flow_glow import *
+from flow_models.flow_real_nvp import *
+from flow_models.flow_tfk_layers import *
 import unittest
 import tensorflow as tf
 import numpy as np
@@ -34,18 +37,21 @@ def make_test_case_bijector(bijector_class, inputs, expected_log_det, **kwargs):
             self.assertTrue(is_equal)
 
         def test_log_det(self):
-            bij_forward_log_det = self.bijector.forward_log_det_jacobian(
-                self.inputs, event_ndims=3).numpy()[0]
-            outputs = self.bijector.forward(self.inputs)
-            bij_inv_log_det = self.bijector.inverse_log_det_jacobian(
-                outputs, event_ndims=3).numpy()[0]
-            self.assertEqual(bij_forward_log_det, -bij_inv_log_det)
-            self.assertEqual(bij_forward_log_det, self.expected_log_det)
+            if self.expected_log_det is not None:
+                bij_forward_log_det = self.bijector.forward_log_det_jacobian(
+                    self.inputs, event_ndims=3).numpy()[0]
+                outputs = self.bijector.forward(self.inputs)
+                bij_inv_log_det = self.bijector.inverse_log_det_jacobian(
+                    outputs, event_ndims=3).numpy()[0]
+                self.assertEqual(bij_forward_log_det, -bij_inv_log_det)
+                self.assertEqual(bij_forward_log_det, self.expected_log_det)
+            else:
+                pass
 
     return TestBijector
 
 
-global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2, MINIBATCH
+global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2, MINIBATCH, MINIBATCH_1, MINIBATCH_2
 EVENT_SHAPE = [2, 2, 1]
 EVENT_SHAPE_1 = [4, 4, 1]
 EVENT_SHAPE_2 = [2, 2, 2]
@@ -55,6 +61,10 @@ INPUTS_1 = tf.random.normal([1] + EVENT_SHAPE_1)
 INPUTS_2 = tf.random.normal([1] + EVENT_SHAPE_2)
 MINIBATCH = tf.concat((2 * tf.ones((1, 2, 2, 1), dtype=tf.float32),
                        tf.ones((1, 2, 2, 1), dtype=tf.float32)), axis=0)
+MINIBATCH_1 = tf.concat((2 * tf.ones((1, 4, 4, 1), dtype=tf.float32),
+                         tf.ones((1, 4, 4, 1), dtype=tf.float32)), axis=0)
+MINIBATCH_2 = tf.concat((2 * tf.ones((1, 2, 2, 2), dtype=tf.float32),
+                         tf.ones((1, 2, 2, 2), dtype=tf.float32)), axis=0)
 
 
 def shift_and_log_scale_toy(x):
@@ -89,6 +99,20 @@ real_nvp_bijector_args = {'input_shape': EVENT_SHAPE_1,
 
 act_norm_args = {'event_shape': EVENT_SHAPE,
                  'minibatch': MINIBATCH}
+
+inv1x1conv_args = {'event_shape': EVENT_SHAPE_2}
+
+glowstep_args = {'event_shape': EVENT_SHAPE_2,
+                 'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
+                 'n_hidden_units': 2, 'minibatch': MINIBATCH_2}
+
+glowblock_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
+                          'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
+                          'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
+
+glowbijector_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
+                     'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
+                     'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
 
 
 # One affine coupling layer with checkboard: Input dimension (2, 2, 1) ->
@@ -137,6 +161,32 @@ class TestRealNVPBijector(make_test_case_bijector(RealNVPBijector, INPUTS_1,
 class TestActNorm(make_test_case_bijector(ActNorm, INPUTS,
                                           expected_log_det=4 * EXPECTED_LOG_DET,
                                           **act_norm_args)):
+    pass
+
+
+# Test invertibility of Invertible1x1Conv
+class TestInvertible1x1Conv(make_test_case_bijector(Invertible1x1Conv, INPUTS_2,
+                                                    expected_log_det=None,
+                                                    **inv1x1conv_args)):
+    pass
+
+
+# Test invertibility of GlowStep, GlowBlock and GlowBijector_2blocks
+class TestGlowStep(make_test_case_bijector(GlowStep, INPUTS_2,
+                                           expected_log_det=None,
+                                           **glowstep_args)):
+    pass
+
+
+class TestGlowBlock(make_test_case_bijector(GlowBlock, INPUTS_1,
+                                            expected_log_det=None,
+                                            **glowblock_args)):
+    pass
+
+
+class TestGlowBijector(make_test_case_bijector(GlowBijector_2blocks, INPUTS_1,
+                                               expected_log_det=None,
+                                               **glowbijector_args)):
     pass
 
 

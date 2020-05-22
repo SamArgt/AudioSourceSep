@@ -200,14 +200,11 @@ def save_tf_records(dataset, filename):
     Save a tensorflow dataset as a tf records
 
     Parameters:
-        dataset: tensorflow dataset
+        dataset: tensorflow dataset containing tensors
         It should be a dataset of tensors
 
         filename: str
         filename to save the tf.records
-
-        write_shape: bool
-        if True, write the shape of the tensors into a text file
     """
 
     serialized_dataset = dataset.map(tf_serialize_example)
@@ -220,12 +217,10 @@ def save_tf_records(dataset, filename):
 
 def load_tf_records(filenames, dtype=tf.float32):
     """
-    Load tf.records into a tensorflow dataset
+    Load tf.records (saved with the above function) into a tensorflow dataset
 
     Parameters:
         filenames: list of the tf.records filenames
-        shape: list of int
-            shape of the tensors to be loaded
 
     Returns:
         tensorflow dataset
