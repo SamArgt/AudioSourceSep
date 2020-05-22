@@ -62,7 +62,7 @@ def main():
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 24
+    K = 32
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
     n_filters_base = 128
 
@@ -144,10 +144,11 @@ def main():
                 tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
 
             manager.save()
+            print("Model's variables saved.")
 
     # Saving the last variables
     manager.save()
-    print("Model's variables saved")
+    print("Model's variables saved.")
 
     # Training Time
     t1 = time.time()
