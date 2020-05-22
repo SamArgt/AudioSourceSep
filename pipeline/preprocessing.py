@@ -159,6 +159,11 @@ def _float_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 
+def _int64_feature(value):
+    """Returns an int64_list from a bool / enum / int / uint."""
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+
+
 def serialize_example(array):
     """
     Creates a tf.Example message ready to be written to a file.
@@ -169,8 +174,10 @@ def serialize_example(array):
     Returns:
      a tf.Example object
     """
+    shape = list(array.shape)
     feature = {
         'array': _float_feature(np.reshape(array, -1)),
+        'shape': _int64_feature(shape)
     }
 
     # Create a Features message using tf.train.Example.
@@ -188,7 +195,7 @@ def tf_serialize_example(array):
     return tf.reshape(tf_string, ())
 
 
-def save_tf_records(dataset, filename, write_shape=True):
+def save_tf_records(dataset, filename):
     """
     Save a tensorflow dataset as a tf records
 
@@ -207,16 +214,11 @@ def save_tf_records(dataset, filename, write_shape=True):
     writer = tf.data.experimental.TFRecordWriter(filename)
     writer.write(serialized_dataset)
 
-    if write_shape:
-        shape = list(dataset.take(1).as_numpy_iterator())[0].shape
-        with open(filename + '_shape.txt', 'w') as f:
-            f.write(str(shape))
-
     print('TFrecord saved')
     return 0
 
 
-def load_tf_records(filenames, shape, dtype=tf.float32):
+def load_tf_records(filenames, dtype=tf.float32):
     """
     Load tf.records into a tensorflow dataset
 
@@ -229,7 +231,8 @@ def load_tf_records(filenames, shape, dtype=tf.float32):
         tensorflow dataset
     """
     feature_description = {
-        'array': tf.io.FixedLenFeature(shape=shape, dtype=dtype)
+        'array': tf.io.FixedLenSequenceFeature(shape=[], dtype=dtype, allow_missing=True),
+        'shape': tf.io.FixedLenSequenceFeature(shape=[], dtype=tf.int64, allow_missing=True),
     }
 
     def _parse_function(example_proto):
@@ -238,6 +241,6 @@ def load_tf_records(filenames, shape, dtype=tf.float32):
 
     raw_dataset = tf.data.TFRecordDataset(filenames)
     parsed_dataset = raw_dataset.map(_parse_function)
-    parsed_dataset = parsed_dataset.map(lambda x: x['array'])
+    parsed_dataset = parsed_dataset.map(lambda x: tf.reshape(x['array'], x['shape']))
 
     return parsed_dataset
