@@ -24,8 +24,12 @@ def main():
                         help='output dirpath for savings')
     parser.add_argument('--n_epochs', type=str,
                         help='number of epochs to train')
+    parser.add_argument('--restore', type=str,
+                        help='directory of saved weights (optional)')
     args = parser.parse_args()
     output_dirpath = args.OUTPUT
+    if arg.restore is not None:
+        restore_abs_dirpath = os.path.abspath(args.restore)
 
     try:
         os.mkdir(output_dirpath)
@@ -67,6 +71,7 @@ def main():
     n_filters_base = 128
 
     # Build Flow
+    tfk.backend.clear_session()
     bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
     inv_bijector = tfb.Invert(bijector)
@@ -76,7 +81,8 @@ def main():
     print('Glow Bijector 2 Blocks: K = {} \n ShiftAndLogScaleResNet \n n_filters = {} \n batch size : {}'.format(
         K, n_filters_base, batch_size))
     print("flow sample shape: ", flow.sample(1).shape)
-    utils.print_summary(flow)
+    # utils.print_summary(flow)
+    print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
 
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
@@ -99,12 +105,15 @@ def main():
     # Checkpoint object
     ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
+    # Restore weights if specified
+    if args.restore is not None:
+        ckpt.restore(tf.train.latest_checkpoint(os.path.join(restore_abs_dirpath, 'tf_ckpts')))
 
     t0 = time.time()
     loss_history = []
     history_loss_avg = tf.keras.metrics.Mean()
     epoch_loss_avg = tf.keras.metrics.Mean()
-    count_step = 0
+    count_step = optimizer.iterations.numpy()
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
@@ -144,7 +153,6 @@ def main():
                 tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
 
             manager.save()
-            print("Model's variables saved.")
 
     # Saving the last variables
     manager.save()

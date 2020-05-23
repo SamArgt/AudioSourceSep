@@ -61,3 +61,11 @@ def print_summary(flow):
     print('\t', curr_layer_name, '\t\t', curr_print_shape, '\t\t', curr_count)
     print('=' * 100)
     print("Total Trainable Variables: ", total_count)
+
+
+def total_trainable_variables(flow):
+    count_total = 0
+    for var in flow.trainable_variables:
+        count_total += np.prod(var.shape)
+
+    return count_total
