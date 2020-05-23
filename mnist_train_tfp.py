@@ -28,7 +28,7 @@ def main():
                         help='directory of saved weights (optional)')
     args = parser.parse_args()
     output_dirpath = args.OUTPUT
-    if arg.restore is not None:
+    if args.restore is not None:
         restore_abs_dirpath = os.path.abspath(args.restore)
 
     try:
