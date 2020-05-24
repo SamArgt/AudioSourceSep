@@ -68,7 +68,7 @@ def main():
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
     K = 32
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 128
+    n_filters_base = 256
 
     # Build Flow
     tfk.backend.clear_session()
@@ -104,7 +104,7 @@ def main():
 
     # Checkpoint object
     ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
-    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
+    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
     # Restore weights if specified
     if args.restore is not None:
         ckpt.restore(tf.train.latest_checkpoint(os.path.join(restore_abs_dirpath, 'tf_ckpts')))
@@ -153,16 +153,15 @@ def main():
             with train_summary_writer.as_default():
                 tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
 
+            curr_avg_loss = epoch_loss_avg.result()
             if curr_avg_loss < prev_avg_loss:
-                manager.save()
-                print("Model Saved")
-
-        prev_avg_loss = curr_avg_loss
-        curr_avg_loss = epoch_loss_avg.result()
+                save_path = manager.save()
+                print("Model Saved at {}".format(save_path))
+                prev_avg_loss = curr_avg_loss
 
     # Saving the last variables
     manager.save()
-    print("Model's variables saved.")
+    print("Model Saved at {}".format(save_path))
 
     # Training Time
     t1 = time.time()
