@@ -114,6 +114,7 @@ def main():
     history_loss_avg = tf.keras.metrics.Mean()
     epoch_loss_avg = tf.keras.metrics.Mean()
     count_step = optimizer.iterations.numpy()
+    prev_avg_loss, curr_avg_loss = 0, 0
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
@@ -152,7 +153,12 @@ def main():
             with train_summary_writer.as_default():
                 tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
 
-            manager.save()
+            if curr_avg_loss < prev_avg_loss:
+                manager.save()
+                print("Model Saved")
+
+        prev_avg_loss = curr_avg_loss
+        curr_avg_loss = epoch_loss_avg.result()
 
     # Saving the last variables
     manager.save()
