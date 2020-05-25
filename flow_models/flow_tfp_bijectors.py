@@ -129,7 +129,7 @@ class ActNorm(tfb.Bijector):
         shift_init = - mean_init / std_init
 
         self.scale = tf.Variable(
-            initial_value=scale_init, name=name + '/scale')
+            initial_value=scale_init, name=name + '/scale', constraint=tfk.constraints.NonNeg)
         self.shift = tf.Variable(
             initial_value=shift_init, name=name + '/shift')
 
@@ -137,7 +137,7 @@ class ActNorm(tfb.Bijector):
         return x * self.scale + self.shift
 
     def _inverse(self, y):
-        return (y - self.shift) / (self.scale + tf.constant(10**(-8), dtype=tf.float32))
+        return (y - self.shift) / self.scale
 
     def _forward_log_det_jacobian(self, x):
         log_det = self.H * self.W * \
