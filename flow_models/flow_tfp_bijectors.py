@@ -129,7 +129,7 @@ class ActNorm(tfb.Bijector):
         shift_init = - mean_init / std_init
 
         self.scale = tf.Variable(
-            initial_value=scale_init, name=name + '/scale', constraint=tfk.constraints.NonNeg)
+            initial_value=scale_init, name=name + '/scale', constraint=tfk.constraints.NonNeg())
         self.shift = tf.Variable(
             initial_value=shift_init, name=name + '/shift')
 
