@@ -53,6 +53,11 @@ def main():
     train_log_dir = os.path.join('tensorboard_logs', 'gradient_tape', current_time, 'train')
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
+    tfk.backend.clear_session()
+
+    # Distributed Strategy
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+
     # Construct a tf.data.Dataset
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
@@ -62,6 +67,7 @@ def main():
     batch_size = 256
     ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
+    ds = mirrored_strategy.experimental_distribute_dataset(ds)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
@@ -71,8 +77,6 @@ def main():
     n_filters_base = 64
 
     # Build Flow
-    tfk.backend.clear_session()
-    mirrored_strategy = tf.distribute.MirroredStrategy()
     with mirrored_strategy.scope():
         bijector = flow_glow.GlowBijector_2blocks(
             K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
