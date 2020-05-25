@@ -1,0 +1,3 @@
+Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
+TensorBoard 2.2.1 at http://localhost:6006/ (Press CTRL+C to quit)
+TensorBoard caught SIGTERM; exiting...
