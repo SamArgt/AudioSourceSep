@@ -50,7 +50,8 @@ def main():
     except FileNotFoundError:
         pass
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    train_log_dir = os.path.join('tensorboard_logs', 'gradient_tape', current_time, 'train')
+    train_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'train')
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
     tfk.backend.clear_session()
@@ -65,7 +66,8 @@ def main():
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
     batch_size = 256
-    ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    ds = ds.shuffle(1024).batch(batch_size).prefetch(
+        tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
 
@@ -88,7 +90,8 @@ def main():
         K, n_filters_base, batch_size)
     print(params_str)
     with train_summary_writer.as_default():
-        tf.summary.text(name='Flow parameters', data=tf.constant(params_str), step=0)
+        tf.summary.text(name='Flow parameters',
+                        data=tf.constant(params_str), step=0)
     print("flow sample shape: ", flow.sample(1).shape)
     # utils.print_summary(flow)
     print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
@@ -96,13 +99,19 @@ def main():
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
     @tf.function
-    def train_step(X):
-        with tf.GradientTape() as tape:
-            tape.watch(flow.trainable_variables)
-            loss = -tf.reduce_mean(flow.log_prob(X))
-            gradients = tape.gradient(loss, flow.trainable_variables)
-        optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
+    def train_step(dist_inputs):
+        def step_fn(X):
+            with tf.GradientTape() as tape:
+                tape.watch(flow.trainable_variables)
+                loss = -tf.reduce_mean(flow.log_prob(X))
+                gradients = tape.gradient(loss, flow.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
         return loss
+        per_example_losses = mirrored_strategy.run(
+            step_fn, args=(dist_inputs,))
+        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                             per_example_losses, axis=0)
+        return mean_loss
 
     # Training Parameters
     N_EPOCHS = 100
@@ -118,7 +127,8 @@ def main():
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
     # Restore weights if specified
     if args.restore is not None:
-        ckpt.restore(tf.train.latest_checkpoint(os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+        ckpt.restore(tf.train.latest_checkpoint(
+            os.path.join(restore_abs_dirpath, 'tf_ckpts')))
 
     t0 = time.time()
     loss_history = []
@@ -152,7 +162,8 @@ def main():
                     loss_history.append(history_loss_avg.result())
                     with train_summary_writer.as_default():
                         step_int = int(loss_per_epoch * count_step * batch_size / 60000)
-                        tf.summary.scalar('loss', history_loss_avg.result(), step=step_int)
+                        tf.summary.scalar(
+                            'loss', history_loss_avg.result(), step=step_int)
 
                     history_loss_avg.reset_states()
 
@@ -163,7 +174,8 @@ def main():
                 samples = flow.sample(9)
                 samples = samples.numpy().reshape((9, 28, 28, 1))
                 with train_summary_writer.as_default():
-                    tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
+                    tf.summary.image("9 generated samples",
+                                     samples, max_outputs=27, step=epoch)
 
                 curr_avg_loss = epoch_loss_avg.result()
                 if curr_avg_loss < min_avg_loss:
