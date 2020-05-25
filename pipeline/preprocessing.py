@@ -95,6 +95,30 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
     return spect_dataset
 
 
+def mel_spectrograms_from_ds_tfSignal(song_ds, sr, frame_length, n_fft=2048, hop_length=512, n_mels=128):
+    """
+    Same function as above but use the tf.signal package
+
+    Need to specify the frame_length (length_sec * rate)
+    """
+    ds_stft = song_ds.map(lambda x: tf.signal.stft(x,
+                                                   frame_length=frame_length,
+                                                   frame_step=hop_length,
+                                                   fft_length=n_fft,
+                                                   window_fn=tf.signal.hann_window,
+                                                   pad_end=True, name=None))
+    ds_stft_power = ds_stft.map(lambda x: tf.cast(tf.abs(x)**2, tf.float32))
+    num_spectrogram_bins = (n_fft // 2) + 1
+    A = tf.signal.linear_to_mel_weight_matrix(num_mel_bins=n_mels,
+                                              num_spectrogram_bins=num_spectrogram_bins,
+                                              sample_rate=sr,
+                                              lower_edge_hertz=0.,
+                                              upper_edge_hertz=float(sr) / 2,
+                                              dtype=tf.dtypes.float32, name=None)
+    ds_mel = ds_stft_power.map(lambda x: tf.matmul(x, A))
+    return ds_mel
+
+
 def save_mel_spectrograms(mel_spectrograms_ds, filename):
     """
     Save all the spectrograms as npy file
@@ -206,12 +230,11 @@ def save_tf_records(dataset, filename):
         filename: str
         filename to save the tf.records
     """
-
+    if not re.match(".*(.)tfrecords$", filename):
+        filename += '.tfrecords'
     serialized_dataset = dataset.map(tf_serialize_example)
     writer = tf.data.experimental.TFRecordWriter(filename)
     writer.write(serialized_dataset)
-
-    print('TFrecord saved')
     return 0
 
 
@@ -236,6 +259,7 @@ def load_tf_records(filenames, dtype=tf.float32):
 
     raw_dataset = tf.data.TFRecordDataset(filenames)
     parsed_dataset = raw_dataset.map(_parse_function)
-    parsed_dataset = parsed_dataset.map(lambda x: tf.reshape(x['array'], x['shape']))
+    parsed_dataset = parsed_dataset.map(
+        lambda x: tf.reshape(x['array'], x['shape']))
 
     return parsed_dataset

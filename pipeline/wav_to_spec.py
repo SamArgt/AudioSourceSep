@@ -21,6 +21,10 @@ def main():
     parser.add_argument('--params', type=str,
                         help='parameters for the computation: length_sec,stride,n_fft,hop_length,n_mels',
                         default=None)
+    parser.add_argument('--use_signal', action="store_true",
+                        help='Either to use tf.signal or not (otherwise use librosa)')
+    parser.add_argument('--tfrecords', action="store_true",
+                        help="Either to save as tfrecords or not (otherwise as npy)")
     args = parser.parse_args()
 
     if args.params is None:
@@ -71,22 +75,39 @@ def main():
         song_ds, rate = load_wav(wav_file, length_sec)
         print('{} Loaded...'.format(wav_file))
         # compute the spectrograms
-        melspectrograms_ds = mel_spectrograms_from_ds(
-            song_ds, rate, n_fft, hop_length, n_mels)
-        print("\t Mel Spectrograms computed...")
+        if args.use_signal:
+            melspectrograms_ds = mel_spectrograms_from_ds_tfSignal(song_ds, rate,
+                                                                   int(rate * length_sec),
+                                                                   n_fft, hop_length, n_mels)
+            print("\t Mel Spectrograms computed using tf.signal")
+        else:
+            melspectrograms_ds = mel_spectrograms_from_ds(
+                song_ds, rate, n_fft, hop_length, n_mels)
+            print("\t Mel Spectrograms computed using librosa")
+
         # save the spectrograms
         wav_file_relpath = os.path.relpath(wav_file, input_dirpath)
         temp_output_dirpath = os.path.join(output_dirpath, wav_file_relpath)
         temp_output_dirpath = temp_output_dirpath[:-4]
-        wav_file_output = os.path.join(
-            temp_output_dirpath, os.path.split(temp_output_dirpath)[1])
-        try:
-            os.makedirs(temp_output_dirpath)
-        except FileExistsError:
-            pass
-        N = save_mel_spectrograms(melspectrograms_ds, wav_file_output)
+        if args.tfrecords:
+            try:
+                os.makedirs(os.path.split(temp_output_dirpath)[0])
+            except FileExistsError:
+                pass
+            save_tf_records(melspectrograms_ds, temp_output_dirpath)
+            print('\t Saved as tfrecords')
+        else:
+            wav_file_output = os.path.join(
+                temp_output_dirpath, os.path.split(temp_output_dirpath)[1])
+            try:
+                os.makedirs(temp_output_dirpath)
+            except FileExistsError:
+                pass
 
-        print("\tSaved into {} spectrograms".format(N))
+            else:
+                N = save_mel_spectrograms(melspectrograms_ds, wav_file_output)
+            print("\tSaved into {} spectrograms as npy".format(N))
+
     print("-" * 40)
     deltaT = np.round(time.time() - t0, 2)
     print("{} wav files saved as spectrograms in {} seconds.".format(
