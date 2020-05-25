@@ -59,16 +59,16 @@ def main():
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x / 255.)
-    batch_size = 128
+    batch_size = 256
     ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 32
+    K = 16
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 256
+    n_filters_base = 64
 
     # Build Flow
     tfk.backend.clear_session()
@@ -78,8 +78,11 @@ def main():
     flow = tfd.TransformedDistribution(tfd.Normal(
         0., 1.), inv_bijector, event_shape=base_distr_shape)
 
-    print('Glow Bijector 2 Blocks: K = {} \n ShiftAndLogScaleResNet \n n_filters = {} \n batch size : {}'.format(
-        K, n_filters_base, batch_size))
+    params_str = 'Glow Bijector 2 Blocks: K = {} \n ShiftAndLogScaleResNet \n n_filters = {} \n batch size : {}'.format(
+        K, n_filters_base, batch_size)
+    print(params_str)
+    with train_summary_writer.as_default():
+        tf.summary.text(tf.constant(params_str))
     print("flow sample shape: ", flow.sample(1).shape)
     # utils.print_summary(flow)
     print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
