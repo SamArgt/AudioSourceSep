@@ -103,11 +103,11 @@ def main():
         def step_fn(X):
             with tf.GradientTape() as tape:
                 tape.watch(flow.trainable_variables)
-                loss = -tf.reduce_sum(flow.log_prob(X))
-                loss = loss * (1.0 / batch_size)
-            gradients = tape.gradient(loss, flow.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, flow.trainable_variables))
-        return loss
+                log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
+                scaled_loss = log_prob_sum * (1.0 / batch_size)
+            gradients = tape.gradient(scaled_loss, flow.trainable_variables)
+            optimizer.apply_gradients(list(zip(gradients, flow.trainable_variables)))
+            return log_prob_sum
         per_example_losses = mirrored_strategy.run(
             step_fn, args=(dist_inputs,))
         mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.MEAN,
