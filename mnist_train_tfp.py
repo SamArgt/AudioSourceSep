@@ -82,7 +82,7 @@ def main():
         K, n_filters_base, batch_size)
     print(params_str)
     with train_summary_writer.as_default():
-        tf.summary.text(tf.constant(params_str))
+        tf.summary.text(name='Flow parameters', data=tf.constant(params_str), step=0)
     print("flow sample shape: ", flow.sample(1).shape)
     # utils.print_summary(flow)
     print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
