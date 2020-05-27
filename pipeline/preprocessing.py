@@ -230,8 +230,8 @@ def save_tf_records(dataset, filename):
         filename: str
         filename to save the tf.records
     """
-    if not re.match(".*(.)tfrecords$", filename):
-        filename += '.tfrecords'
+    if not re.match(".*(.)tfrecord$", filename):
+        filename += '.tfrecord'
     serialized_dataset = dataset.map(tf_serialize_example)
     writer = tf.data.experimental.TFRecordWriter(filename)
     writer.write(serialized_dataset)
