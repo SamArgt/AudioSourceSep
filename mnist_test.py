@@ -73,7 +73,7 @@ def main():
     t0 = time.time()
     val_loss = tf.keras.metrics.Mean()
     for elt in ds_val:
-        val_loss.update(-tf.reduce_mean(flow.log_prob(elt)))
+        val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
     print('Validation loss = {}'.format(val_loss.result()))
     print("Computed in {} seconds".format(round(time.time() - t0, 3)))
 
