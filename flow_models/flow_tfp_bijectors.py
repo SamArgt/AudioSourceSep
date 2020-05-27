@@ -125,23 +125,26 @@ class ActNorm(tfb.Bijector):
 
         mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
         std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
-        log_scale_init = tf.math.log(1 / std_init)
+        scale_init = 1 / std_init
+        log_scale_init = tf.math.log(scale_init)
         shift_init = - mean_init / std_init
 
-        self.log_scale = tf.Variable(
-            initial_value=log_scale_init, name=name + '/log_scale')
+        self.log_scale = tf.Variable(initial_value=log_scale_init, name=name + '/log_scale')
+        # self.scale = tf.Variable(initial_value=scale_init, name=name + '/scale')
         self.shift = tf.Variable(
             initial_value=shift_init, name=name + '/shift')
 
     def _forward(self, x):
         return x * tf.exp(self.log_scale) + self.shift
+        # return x * self.scale + self.shift
 
     def _inverse(self, y):
         return (y - self.shift) / tf.exp(self.log_scale)
+        # return (y - self.shift) / self.scale
 
     def _forward_log_det_jacobian(self, x):
-        log_det = self.H * self.W * \
-            tf.reduce_sum(self.log_scale)
+        log_det = self.H * self.W * tf.reduce_sum(self.log_scale)
+        # log_det = self.H * self.W * tf.reduce_sum(tf.math.log(tf.abs(self.scale)))
         return tf.repeat(log_det, x.shape[0], axis=0)
 
 
