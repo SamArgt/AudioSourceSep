@@ -67,8 +67,7 @@ def main():
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
     ds_val = ds_val.map(lambda x: x / 255.)
-    ds_val = ds_val.shuffle(1024).batch(
-        5000).prefetch(tf.data.experimental.AUTOTUNE)
+    ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
 
     t0 = time.time()
     val_loss = tf.keras.metrics.Mean()

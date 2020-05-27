@@ -62,13 +62,19 @@ def main():
     batch_size = 256
     ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
+    # Validation Set
+    ds_val = tfds.load('mnist', split='test', shuffle_files=True)
+    ds_val = ds_val.map(lambda x: x['image'])
+    ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
+    ds_val = ds_val.map(lambda x: x / 255.)
+    ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 32
+    K = 8
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 64
+    n_filters_base = 512
 
     # Build Flow
     tfk.backend.clear_session()
@@ -148,8 +154,11 @@ def main():
                 history_loss_avg.reset_states()
 
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
-            print("Epoch {:03d}: Loss: {:.3f}".format(
-                epoch, epoch_loss_avg.result()))
+            val_loss = tf.keras.metrics.Mean()
+            for elt in ds_val:
+                val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03d}".format(
+                epoch, epoch_loss_avg.result(), val_loss.result()))
 
             samples = flow.sample(9)
             samples = samples.numpy().reshape((9, 28, 28, 1))
