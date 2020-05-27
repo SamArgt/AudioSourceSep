@@ -51,7 +51,9 @@ def main():
         pass
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     train_log_dir = os.path.join('tensorboard_logs', 'gradient_tape', current_time, 'train')
+    test_log_dir = 'logs/gradient_tape/' + current_time + '/test'
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+    test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
     # Construct a tf.data.Dataset
     ds = tfds.load('mnist', split='train', shuffle_files=True)
@@ -149,7 +151,7 @@ def main():
                 loss_history.append(history_loss_avg.result())
                 with train_summary_writer.as_default():
                     step_int = int(loss_per_epoch * count_step * batch_size / 60000)
-                    tf.summary.scalar('loss', history_loss_avg.result(), step=step_int)
+                    tf.summary.scalar('train loss', history_loss_avg.result(), step=step_int)
 
                 history_loss_avg.reset_states()
 
@@ -157,7 +159,9 @@ def main():
             val_loss = tf.keras.metrics.Mean()
             for elt in ds_val:
                 val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
-            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03d}".format(
+            with test_summary_writer.as_default():
+                tf.summary.scalar('val loss', val_loss.result(), step=step_int)
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), val_loss.result()))
 
             samples = flow.sample(9)
