@@ -50,33 +50,39 @@ def main():
     except FileNotFoundError:
         pass
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    train_log_dir = os.path.join('tensorboard_logs', 'gradient_tape', current_time, 'train')
-    test_log_dir = os.path.join('tensorboard_logs', 'gradient_tape', current_time, 'test')
+    train_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'train')
+    test_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'test')
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
     # Construct a tf.data.Dataset
+    alpha = 0.05
+    batch_size = 256
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: x / 255.)
-    batch_size = 256
-    ds = ds.shuffle(1024).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
+    ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+    ds = ds.shuffle(1024).batch(batch_size).prefetch(
+        tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     # Validation Set
     ds_val = tfds.load('mnist', split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
-    ds_val = ds_val.map(lambda x: x / 255.)
+    ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
+    ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 8
+    K = 16
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 512
+    n_filters_base = 128
 
     # Build Flow
     tfk.backend.clear_session()
@@ -90,7 +96,8 @@ def main():
         K, n_filters_base, batch_size)
     print(params_str)
     with train_summary_writer.as_default():
-        tf.summary.text(name='Flow parameters', data=tf.constant(params_str), step=0)
+        tf.summary.text(name='Flow parameters',
+                        data=tf.constant(params_str), step=0)
     print("flow sample shape: ", flow.sample(1).shape)
     # utils.print_summary(flow)
     print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
@@ -118,7 +125,8 @@ def main():
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
     # Restore weights if specified
     if args.restore is not None:
-        ckpt.restore(tf.train.latest_checkpoint(os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+        ckpt.restore(tf.train.latest_checkpoint(
+            os.path.join(restore_abs_dirpath, 'tf_ckpts')))
 
     t0 = time.time()
     loss_history = []
@@ -150,8 +158,10 @@ def main():
 
                 loss_history.append(history_loss_avg.result())
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch * count_step * batch_size / 60000)
-                    tf.summary.scalar('train loss', history_loss_avg.result(), step=step_int)
+                    step_int = int(loss_per_epoch *
+                                   count_step * batch_size / 60000)
+                    tf.summary.scalar(
+                        'train loss', history_loss_avg.result(), step=step_int)
 
                 history_loss_avg.reset_states()
 
@@ -167,7 +177,8 @@ def main():
             samples = flow.sample(9)
             samples = samples.numpy().reshape((9, 28, 28, 1))
             with train_summary_writer.as_default():
-                tf.summary.image("9 generated samples", samples, max_outputs=27, step=epoch)
+                tf.summary.image("9 generated samples", samples,
+                                 max_outputs=27, step=epoch)
 
             curr_avg_loss = epoch_loss_avg.result()
             if curr_avg_loss < min_avg_loss:
