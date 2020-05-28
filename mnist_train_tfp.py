@@ -158,10 +158,9 @@ def main():
 
                 loss_history.append(history_loss_avg.result())
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch *
-                                   count_step * batch_size / 60000)
+                    step_int = int(loss_per_epoch * count_step * batch_size / 60000)
                     tf.summary.scalar(
-                        'train loss', history_loss_avg.result(), step=step_int)
+                        'loss', history_loss_avg.result(), step=step_int)
 
                 history_loss_avg.reset_states()
 
@@ -170,7 +169,7 @@ def main():
             for elt in ds_val:
                 val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
             with test_summary_writer.as_default():
-                tf.summary.scalar('val loss', val_loss.result(), step=step_int)
+                tf.summary.scalar('loss', val_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), val_loss.result()))
 
