@@ -82,7 +82,7 @@ def main():
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
     K = 16
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 128
+    n_filters_base = 64
 
     # Build Flow
     tfk.backend.clear_session()
@@ -123,6 +123,9 @@ def main():
     # Checkpoint object
     ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+    # if huge jump in the loss, save weights here
+    manage_issues = tf.train.CheckpointManager(
+        ckpt, './tf_ckpts_issues', max_to_keep=3)
     # Restore weights if specified
     if args.restore is not None:
         ckpt.restore(tf.train.latest_checkpoint(
@@ -133,7 +136,8 @@ def main():
     history_loss_avg = tf.keras.metrics.Mean()
     epoch_loss_avg = tf.keras.metrics.Mean()
     count_step = optimizer.iterations.numpy()
-    min_avg_loss, curr_avg_loss = 0., 0.
+    min_val_loss = 0.
+    prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
@@ -149,22 +153,41 @@ def main():
             history_loss_avg.update_state(loss)
             count_step += 1
 
+            # every loss_per_epoch train step
             if count_step % (60000 // (batch_size * loss_per_epoch)) == 0:
-
+                # check nan loss
                 if tf.math.is_nan(loss):
                     print('Nan Loss')
                     is_nan_loss = True
                     break
 
-                loss_history.append(history_loss_avg.result())
+                # Save history and monitor it on tensorboard
+                curr_loss_history = history_loss_avg.result()
+                loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
                     step_int = int(loss_per_epoch * count_step * batch_size / 60000)
                     tf.summary.scalar(
-                        'loss', history_loss_avg.result(), step=step_int)
+                        'loss', curr_loss_history, step=step_int)
 
+                # look for huge jump in the loss
+                if prev_history_loss_avg is None:
+                    prev_history_loss_avg = curr_loss_history
+                elif curr_loss_history - prev_history_loss_avg > 10**4:
+                    print("Huge gap in the loss")
+                    save_path = manage_issues.save()
+                    print("Model weights saved at {}".format(save_path))
+                    with train_summary_writer.as_default():
+                        tf.summary.text(name='Loss Jump',
+                                        data=tf.constant(
+                                            "Huge jump in the loss. Model weights saved at {}".format(save_path)),
+                                        step=step_int)
+
+                prev_history_loss_avg = curr_loss_history
                 history_loss_avg.reset_states()
 
+        # every 10 epochs
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
+            # Compute validation loss and monitor it on tensoboard
             val_loss = tf.keras.metrics.Mean()
             for elt in ds_val:
                 val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
@@ -172,18 +195,18 @@ def main():
                 tf.summary.scalar('loss', val_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), val_loss.result()))
-
+            # Generate some samples and visualize them on tensoboard
             samples = flow.sample(9)
             samples = samples.numpy().reshape((9, 28, 28, 1))
             with train_summary_writer.as_default():
                 tf.summary.image("9 generated samples", samples,
                                  max_outputs=27, step=epoch)
-
-            curr_avg_loss = epoch_loss_avg.result()
-            if curr_avg_loss < min_avg_loss:
+            # If minimum validation loss is reached, save model
+            curr_val_loss = val_loss.result()
+            if curr_val_loss < min_val_loss:
                 save_path = manager.save()
                 print("Model Saved at {}".format(save_path))
-                min_avg_loss = curr_avg_loss
+                min_val_loss = curr_val_loss
 
     # Saving the last variables
     save_path = manager.save()

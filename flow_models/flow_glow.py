@@ -18,7 +18,7 @@ class GlowStep(tfb.Bijector):
         self.inv1x1conv = Invertible1x1Conv(
             event_shape, name=name + '/inv1x1conv')
         self.coupling_layer = AffineCouplingLayerMasked(event_shape, shift_and_log_scale_layer,
-                                                        n_hidden_units)
+                                                        n_hidden_units, name=name + '/couplingLayer')
         self.bijector = tfb.Chain(
             [self.coupling_layer, self.inv1x1conv, self.actnorm])
 

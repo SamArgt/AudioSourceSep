@@ -42,8 +42,8 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     splitting along the channel dimension to obtain log(s) and t
     """
 
-    def __init__(self, input_shape, n_filters, data_format='channels_last', dtype=tf.float32):
-        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype)
+    def __init__(self, input_shape, n_filters, data_format='channels_last', name='ShiftAndLogScaleResNet', dtype=tf.float32):
+        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype, name=name)
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape,
                                        data_format=data_format,

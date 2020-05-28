@@ -25,10 +25,10 @@ def print_summary(flow):
         if len(names) == 1:
             network_name = ''
             layer_name = kernel_bias
-        elif len(names) > 3:
-            network_name = '/'.join([names[-4], names[-3]])
+        elif len(names) > 4:
+            network_name = '/'.join([names[-5], names[-4], names[-3]])
             layer_name = names[-2]
-        elif len(names) >= 3:
+        elif len(names) >= 4:
             network_name = names[-3]
             layer_name = names[-2]
         else:

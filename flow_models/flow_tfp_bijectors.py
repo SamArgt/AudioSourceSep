@@ -30,11 +30,11 @@ class AffineCouplingLayerMasked(tfb.Bijector):
     """
 
     def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units,
-                 masking='channel', mask_state=0, dtype=tf.float32):
+                 masking='channel', mask_state=0, name='AffineCouplingLayer', dtype=tf.float32):
         super(AffineCouplingLayerMasked, self).__init__(
             forward_min_event_ndims=0)
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            event_shape, n_hidden_units)
+            event_shape, n_hidden_units, name=name + '/shiftAndLogScaleLayer')
         self.binary_mask = self.binary_mask_fn(
             event_shape, masking, mask_state, dtype)
         self.tensor_dtype = dtype
