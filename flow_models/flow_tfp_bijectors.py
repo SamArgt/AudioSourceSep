@@ -227,7 +227,7 @@ class Preprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         u = self.alpha + (1 - self.alpha) * x / 256.
-        logit_log_det = tf.reduce_sum(tf.math.log(-u) + tf.math.log(u - 1))
+        logit_log_det = -tf.reduce_sum(tf.math.log(u) + tf.math.log(1 - u))
         scale_log_det = self.H * self.W * self.C * tf.math.log((1 - self.alpha) / 256.)
         log_det = logit_log_det + scale_log_det
         return tf.repeat(log_det, x.shape[0], axis=0)
