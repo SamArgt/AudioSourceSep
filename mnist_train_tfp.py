@@ -64,6 +64,7 @@ def main():
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
+    ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     # ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
     # ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     ds = ds.shuffle(1024).batch(batch_size).prefetch(
@@ -73,6 +74,7 @@ def main():
     ds_val = tfds.load('mnist', split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
+    ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     # ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
     # ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
@@ -82,7 +84,7 @@ def main():
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
     K = 8
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 512
+    n_filters_base = 64
 
     # Build Flow
     tfk.backend.clear_session()
