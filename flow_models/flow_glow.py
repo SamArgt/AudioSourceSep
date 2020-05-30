@@ -86,12 +86,10 @@ class GlowBijector_2blocks(tfb.Bijector):
         super(GlowBijector_2blocks, self).__init__(forward_min_event_ndims=3)
 
         H, W, C = event_shape
-        self.preprocessing = Preprocessing(event_shape, alpha=0.05)
-        minibatch_updated = self.preprocessing.forward(minibatch)
 
         self.glow_block1 = GlowBlock(K, event_shape,
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
+                                     n_hidden_units, minibatch,
                                      name='glowBlock1')
 
         H1, W1, C1 = self.glow_block1.event_shape_out
@@ -104,7 +102,6 @@ class GlowBijector_2blocks(tfb.Bijector):
                                      name='glowBlock2')
 
     def _forward(self, x):
-        x = self.preprocessing.forward(x)
         output1 = self.glow_block1.forward(x)
         z1, h1 = tf.split(output1, 2, axis=-1)
         N, H, W, C = z1.shape
@@ -119,19 +116,16 @@ class GlowBijector_2blocks(tfb.Bijector):
         z1 = tf.reshape(z1, (N, H * 2, W * 2, C // 4))
         output1 = tf.concat((z1, h1), axis=-1)
         x = self.glow_block1.inverse(output1)
-        return self.preprocessing.inverse(x)
+        return x
 
     def _forward_log_det_jacobian(self, x):
-        log_det_0 = self.preprocessing.forward_log_det_jacobian(
-            x, event_ndims=3)
-        x = self.preprocessing.forward(x)
         output1 = self.glow_block1.forward(x)
         log_det_1 = self.glow_block1.forward_log_det_jacobian(
             x, event_ndims=3)
         z1, h1 = tf.split(output1, 2, axis=-1)
         log_det_2 = self.glow_block2.forward_log_det_jacobian(
             h1, event_ndims=3)
-        return log_det_0 + log_det_1 + log_det_2
+        return log_det_1 + log_det_2
 
     def _forward_event_shape_tensor(self, input_shape):
         H, W, C = input_shape

@@ -218,15 +218,15 @@ class Preprocessing(tfp.bijectors.Bijector):
         self.H, self.W, self.C = event_shape
 
     def _forward(self, x):
-        x = self.alpha + (1 - self.alpha) * x / 256.
+        x = self.alpha + (1 - self.alpha) * x
         return tf.math.log(x / (1 - x))
 
     def _inverse(self, y):
         y = 1 / (tf.exp(-y) + 1)
-        return (y - self.alpha) * 256. / (1 - self.alpha)
+        return (y - self.alpha) / (1 - self.alpha)
 
     def _forward_log_det_jacobian(self, x):
-        u = self.alpha + (1 - self.alpha) * x / 256.
-        log_det = tf.math.log((1 - self.alpha) / 256.) - tf.math.log(u) - tf.math.log(1 - u)
+        u = self.alpha + (1 - self.alpha) * x
+        log_det = tf.math.log((1 - self.alpha)) - tf.math.log(u) - tf.math.log(1 - u)
         log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
         return log_det

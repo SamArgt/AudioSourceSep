@@ -5,6 +5,7 @@ import tensorflow_datasets as tfds
 from flow_models import flow_tfk_layers
 from flow_models import flow_glow
 from flow_models import flow_real_nvp
+from flow_models import flow_tfp_bijectors
 from flow_models import utils
 import argparse
 import time
@@ -65,8 +66,7 @@ def main():
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
-    # ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
-    # ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+    ds = ds.map(lambda x: x / 256.)
     ds = ds.shuffle(1024).batch(batch_size).prefetch(
         tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
@@ -75,8 +75,7 @@ def main():
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
     ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
-    # ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
-    # ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+    ds_val = ds_val.map(lambda x: x / 256.)
     ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
 
     # Set flow parameters
@@ -88,9 +87,11 @@ def main():
 
     # Build Flow
     tfk.backend.clear_session()
-    bijector = flow_glow.GlowBijector_2blocks(
+    flow_bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
-    inv_bijector = tfb.Invert(bijector)
+    # prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
+    # bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+    inv_bijector = tfb.Invert(flow_bijector)
     flow = tfd.TransformedDistribution(tfd.Normal(
         0., 1.), inv_bijector, event_shape=base_distr_shape)
 
@@ -174,7 +175,7 @@ def main():
                 # look for huge jump in the loss
                 if prev_history_loss_avg is None:
                     prev_history_loss_avg = curr_loss_history
-                elif curr_loss_history - prev_history_loss_avg > 10**4:
+                elif curr_loss_history - prev_history_loss_avg > 10**6:
                     print("Huge gap in the loss")
                     save_path = manage_issues.save()
                     print("Model weights saved at {}".format(save_path))
