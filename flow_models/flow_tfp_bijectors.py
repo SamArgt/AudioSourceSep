@@ -209,3 +209,25 @@ class Invertible1x1Conv(tfb.Bijector):
         log_det = self.height * self.width * \
             tf.reduce_sum(self.Log_s)
         return tf.repeat(log_det, x.shape[0], axis=0)
+
+
+class Preprocessing(tfp.bijectors.Bijector):
+    def __init__(self, event_shape, alpha=0.05):
+        super(Preprocessing, self).__init__(forward_min_event_ndims=3)
+        self.alpha = alpha
+        self.H, self.W, self.C = event_shape
+
+    def _forward(self, x):
+        x = self.alpha + (1 - self.alpha) * x / 256.
+        return tf.math.log(x / (1 - x))
+
+    def _inverse(self, y):
+        y = 1 / (tf.exp(-y) + 1)
+        return (y - self.alpha) * 256. / (1 - self.alpha)
+
+    def _forward_log_det_jacobian(self, x):
+        u = self.alpha + (1 - self.alpha) * x / 256.
+        logit_log_det = tf.reduce_sum(tf.math.log(-u) + tf.math.log(u - 1))
+        scale_log_det = self.H * self.W * self.C * tf.math.log((1 - self.alpha) / 256.)
+        log_det = logit_log_det + scale_log_det
+        return tf.repeat(log_det, x.shape[0], axis=0)

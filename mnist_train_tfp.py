@@ -58,14 +58,14 @@ def main():
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
     # Construct a tf.data.Dataset
-    alpha = 0.05
+    # alpha = 0.05
     batch_size = 256
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
-    ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+    # ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
+    # ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     ds = ds.shuffle(1024).batch(batch_size).prefetch(
         tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
@@ -73,8 +73,8 @@ def main():
     ds_val = tfds.load('mnist', split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
-    ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
-    ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+    # ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
+    # ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
 
     # Set flow parameters

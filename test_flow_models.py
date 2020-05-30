@@ -73,7 +73,7 @@ def shift_and_log_scale_toy(x):
     return log_s, t
 
 
-def shift_and_log_scale_layer_toy(event_shape, n_hidden_units, dtype=tf.float32):
+def shift_and_log_scale_layer_toy(event_shape, n_hidden_units, dtype=tf.float32, name='toy'):
     return shift_and_log_scale_toy
 
 
@@ -113,6 +113,8 @@ glowblock_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
 glowbijector_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
                      'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
                      'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
+
+preprocessing_args = {'event_shape': EVENT_SHAPE_1}
 
 
 # One affine coupling layer with checkboard: Input dimension (2, 2, 1) ->
@@ -187,6 +189,12 @@ class TestGlowBlock(make_test_case_bijector(GlowBlock, INPUTS_1,
 class TestGlowBijector(make_test_case_bijector(GlowBijector_2blocks, INPUTS_1,
                                                expected_log_det=None,
                                                **glowbijector_args)):
+    pass
+
+
+class TestPreprocessing(make_test_case_bijector(Preprocessing, INPUTS_1,
+                                                expected_log_det=None,
+                                                **preprocessing_args)):
     pass
 
 
