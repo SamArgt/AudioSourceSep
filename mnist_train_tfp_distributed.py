@@ -87,6 +87,7 @@ def main():
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
     ds_val = ds_val.batch(5000)
+    ds_val_dist =  mirrored_strategy.experimental_distribute_dataset(ds_val_dist)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
@@ -122,23 +123,37 @@ def main():
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
     with mirrored_strategy.scope():
-        def compute_loss(X):
+        def compute_train_loss(X):
             per_example_loss = -flow.log_prob(X)
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
+
+        def compute_test_loss(X):
+            per_example_loss = -flow.log_prob(X)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=5000)
 
     def train_step(inputs):
         with tf.GradientTape() as tape:
             tape.watch(flow.trainable_variables)
-            loss = compute_loss(inputs)
+            loss = compute_train_loss(inputs)
         gradients = tape.gradient(loss, flow.trainable_variables)
         optimizer.apply_gradients(
             list(zip(gradients, flow.trainable_variables)))
+        return loss
+
+    def test_step(inputs):
+        loss = compute_test_loss(inputs)
         return loss
 
     @tf.function
     def distributed_train_step(dataset_inputs):
         per_replica_losses = mirrored_strategy.run(
             train_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    @tf.function
+    def distributed_test_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
     # Training Parameters
@@ -171,8 +186,8 @@ def main():
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     test_loss = tfk.metrics.Mean(name='test_loss')
-    history_loss_avg = tf.keras.metrics.Sum(name="tensorboard_loss")
-    epoch_loss_avg = tf.keras.metrics.Sum(name="epoch_loss")
+    history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
+    epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
     # Custom Training Loop
     for epoch in range(N_EPOCHS):
         epoch_loss_avg.reset_states()
@@ -223,7 +238,7 @@ def main():
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
             for elt in ds_val:
-                test_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
+                test_loss.update_state(distributed_test_step(elt))
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
