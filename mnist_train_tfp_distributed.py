@@ -124,7 +124,7 @@ def main():
     # Adding the tf.function makes it about 10 times faster!!!
     with mirrored_strategy.scope():
         def compute_loss(X):
-            per_example_loss = -tf.reduce_sum(flow.log_prob(X))
+            per_example_loss = -flow.log_prob(X)
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
     with mirrored_strategy.scope():
