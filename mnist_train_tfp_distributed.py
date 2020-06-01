@@ -126,10 +126,6 @@ def main():
             per_example_loss = -flow.log_prob(X)
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
-    with mirrored_strategy.scope():
-        history_loss_avg = tf.keras.metrics.Sum(name="tensorboard_loss")
-        epoch_loss_avg = tf.keras.metrics.Sum(name="epoch_loss")
-
     def train_step(inputs):
         with tf.GradientTape() as tape:
             tape.watch(flow.trainable_variables)
@@ -137,8 +133,6 @@ def main():
         gradients = tape.gradient(loss, flow.trainable_variables)
         optimizer.apply_gradients(
             list(zip(gradients, flow.trainable_variables)))
-        history_loss_avg.update_state(loss)
-        epoch_loss_avg.update_state(loss)
         return loss
 
     @tf.function
@@ -177,6 +171,8 @@ def main():
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     test_loss = tfk.metrics.Mean(name='test_loss')
+    history_loss_avg = tf.keras.metrics.Sum(name="tensorboard_loss")
+    epoch_loss_avg = tf.keras.metrics.Sum(name="epoch_loss")
     # Custom Training Loop
     for epoch in range(N_EPOCHS):
         epoch_loss_avg.reset_states()
@@ -186,6 +182,8 @@ def main():
 
         for batch in ds_dist:
             loss = distributed_train_step(batch)
+            history_loss_avg.update_state(loss)
+            epoch_loss_avg.update_state(loss)
             count_step += 1
 
             # every loss_per_epoch train step
