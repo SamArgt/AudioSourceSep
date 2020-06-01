@@ -128,8 +128,9 @@ def main():
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
     with mirrored_strategy.scope():
-        train_loss = tfk.metrics.Mean(name='train_loss')
         test_loss = tfk.metrics.Mean(name='test_loss')
+        history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
+        epoch_loss_avg = tf.keras.metrics.Mean(nam="epoch_loss")
 
     def train_step(inputs):
         with tf.GradientTape() as tape:
@@ -138,7 +139,7 @@ def main():
         gradients = tape.gradient(loss, flow.trainable_variables)
         optimizer.apply_gradients(
             list(zip(gradients, flow.trainable_variables)))
-        train_loss.update_state(loss)
+        history_loss_avg.update_state(loss)
         return loss
 
     def test_step(inputs):
@@ -179,82 +180,77 @@ def main():
 
     t0 = time.time()
     loss_history = []
-    history_loss_avg = tf.keras.metrics.Mean()
-    epoch_loss_avg = tf.keras.metrics.Mean()
     count_step = optimizer.iterations.numpy()
     min_val_loss = 0.
     prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
-    """
-    with mirrored_strategy.scope():
-        for epoch in range(N_EPOCHS):
-            epoch_loss_avg.reset_states()
+    for epoch in range(N_EPOCHS):
+        epoch_loss_avg.reset_states()
 
-            if is_nan_loss:
-                break
+        if is_nan_loss:
+            break
 
-            for batch in ds_dist:
-                loss = train_step(batch)
-                epoch_loss_avg.update_state(loss)
-                history_loss_avg.update_state(loss)
-                count_step += 1
+        for batch in ds_dist:
+            loss = distributed_train_step(batch)
+            epoch_loss_avg.update_state(loss)
+            count_step += 1
 
-                # every loss_per_epoch train step
-                if count_step % (60000 // (global_batch_size * loss_per_epoch)) == 0:
-                    # check nan loss
-                    if tf.math.is_nan(loss):
-                        print('Nan Loss')
-                        is_nan_loss = True
-                        break
+            # every loss_per_epoch train step
+            if count_step % (60000 // (global_batch_size * loss_per_epoch)) == 0:
+                # check nan loss
+                if tf.math.is_nan(loss):
+                    print('Nan Loss')
+                    is_nan_loss = True
+                    break
 
-                    # Save history and monitor it on tensorboard
-                    curr_loss_history = history_loss_avg.result()
-                    loss_history.append(curr_loss_history)
-                    with train_summary_writer.as_default():
-                        step_int = int(loss_per_epoch * count_step * global_batch_size / 60000)
-                        tf.summary.scalar(
-                            'loss', curr_loss_history, step=step_int)
-
-                    # look for huge jump in the loss
-                    if prev_history_loss_avg is None:
-                        prev_history_loss_avg = curr_loss_history
-                    elif curr_loss_history - prev_history_loss_avg > 10**6:
-                        print("Huge gap in the loss")
-                        save_path = manage_issues.save()
-                        print("Model weights saved at {}".format(save_path))
-                        with train_summary_writer.as_default():
-                            tf.summary.text(name='Loss Jump',
-                                            data=tf.constant(
-                                                "Huge jump in the loss. Model weights saved at {}".format(save_path)),
-                                            step=step_int)
-
-                    prev_history_loss_avg = curr_loss_history
-                    history_loss_avg.reset_states()
-
-            # every 10 epochs
-            if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
-                # Compute validation loss and monitor it on tensoboard
-                val_loss = tf.keras.metrics.Mean()
-                for elt in ds_val_dist:
-                    val_loss.update_state(test_step(elt))
-                with test_summary_writer.as_default():
-                    tf.summary.scalar('loss', val_loss.result(), step=step_int)
-                print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
-                    epoch, epoch_loss_avg.result(), val_loss.result()))
-                # Generate some samples and visualize them on tensoboard
-                samples = flow.sample(9)
-                samples = samples.numpy().reshape((9, 28, 28, 1))
+                # Save history and monitor it on tensorboard
+                curr_loss_history = history_loss_avg.result()
+                loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
-                    tf.summary.image("9 generated samples", samples,
-                                     max_outputs=27, step=epoch)
-                # If minimum validation loss is reached, save model
-                curr_val_loss = val_loss.result()
-                if curr_val_loss < min_val_loss:
-                    save_path = manager.save()
-                    print("Model Saved at {}".format(save_path))
-                    min_val_loss = curr_val_loss
+                    step_int = int(loss_per_epoch * count_step * global_batch_size / 60000)
+                    tf.summary.scalar(
+                        'loss', curr_loss_history, step=step_int)
+
+                # look for huge jump in the loss
+                if prev_history_loss_avg is None:
+                    prev_history_loss_avg = curr_loss_history
+                elif curr_loss_history - prev_history_loss_avg > 10**6:
+                    print("Huge gap in the loss")
+                    save_path = manage_issues.save()
+                    print("Model weights saved at {}".format(save_path))
+                    with train_summary_writer.as_default():
+                        tf.summary.text(name='Loss Jump',
+                                        data=tf.constant(
+                                            "Huge jump in the loss. Model weights saved at {}".format(save_path)),
+                                        step=step_int)
+
+                prev_history_loss_avg = curr_loss_history
+                history_loss_avg.reset_states()
+
+        # every 10 epochs
+        if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
+            # Compute validation loss and monitor it on tensoboard
+            test_loss.reset_states()
+            for elt in ds_val_dist:
+                distributed_test_step(elt)
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss.result(), step=step_int)
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
+                epoch, epoch_loss_avg.result(), test_loss.result()))
+            # Generate some samples and visualize them on tensoboard
+            samples = flow.sample(9)
+            samples = samples.numpy().reshape((9, 28, 28, 1))
+            with train_summary_writer.as_default():
+                tf.summary.image("9 generated samples", samples,
+                                 max_outputs=27, step=epoch)
+            # If minimum validation loss is reached, save model
+            curr_val_loss = test_loss.result()
+            if curr_val_loss < min_val_loss:
+                save_path = manager.save()
+                print("Model Saved at {}".format(save_path))
+                min_val_loss = curr_val_loss
 
     # Saving the last variables
     manager.save()
@@ -266,10 +262,6 @@ def main():
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
     log_file.close()
-"""
-
-    for inputs in ds_dist:
-        print(distributed_train_step(inputs))
 
 
 if __name__ == '__main__':
