@@ -130,7 +130,7 @@ def main():
     with mirrored_strategy.scope():
         test_loss = tfk.metrics.Mean(name='test_loss')
         history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
-        epoch_loss_avg = tf.keras.metrics.Mean(nam="epoch_loss")
+        epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
 
     def train_step(inputs):
         with tf.GradientTape() as tape:
@@ -140,6 +140,7 @@ def main():
         optimizer.apply_gradients(
             list(zip(gradients, flow.trainable_variables)))
         history_loss_avg.update_state(loss)
+        epoch_loss_avg.update_state(loss)
         return loss
 
     def test_step(inputs):
@@ -194,7 +195,6 @@ def main():
 
         for batch in ds_dist:
             loss = distributed_train_step(batch)
-            epoch_loss_avg.update_state(loss)
             count_step += 1
 
             # every loss_per_epoch train step
