@@ -38,7 +38,7 @@ def main():
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    # sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -113,9 +113,10 @@ def main():
     with train_summary_writer.as_default():
         tf.summary.text(name='Flow parameters',
                         data=tf.constant(params_str), step=0)
-    print("flow sample shape: ", flow.sample(1).shape)
-    # utils.print_summary(flow)
-    print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
+    with mirrored_strategy.scope():
+        print("flow sample shape: ", flow.sample(1).shape)
+        # utils.print_summary(flow)
+        print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
 
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
