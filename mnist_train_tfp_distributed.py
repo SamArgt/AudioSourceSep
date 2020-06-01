@@ -52,7 +52,10 @@ def main():
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     train_log_dir = os.path.join(
         'tensorboard_logs', 'gradient_tape', current_time, 'train')
+    test_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'test')
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+    test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
     tfk.backend.clear_session()
 
@@ -60,29 +63,44 @@ def main():
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     # Construct a tf.data.Dataset
+    batch_size = 256
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: x / 255.)
-    batch_size = 256
+    ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
+                                                minval=0., maxval=1. / 256.))
+    ds = ds.map(lambda x: x / 256.)
     ds = ds.shuffle(1024).batch(batch_size).prefetch(
         tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
+    # Validation Set
+    ds_val = tfds.load('mnist', split='test', shuffle_files=True)
+    ds_val = ds_val.map(lambda x: x['image'])
+    ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
+    ds_val = ds_val.map(
+        lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
+    ds_val = ds_val.map(lambda x: x / 256.)
+    ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
+    ds_val = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 32
+    K = 24
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 64
+    n_filters_base = 128
 
     # Build Flow
     with mirrored_strategy.scope():
-        bijector = flow_glow.GlowBijector_2blocks(
-            K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
-        inv_bijector = tfb.Invert(bijector)
+        # prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
+        # minibatch = prepocessing_bijector.forward(tf.reshape(minibatch, (1, 28, 28, 1)))
+        # minibatch = tf.reshape(minibatch, (28, 28, 1))
+        flow_bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
+                                                       shift_and_log_scale_layer, n_filters_base, minibatch)
+        # bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+        inv_bijector = tfb.Invert(flow_bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
@@ -106,7 +124,8 @@ def main():
                 log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
                 scaled_loss = log_prob_sum * (1.0 / batch_size)
             gradients = tape.gradient(scaled_loss, flow.trainable_variables)
-            optimizer.apply_gradients(list(zip(gradients, flow.trainable_variables)))
+            optimizer.apply_gradients(
+                list(zip(gradients, flow.trainable_variables)))
             return log_prob_sum
         per_example_losses = mirrored_strategy.run(
             step_fn, args=(dist_inputs,))
@@ -126,6 +145,9 @@ def main():
     # Checkpoint object
     ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+    # if huge jump in the loss, save weights here
+    manage_issues = tf.train.CheckpointManager(
+        ckpt, './tf_ckpts_issues', max_to_keep=3)
     # Restore weights if specified
     if args.restore is not None:
         ckpt.restore(tf.train.latest_checkpoint(
@@ -136,7 +158,8 @@ def main():
     history_loss_avg = tf.keras.metrics.Mean()
     epoch_loss_avg = tf.keras.metrics.Mean()
     count_step = optimizer.iterations.numpy()
-    min_avg_loss, curr_avg_loss = 0., 0.
+    min_val_loss = 0.
+    prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
@@ -153,36 +176,60 @@ def main():
                 history_loss_avg.update_state(loss)
                 count_step += 1
 
+                # every loss_per_epoch train step
                 if count_step % (60000 // (batch_size * loss_per_epoch)) == 0:
-
+                    # check nan loss
                     if tf.math.is_nan(loss):
                         print('Nan Loss')
                         is_nan_loss = True
                         break
 
-                    loss_history.append(history_loss_avg.result())
+                    # Save history and monitor it on tensorboard
+                    curr_loss_history = history_loss_avg.result()
+                    loss_history.append(curr_loss_history)
                     with train_summary_writer.as_default():
                         step_int = int(loss_per_epoch * count_step * batch_size / 60000)
                         tf.summary.scalar(
-                            'loss', history_loss_avg.result(), step=step_int)
+                            'loss', curr_loss_history, step=step_int)
 
+                    # look for huge jump in the loss
+                    if prev_history_loss_avg is None:
+                        prev_history_loss_avg = curr_loss_history
+                    elif curr_loss_history - prev_history_loss_avg > 10**6:
+                        print("Huge gap in the loss")
+                        save_path = manage_issues.save()
+                        print("Model weights saved at {}".format(save_path))
+                        with train_summary_writer.as_default():
+                            tf.summary.text(name='Loss Jump',
+                                            data=tf.constant(
+                                                "Huge jump in the loss. Model weights saved at {}".format(save_path)),
+                                            step=step_int)
+
+                    prev_history_loss_avg = curr_loss_history
                     history_loss_avg.reset_states()
 
+            # every 10 epochs
             if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
-                print("Epoch {:03d}: Loss: {:.3f}".format(
-                    epoch, epoch_loss_avg.result()))
-
+                # Compute validation loss and monitor it on tensoboard
+                val_loss = tf.keras.metrics.Mean()
+                for elt in ds_val:
+                    val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
+                with test_summary_writer.as_default():
+                    tf.summary.scalar('loss', val_loss.result(), step=step_int)
+                print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
+                    epoch, epoch_loss_avg.result(), val_loss.result()))
+                # Generate some samples and visualize them on tensoboard
                 samples = flow.sample(9)
                 samples = samples.numpy().reshape((9, 28, 28, 1))
                 with train_summary_writer.as_default():
-                    tf.summary.image("9 generated samples",
-                                     samples, max_outputs=27, step=epoch)
-
-                curr_avg_loss = epoch_loss_avg.result()
-                if curr_avg_loss < min_avg_loss:
+                    tf.summary.image("9 generated samples", samples,
+                                     max_outputs=27, step=epoch)
+                # If minimum validation loss is reached, save model
+                curr_val_loss = val_loss.result()
+                if curr_val_loss < min_val_loss:
                     save_path = manager.save()
                     print("Model Saved at {}".format(save_path))
-                    min_avg_loss = curr_avg_loss
+                    min_val_loss = curr_val_loss
 
     # Saving the last variables
     manager.save()
@@ -192,16 +239,6 @@ def main():
     t1 = time.time()
     training_time = t1 - t0
     print("Training time: ", np.round(training_time, 2), ' seconds')
-
-    # Saving loss history
-    np.save('loss_history', np.array(loss_history))
-    print('loss history saved')
-
-    # Saving samples
-    samples = flow.sample(9)
-    samples_np = samples.numpy()
-    np.save('samples', samples_np)
-    print("9 samples saved")
 
     log_file.close()
 

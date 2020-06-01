@@ -59,7 +59,6 @@ def main():
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
     # Construct a tf.data.Dataset
-    # alpha = 0.05
     batch_size = 256
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
@@ -87,9 +86,11 @@ def main():
 
     # Build Flow
     tfk.backend.clear_session()
+    # prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
+    # minibatch = prepocessing_bijector.forward(tf.reshape(minibatch, (1, 28, 28, 1)))
+    # minibatch = tf.reshape(minibatch, (28, 28, 1))
     flow_bijector = flow_glow.GlowBijector_2blocks(
         K, data_shape, shift_and_log_scale_layer, n_filters_base, minibatch)
-    # prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
     # bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
     inv_bijector = tfb.Invert(flow_bijector)
     flow = tfd.TransformedDistribution(tfd.Normal(
@@ -219,16 +220,6 @@ def main():
     t1 = time.time()
     training_time = t1 - t0
     print("Training time: ", np.round(training_time, 2), ' seconds')
-
-    # Saving loss history
-    np.save('loss_history', np.array(loss_history))
-    print('loss history saved')
-
-    # Saving samples
-    samples = flow.sample(9)
-    samples_np = samples.numpy()
-    np.save('samples', samples_np)
-    print("9 samples saved")
 
     log_file.close()
 
