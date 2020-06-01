@@ -87,7 +87,7 @@ def main():
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
     ds_val = ds_val.batch(5000)
-    ds_val_dist =  mirrored_strategy.experimental_distribute_dataset(ds_val_dist)
+    ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
@@ -237,7 +237,7 @@ def main():
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
-            for elt in ds_val:
+            for elt in ds_val_dist:
                 test_loss.update_state(distributed_test_step(elt))
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
