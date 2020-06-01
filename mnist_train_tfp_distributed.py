@@ -61,9 +61,12 @@ def main():
 
     # Distributed Strategy
     mirrored_strategy = tf.distribute.MirroredStrategy()
+    print("Number of devices: {}".format(mirrored_strategy.num_replicas_in_sync))
 
     # Construct a tf.data.Dataset
-    batch_size = 256
+    buffer_size = 2048
+    batch_size_per_replica = 64
+    global_batch_size = batch_size_per_replica * mirrored_strategy.num_replicas_in_sync
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
@@ -71,7 +74,7 @@ def main():
     ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
                                                 minval=0., maxval=1. / 256.))
     ds = ds.map(lambda x: x / 256.)
-    ds = ds.shuffle(1024).batch(batch_size).prefetch(
+    ds = ds.shuffle(buffer_size).batch(global_batch_size).prefetch(
         tf.data.experimental.AUTOTUNE)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
@@ -88,9 +91,9 @@ def main():
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 24
+    K = 8
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 128
+    n_filters_base = 32
 
     # Build Flow
     with mirrored_strategy.scope():
@@ -105,7 +108,7 @@ def main():
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     params_str = 'Glow Bijector 2 Blocks: \n\t K = {} \n\t ShiftAndLogScaleResNet \n\t n_filters = {} \n\t batch size = {}'.format(
-        K, n_filters_base, batch_size)
+        K, n_filters_base, global_batch_size)
     print(params_str)
     with train_summary_writer.as_default():
         tf.summary.text(name='Flow parameters',
@@ -122,14 +125,26 @@ def main():
             with tf.GradientTape() as tape:
                 tape.watch(flow.trainable_variables)
                 log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
-                scaled_loss = log_prob_sum * (1.0 / batch_size)
+                scaled_loss = log_prob_sum * (1.0 / global_batch_size)
             gradients = tape.gradient(scaled_loss, flow.trainable_variables)
             optimizer.apply_gradients(
                 list(zip(gradients, flow.trainable_variables)))
-            return log_prob_sum
+            return scaled_loss
         per_example_losses = mirrored_strategy.run(
             step_fn, args=(dist_inputs,))
-        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.MEAN,
+        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM,
+                                             per_example_losses, axis=0)
+        return mean_loss
+
+    @tf.function
+    def test_step(dist_inputs):
+        def step_fn(X):
+            log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
+            scaled_loss = log_prob_sum * (1.0 / global_batch_size)
+            return scaled_loss
+        per_example_losses = mirrored_strategy.run(
+            step_fn, args=(dist_inputs,))
+        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM,
                                              per_example_losses, axis=0)
         return mean_loss
 
@@ -143,15 +158,16 @@ def main():
     print("Start Training on {} epochs".format(N_EPOCHS))
 
     # Checkpoint object
-    ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
-    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
-    # if huge jump in the loss, save weights here
-    manage_issues = tf.train.CheckpointManager(
-        ckpt, './tf_ckpts_issues', max_to_keep=3)
-    # Restore weights if specified
-    if args.restore is not None:
-        ckpt.restore(tf.train.latest_checkpoint(
-            os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+    with mirrored_strategy.scope():
+        ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
+        manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+        # if huge jump in the loss, save weights here
+        manage_issues = tf.train.CheckpointManager(
+            ckpt, './tf_ckpts_issues', max_to_keep=3)
+        # Restore weights if specified
+        if args.restore is not None:
+            ckpt.restore(tf.train.latest_checkpoint(
+                os.path.join(restore_abs_dirpath, 'tf_ckpts')))
 
     t0 = time.time()
     loss_history = []
@@ -177,7 +193,7 @@ def main():
                 count_step += 1
 
                 # every loss_per_epoch train step
-                if count_step % (60000 // (batch_size * loss_per_epoch)) == 0:
+                if count_step % (60000 // (global_batch_size * loss_per_epoch)) == 0:
                     # check nan loss
                     if tf.math.is_nan(loss):
                         print('Nan Loss')
@@ -188,7 +204,7 @@ def main():
                     curr_loss_history = history_loss_avg.result()
                     loss_history.append(curr_loss_history)
                     with train_summary_writer.as_default():
-                        step_int = int(loss_per_epoch * count_step * batch_size / 60000)
+                        step_int = int(loss_per_epoch * count_step * global_batch_size / 60000)
                         tf.summary.scalar(
                             'loss', curr_loss_history, step=step_int)
 
@@ -213,7 +229,7 @@ def main():
                 # Compute validation loss and monitor it on tensoboard
                 val_loss = tf.keras.metrics.Mean()
                 for elt in ds_val:
-                    val_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
+                    val_loss.update_state(test_step(elt))
                 with test_summary_writer.as_default():
                     tf.summary.scalar('loss', val_loss.result(), step=step_int)
                 print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
