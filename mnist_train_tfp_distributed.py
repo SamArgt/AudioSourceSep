@@ -74,8 +74,7 @@ def main():
     ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
                                                 minval=0., maxval=1. / 256.))
     ds = ds.map(lambda x: x / 256.)
-    ds = ds.shuffle(buffer_size).batch(global_batch_size).prefetch(
-        tf.data.experimental.AUTOTUNE)
+    ds = ds.shuffle(buffer_size).batch(global_batch_size)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
     # Validation Set
@@ -85,7 +84,7 @@ def main():
     ds_val = ds_val.map(
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
-    ds_val = ds_val.batch(5000).prefetch(tf.data.experimental.AUTOTUNE)
+    ds_val = ds_val.batch(5000)
     ds_val = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
     # Set flow parameters
@@ -264,6 +263,7 @@ def main():
     with mirrored_strategy.scope():
         for inputs in ds:
             print(train_step(inputs))
+
 
 if __name__ == '__main__':
     main()
