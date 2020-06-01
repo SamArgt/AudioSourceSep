@@ -268,9 +268,8 @@ def main():
     log_file.close()
 """
 
-    with mirrored_strategy.scope():
-        for inputs in ds_dist:
-            print(distributed_train_step(inputs))
+    for inputs in ds_dist:
+        print(distributed_train_step(inputs))
 
 
 if __name__ == '__main__':
