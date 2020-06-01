@@ -61,12 +61,14 @@ def main():
 
     # Distributed Strategy
     mirrored_strategy = tf.distribute.MirroredStrategy()
-    print("Number of devices: {}".format(mirrored_strategy.num_replicas_in_sync))
+    print("Number of devices: {}".format(
+        mirrored_strategy.num_replicas_in_sync))
 
     # Construct a tf.data.Dataset
     buffer_size = 2048
     batch_size_per_replica = 64
-    global_batch_size = batch_size_per_replica * mirrored_strategy.num_replicas_in_sync
+    global_batch_size = batch_size_per_replica * \
+        mirrored_strategy.num_replicas_in_sync
     ds = tfds.load('mnist', split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
@@ -76,7 +78,7 @@ def main():
     ds = ds.map(lambda x: x / 256.)
     ds = ds.shuffle(buffer_size).batch(global_batch_size)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
-    ds = mirrored_strategy.experimental_distribute_dataset(ds)
+    ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
     # Validation Set
     ds_val = tfds.load('mnist', split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
@@ -85,7 +87,7 @@ def main():
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
     ds_val = ds_val.batch(5000)
-    ds_val = mirrored_strategy.experimental_distribute_dataset(ds_val)
+    ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
@@ -115,38 +117,43 @@ def main():
     with mirrored_strategy.scope():
         print("flow sample shape: ", flow.sample(1).shape)
         # utils.print_summary(flow)
-        print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
+        print("Total Trainable Variables: ",
+              utils.total_trainable_variables(flow))
 
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
-    @tf.function
-    def train_step(dist_inputs):
-        def step_fn(X):
-            with tf.GradientTape() as tape:
-                tape.watch(flow.trainable_variables)
-                log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
-                scaled_loss = log_prob_sum * (1.0 / global_batch_size)
-            gradients = tape.gradient(scaled_loss, flow.trainable_variables)
-            optimizer.apply_gradients(
-                list(zip(gradients, flow.trainable_variables)))
-            return scaled_loss
-        per_example_losses = mirrored_strategy.run(
-            step_fn, args=(dist_inputs,))
-        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM,
-                                             per_example_losses, axis=0)
-        return mean_loss
+    with mirrored_strategy.scope():
+        def compute_loss(X):
+            per_example_loss = -tf.reduce_sum(flow.log_prob(X))
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
+
+    with mirrored_strategy.scope():
+        train_loss = tfk.metrics.Mean(name='train_loss')
+        test_loss = tfk.metrics.Mean(name='test_loss')
+
+    def train_step(inputs):
+        with tf.GradientTape() as tape:
+            tape.watch(flow.trainable_variables)
+            loss = compute_loss(inputs)
+        gradients = tape.gradient(loss, flow.trainable_variables)
+        optimizer.apply_gradients(
+            list(zip(gradients, flow.trainable_variables)))
+        train_loss.update_state(loss)
+        return loss
+
+    def test_step(inputs):
+        loss = compute_loss(inputs)
+        test_loss.update_state(loss)
 
     @tf.function
-    def test_step(dist_inputs):
-        def step_fn(X):
-            log_prob_sum = -tf.reduce_sum(flow.log_prob(X))
-            scaled_loss = log_prob_sum * (1.0 / global_batch_size)
-            return scaled_loss
-        per_example_losses = mirrored_strategy.run(
-            step_fn, args=(dist_inputs,))
-        mean_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM,
-                                             per_example_losses, axis=0)
-        return mean_loss
+    def distributed_train_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            train_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    @tf.function
+    def distributed_test_step(dataset_inputs):
+        return mirrored_strategy.run(test_step, args=(dataset_inputs,))
 
     # Training Parameters
     N_EPOCHS = 100
@@ -159,7 +166,8 @@ def main():
 
     # Checkpoint object
     with mirrored_strategy.scope():
-        ckpt = tf.train.Checkpoint(variables=flow.variables, optimizer=optimizer)
+        ckpt = tf.train.Checkpoint(
+            variables=flow.variables, optimizer=optimizer)
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
         # if huge jump in the loss, save weights here
         manage_issues = tf.train.CheckpointManager(
@@ -187,7 +195,7 @@ def main():
             if is_nan_loss:
                 break
 
-            for batch in ds:
+            for batch in ds_dist:
                 loss = train_step(batch)
                 epoch_loss_avg.update_state(loss)
                 history_loss_avg.update_state(loss)
@@ -229,7 +237,7 @@ def main():
             if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
                 # Compute validation loss and monitor it on tensoboard
                 val_loss = tf.keras.metrics.Mean()
-                for elt in ds_val:
+                for elt in ds_val_dist:
                     val_loss.update_state(test_step(elt))
                 with test_summary_writer.as_default():
                     tf.summary.scalar('loss', val_loss.result(), step=step_int)
@@ -261,8 +269,8 @@ def main():
 """
 
     with mirrored_strategy.scope():
-        for inputs in ds:
-            print(train_step(inputs))
+        for inputs in ds_dist:
+            print(distributed_train_step(inputs))
 
 
 if __name__ == '__main__':
