@@ -87,7 +87,6 @@ def main():
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
     ds_val = ds_val.batch(5000)
-    ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
@@ -128,7 +127,6 @@ def main():
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
     with mirrored_strategy.scope():
-        test_loss = tfk.metrics.Sum(name='test_loss')
         history_loss_avg = tf.keras.metrics.Sum(name="tensorboard_loss")
         epoch_loss_avg = tf.keras.metrics.Sum(name="epoch_loss")
 
@@ -143,19 +141,11 @@ def main():
         epoch_loss_avg.update_state(loss)
         return loss
 
-    def test_step(inputs):
-        loss = compute_loss(inputs)
-        test_loss.update_state(loss)
-
     @tf.function
     def distributed_train_step(dataset_inputs):
         per_replica_losses = mirrored_strategy.run(
             train_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-
-    @tf.function
-    def distributed_test_step(dataset_inputs):
-        return mirrored_strategy.run(test_step, args=(dataset_inputs,))
 
     # Training Parameters
     N_EPOCHS = 100
@@ -186,6 +176,7 @@ def main():
     prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
+    test_loss = tfk.metrics.Mean(name='test_loss')
     # Custom Training Loop
     for epoch in range(N_EPOCHS):
         epoch_loss_avg.reset_states()
@@ -233,14 +224,15 @@ def main():
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
-            for elt in ds_val_dist:
-                distributed_test_step(elt)
+            for elt in ds_val:
+                test_loss.update_state(-tf.reduce_mean(flow.log_prob(elt)))
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), test_loss.result()))
             # Generate some samples and visualize them on tensoboard
-            samples = flow.sample(9)
+            with mirrored_strategy.scope():
+                samples = flow.sample(9)
             samples = samples.numpy().reshape((9, 28, 28, 1))
             with train_summary_writer.as_default():
                 tf.summary.image("9 generated samples", samples,
