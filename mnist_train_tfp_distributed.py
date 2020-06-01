@@ -38,7 +38,7 @@ def main():
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    # sys.stdout = log_file
+    sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -92,9 +92,9 @@ def main():
     # Set flow parameters
     data_shape = [28, 28, 1]  # (H, W, C)
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = 8
+    K = 24
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 32
+    n_filters_base = 128
 
     # Build Flow
     with mirrored_strategy.scope():
@@ -128,9 +128,9 @@ def main():
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
     with mirrored_strategy.scope():
-        test_loss = tfk.metrics.Mean(name='test_loss')
-        history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
-        epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
+        test_loss = tfk.metrics.Sum(name='test_loss')
+        history_loss_avg = tf.keras.metrics.Sum(name="tensorboard_loss")
+        epoch_loss_avg = tf.keras.metrics.Sum(name="epoch_loss")
 
     def train_step(inputs):
         with tf.GradientTape() as tape:
