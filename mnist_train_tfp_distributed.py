@@ -180,6 +180,7 @@ def main():
     loss_per_epoch = 10  # number of losses per epoch to save
     is_nan_loss = False
     # Custom Training Loop
+    """
     with mirrored_strategy.scope():
         for epoch in range(N_EPOCHS):
             epoch_loss_avg.reset_states()
@@ -258,7 +259,11 @@ def main():
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
     log_file.close()
+"""
 
+    with mirrored_strategy.scope():
+        for inputs in ds:
+            print(train_step(inputs))
 
 if __name__ == '__main__':
     main()
