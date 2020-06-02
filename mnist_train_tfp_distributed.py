@@ -95,15 +95,21 @@ def main():
     base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
     K = 24
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = 256
+    n_filters_base = 128
 
     # Build Flow
+    logit = True
     with mirrored_strategy.scope():
-        prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
-        minibatch = prepocessing_bijector.forward(minibatch)
-        flow_bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
-                                                       shift_and_log_scale_layer, n_filters_base, minibatch)
-        bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+        if logit is True:
+            prepocessing_bijector = flow_tfp_bijectors.Preprocessing(
+                data_shape)
+            minibatch = prepocessing_bijector.forward(minibatch)
+            flow_bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
+                                                           shift_and_log_scale_layer, n_filters_base, minibatch)
+            bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+        else:
+            bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
+                                                      shift_and_log_scale_layer, n_filters_base, minibatch)
         inv_bijector = tfb.Invert(bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
