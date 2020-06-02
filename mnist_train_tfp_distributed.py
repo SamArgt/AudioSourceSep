@@ -100,8 +100,7 @@ def main():
     # Build Flow
     with mirrored_strategy.scope():
         prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
-        minibatch = prepocessing_bijector.forward(tf.reshape(minibatch, (1, 28, 28, 1)))
-        minibatch = tf.reshape(minibatch, (28, 28, 1))
+        minibatch = prepocessing_bijector.forward(minibatch)
         flow_bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
                                                        shift_and_log_scale_layer, n_filters_base, minibatch)
         bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
