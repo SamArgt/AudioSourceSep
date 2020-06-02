@@ -5,6 +5,7 @@ import tensorflow_datasets as tfds
 from flow_models import flow_tfk_layers
 from flow_models import flow_glow
 from flow_models import flow_real_nvp
+from flow_models import flow_tfp_bijectors
 from flow_models import utils
 import argparse
 import time
@@ -98,13 +99,13 @@ def main():
 
     # Build Flow
     with mirrored_strategy.scope():
-        # prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
-        # minibatch = prepocessing_bijector.forward(tf.reshape(minibatch, (1, 28, 28, 1)))
-        # minibatch = tf.reshape(minibatch, (28, 28, 1))
+        prepocessing_bijector = flow_tfp_bijectors.Preprocessing(data_shape)
+        minibatch = prepocessing_bijector.forward(tf.reshape(minibatch, (1, 28, 28, 1)))
+        minibatch = tf.reshape(minibatch, (28, 28, 1))
         flow_bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
                                                        shift_and_log_scale_layer, n_filters_base, minibatch)
-        # bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
-        inv_bijector = tfb.Invert(flow_bijector)
+        bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+        inv_bijector = tfb.Invert(bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
