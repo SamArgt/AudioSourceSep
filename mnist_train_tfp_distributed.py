@@ -258,7 +258,7 @@ def main():
                 min_val_loss = curr_val_loss
 
     # Saving the last variables
-    manager.save()
+    save_path = manager.save()
     print("Model Saved at {}".format(save_path))
 
     # Training Time
