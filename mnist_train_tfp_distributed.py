@@ -114,8 +114,18 @@ def main():
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
-    params_str = 'Glow Bijector 2 Blocks: \n\t K = {} \n\t ShiftAndLogScaleResNet \n\t n_filters = {} \n\t batch size = {}'.format(
-        K, n_filters_base, global_batch_size)
+    # Training Parameters
+    N_EPOCHS = 100
+    if args.n_epochs is not None:
+        N_EPOCHS = int(args.n_epochs)
+    with mirrored_strategy.scope():
+        optimizer = tf.keras.optimizers.Adam()
+
+    params_str = 'Glow Bijector 2 Blocks: \n\t \
+      K = {} \n\t ShiftAndLogScaleResNet \n\t  \
+      n_filters = {} \n\t batch size = {} \n\t n epochs = {} \n\t \
+      logit = {}'.format(
+        K, n_filters_base, global_batch_size, N_EPOCHS, logit)
     print(params_str)
     with train_summary_writer.as_default():
         tf.summary.text(name='Flow parameters',
@@ -162,15 +172,6 @@ def main():
             test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
-    # Training Parameters
-    N_EPOCHS = 100
-    if args.n_epochs is not None:
-        N_EPOCHS = int(args.n_epochs)
-    with mirrored_strategy.scope():
-        optimizer = tf.keras.optimizers.Adam()
-
-    print("Start Training on {} epochs".format(N_EPOCHS))
-
     # Checkpoint object
     with mirrored_strategy.scope():
         ckpt = tf.train.Checkpoint(
@@ -194,6 +195,7 @@ def main():
     test_loss = tfk.metrics.Mean(name='test_loss')
     history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
     epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
+    print("Start Training on {} epochs".format(N_EPOCHS))
     # Custom Training Loop
     for epoch in range(N_EPOCHS):
         epoch_loss_avg.reset_states()
