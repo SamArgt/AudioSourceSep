@@ -87,6 +87,36 @@ class AffineCouplingLayerMasked(tfb.Bijector):
             return tf.cast((1 - binary_mask), dtype)
 
 
+class AffineCouplingLayerSplit(tfb.Bijector):
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer'):
+        super(AffineCouplingLayerSplit, self).__init__(forward_min_event_ndims=3)
+
+        self.H, self.W, self.C = event_shape
+        assert(self.C % 2 == 0)
+
+        self.shift_and_log_scale_fn = shift_and_log_scale_layer(
+            [self.H, self.W, self.C // 2], n_hidden_units, name=name + '/shiftAndLogScaleLayer')
+
+    def _forward(self, x):
+        xa, xb = tf.split(x, 2, axis=-1)
+        log_s, t = self.shift_and_log_scale_fn(xb)
+        ya = tf.exp(log_s) * xa + t
+        yb = xb
+        return tf.concat([ya, yb], axis=-1)
+
+    def _inverse(self, y):
+        ya, yb = tf.split(y, 2, axis=-1)
+        log_s, t = self.shift_and_log_scale_fn(yb)
+        xa = (ya - t) / tf.exp(log_s)
+        xb = yb
+        return tf.concat([xa, xb], axis=-1)
+
+    def _forward_log_det_jacobian(self, x):
+        xa, xb = tf.split(x, 2, axis=-1)
+        log_s, _ = self.shift_and_log_scale_fn(xb)
+        return tf.reduce_sum(log_s, axis=[1, 2, 3])
+
+
 class Squeeze(tfb.Reshape):
     """
     Squeezing operation as described in Real NVP

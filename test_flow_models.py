@@ -51,20 +51,26 @@ def make_test_case_bijector(bijector_class, inputs, expected_log_det, **kwargs):
     return TestBijector
 
 
-global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2, MINIBATCH, MINIBATCH_1, MINIBATCH_2
+global EVENT_SHAPE, EVENT_SHAPE_1, EVENT_SHAPE_2, EVENT_SHAPE_3
+global EXPECTED_LOG_DET, INPUTS, INPUTS_1, INPUTS_2, INPUTS_3
+global MINIBATCH, MINIBATCH_1, MINIBATCH_2, MINIBATCh_3
 EVENT_SHAPE = [2, 2, 1]
 EVENT_SHAPE_1 = [4, 4, 1]
 EVENT_SHAPE_2 = [2, 2, 2]
+EVENT_SHAPE_3 = [8, 8, 1]
 EXPECTED_LOG_DET = np.log(2, dtype=np.float32)
 INPUTS = tf.random.normal([1] + EVENT_SHAPE)
 INPUTS_1 = tf.random.normal([1] + EVENT_SHAPE_1)
 INPUTS_2 = tf.random.normal([1] + EVENT_SHAPE_2)
+INPUTS_3 = tf.random.normal([1] + EVENT_SHAPE_3)
 MINIBATCH = tf.concat((2 * tf.ones((1, 2, 2, 1), dtype=tf.float32),
                        tf.ones((1, 2, 2, 1), dtype=tf.float32)), axis=0)
 MINIBATCH_1 = tf.concat((2 * tf.ones((1, 4, 4, 1), dtype=tf.float32),
                          tf.ones((1, 4, 4, 1), dtype=tf.float32)), axis=0)
 MINIBATCH_2 = tf.concat((2 * tf.ones((1, 2, 2, 2), dtype=tf.float32),
                          tf.ones((1, 2, 2, 2), dtype=tf.float32)), axis=0)
+MINIBATCH_3 = tf.concat((2 * tf.ones([1] + EVENT_SHAPE_3, dtype=tf.float32),
+                         tf.ones([1] + EVENT_SHAPE_3, dtype=tf.float32)), axis=0)
 
 
 def shift_and_log_scale_toy(x):
@@ -84,6 +90,10 @@ affine_coupling_layers_checkboard_args = {"event_shape": EVENT_SHAPE,
 affine_coupling_layers_channel_args = {"event_shape": EVENT_SHAPE_2,
                                        "shift_and_log_scale_layer": shift_and_log_scale_layer_toy,
                                        'n_hidden_units': 2, "masking": "channel"}
+
+affine_coupling_layer_split_args = {"event_shape": EVENT_SHAPE_2,
+                                    "shift_and_log_scale_layer": shift_and_log_scale_layer_toy,
+                                    'n_hidden_units': 2}
 
 real_nvp_step_checkboard_args = {'event_shape': EVENT_SHAPE,
                                  'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
@@ -110,9 +120,13 @@ glowblock_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
                           'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
                           'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
 
-glowbijector_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
-                     'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
-                     'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
+glowbijector2_args = {'K': 2, 'event_shape': EVENT_SHAPE_1,
+                      'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
+                      'n_hidden_units': 2, 'minibatch': MINIBATCH_1}
+
+glowbijector3_args = {'K': 2, 'event_shape': EVENT_SHAPE_3,
+                      'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
+                      'n_hidden_units': 2, 'minibatch': MINIBATCH_3}
 
 preprocessing_args = {'event_shape': EVENT_SHAPE_1}
 
@@ -132,6 +146,15 @@ class TestAffineCouplingLayersMaskedChannel(make_test_case_bijector(AffineCoupli
                                                                     INPUTS_2,
                                                                     expected_log_det=4 * EXPECTED_LOG_DET,
                                                                     **affine_coupling_layers_channel_args)):
+    pass
+
+
+# One affine coupling layer splitting along the channel dimension: Input dimension (2, 2, 2) ->
+# 1 * 4 variables are scaled by log(2) -> the expected log det is  (4 * log(2))
+class TestAffineCouplingLayerSplit(make_test_case_bijector(AffineCouplingLayerSplit,
+                                                           INPUTS_2,
+                                                           expected_log_det=4 * EXPECTED_LOG_DET,
+                                                           **affine_coupling_layer_split_args)):
     pass
 
 
@@ -186,9 +209,15 @@ class TestGlowBlock(make_test_case_bijector(GlowBlock, INPUTS_1,
     pass
 
 
-class TestGlowBijector(make_test_case_bijector(GlowBijector_2blocks, INPUTS_1,
-                                               expected_log_det=None,
-                                               **glowbijector_args)):
+class TestGlowBijector_2Blocks(make_test_case_bijector(GlowBijector_2blocks, INPUTS_1,
+                                                       expected_log_det=None,
+                                                       **glowbijector2_args)):
+    pass
+
+
+class TestGlowBijector_3Blocks(make_test_case_bijector(GlowBijector_3blocks, INPUTS_3,
+                                                       expected_log_det=None,
+                                                       **glowbijector3_args)):
     pass
 
 
