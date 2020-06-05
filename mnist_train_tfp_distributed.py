@@ -98,7 +98,7 @@ def main():
     n_filters_base = 256
 
     # Build Flow
-    logit = True
+    logit = False
     with mirrored_strategy.scope():
         if logit is True:
             prepocessing_bijector = flow_tfp_bijectors.Preprocessing(
