@@ -1,5 +1,0 @@
-Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
-TensorBoard 2.2.1 at http://localhost:6006/ (Press CTRL+C to quit)
-W0530 16:41:29.298332 139945908602624 plugin_event_multiplexer.py:263] Deleting accumulator 'gradient_tape/20200530-164021/train'
-W0530 16:41:29.300466 139945908602624 plugin_event_multiplexer.py:263] Deleting accumulator 'gradient_tape/20200530-164021/test'
-TensorBoard caught SIGTERM; exiting...
