@@ -1,12 +1,12 @@
 # Statistics MSs Project: Audio Source Separation
 Statistics MSc Project (2020): Audio Source Separation
 
-### mnist_train_tfp.py
+### mnist_train_tfp_distributed.py
 
 Script to train a Normalizing Flow model on the MNIST dataset
 
 ```bash
-python mnist_train_tfp.py OUTPUT --n_epochs N_EPOCHS
+python mnist_train_tfp_distributed.py [--n_epochs --K --n_filters --batch_size --learning_rate --use_logit --output --restore]
 ```
 OUTPUT: directory where to save the log, the loss history, the variables of the model and some samples
 N_EPOCHS: number of epochs to train the model
@@ -16,12 +16,6 @@ The script uses Tensorboard to visualize the loss and samples during training. T
 cd OUTPUT
 tensorboard --logdir tensorboard_logs/gradient_tape 
 ```
-
-### mnist_train_tfk.py
-(deprecated)
-Script to train a Normalizing Flow model using the keras implementation of the bijectors
-
-
 ## pipeline module
 Set of functions to:
 - load wav files and spectrograms into tensorflow dataset
