@@ -282,15 +282,14 @@ def main(args):
     ckpt, manager, manager_issues = setUp_checkpoint(
         mirrored_strategy, args, flow, optimizer)
 
-    params_str = 'Glow Bijector 2 Blocks: \n\t \
-      K = {} \n\t ShiftAndLogScaleResNet \n\t  \
-      n_filters = {} \n\t batch size = {} \n\t n epochs = {} \n\t \
-      logit = {}'.format(
-        args.K, args.n_filters, args.batch_size, args.n_epochs, args.use_logit)
-    print(params_str)
+    params_dict = vars(args)
+    template = 'Glow Flow \n\t '
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
     with train_summary_writer.as_default():
-        tf.summary.text(name='Flow parameters',
-                        data=tf.constant(params_str), step=0)
+        tf.summary.text(name='Parameters',
+                        data=tf.constant(template), step=0)
     with mirrored_strategy.scope():
         print("flow sample shape: ", flow.sample(1).shape)
         print("Total Trainable Variables: ",
