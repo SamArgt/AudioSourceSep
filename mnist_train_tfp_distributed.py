@@ -243,7 +243,10 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    output_dirpath = args.OUTPUT
+    output_dirname = 'glow_mnist_' + str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+    if args.logit:
+        output_dirname += '_logit'
+    output_dirpath = os.path.join(args.output, output_dirname)
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
@@ -306,7 +309,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
-    parser.add_argument('OUTPUT', type=str,
+    parser.add_argument('--output', type=str, default='mnist_trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--n_epochs', type=int, default=100,
                         help='number of epochs to train')
