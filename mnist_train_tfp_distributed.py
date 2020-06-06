@@ -157,6 +157,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
     N_EPOCHS = args.n_epochs
+    batch_size = args.batch_size
     t0 = time.time()
     loss_history = []
     count_step = optimizer.iterations.numpy()
@@ -182,7 +183,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             count_step += 1
 
             # every loss_per_epoch train step
-            if count_step % (60000 // (args.batch_size * loss_per_epoch)) == 0:
+            if count_step % (60000 // (batch_size * loss_per_epoch)) == 0:
                 # check nan loss
                 if tf.math.is_nan(loss):
                     print('Nan Loss')
@@ -193,7 +194,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 curr_loss_history = history_loss_avg.result()
                 loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch * count_step * args.batch_size / 60000)
+                    step_int = int(loss_per_epoch * count_step * batch_size / 60000)
                     tf.summary.scalar(
                         'loss', curr_loss_history, step=step_int)
 
@@ -219,6 +220,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_loss.reset_states()
             for elt in ds_val_dist:
                 test_loss.update_state(distributed_test_step(elt))
+            step_int = int(loss_per_epoch * count_step * batch_size / 60000)
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
