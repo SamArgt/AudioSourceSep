@@ -71,9 +71,14 @@ def build_flow(mirrored_strategy, args, minibatch):
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
-        optimizer = tf.keras.optimizers.Adam()
+    return flow
 
-    return flow, optimizer
+
+def setUp_optimizer(mirrored_strategy, args):
+    lr = args.learning_rate
+    with mirrored_strategy.scope():
+        optimizer = tfk.optimizers.Adam(lr=lr)
+    return optimizer
 
 
 def setUp_tensorboard():
@@ -263,7 +268,10 @@ def main(args):
     ds_dist, ds_val_dist, minibatch = load_data(mirrored_strategy, args)
 
     # Build Flow and Set up optimizer
-    flow, optimizer = build_flow(mirrored_strategy, args, minibatch)
+    flow = build_flow(mirrored_strategy, args, minibatch)
+
+    # Set up optimizer
+    optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Set up checkpoint
     ckpt, manager, manager_issues = setUp_checkpoint(
@@ -311,6 +319,7 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--use_logit', type=bool, default=False,
                         help="Either to use logit function to preprocess the data")
+    parser.add_argument('--learning_rate', type=float, default=0.001)
     args = parser.parse_args()
 
     main(args)
