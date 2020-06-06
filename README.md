@@ -3,18 +3,34 @@ Statistics MSc Project (2020): Audio Source Separation
 
 ### mnist_train_tfp_distributed.py
 
-Script to train a Normalizing Flow model on the MNIST dataset
-
 ```bash
-python mnist_train_tfp_distributed.py [--n_epochs --K --n_filters --batch_size --learning_rate --use_logit --output --restore]
+python mnist_train_tfp_distributed.py [-h] [--output OUTPUT]
+                                      [--n_epochs N_EPOCHS]
+                                      [--restore RESTORE] [--K K]
+                                      [--batch_size BATCH_SIZE]
+                                      [--n_filters N_FILTERS]
+                                      [--use_logit USE_LOGIT]
+                                      [--learning_rate LEARNING_RATE]
 ```
-OUTPUT: directory where to save the log, the loss history, the variables of the model and some samples
-N_EPOCHS: number of epochs to train the model
+Train Flow model on MNIST dataset
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output OUTPUT       output dirpath for savings
+  --n_epochs N_EPOCHS   number of epochs to train
+  --restore RESTORE     directory of saved weights (optional)
+  --K K                 Number of Step of Flow in each Block
+  --batch_size BATCH_SIZE
+  --n_filters N_FILTERS
+                        number of filters in the Convolutional Network
+  --use_logit USE_LOGIT
+                        Either to use logit function to preprocess the data
+  --learning_rate LEARNING_RATE
 
 The script uses Tensorboard to visualize the loss and samples during training. To launch tensorboard:
 ```bash
 cd OUTPUT
-tensorboard --logdir tensorboard_logs/gradient_tape 
+tensorboard --logdir tensorboard_logs
 ```
 ## pipeline module
 Set of functions to:
