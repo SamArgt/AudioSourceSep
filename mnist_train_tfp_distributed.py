@@ -246,7 +246,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 def main(args):
 
     output_dirname = 'glow_mnist_' + str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
-    if args.logit:
+    if args.use_logit:
         output_dirname += '_logit'
     output_dirpath = os.path.join(args.output, output_dirname)
     try:
