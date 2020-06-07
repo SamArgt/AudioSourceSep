@@ -22,9 +22,9 @@ optional arguments: <br />
   >--K K                 Number of Step of Flow in each Block<br />
   >--batch_size BATCH_SIZE<br />
   >--n_filters N_FILTERS<br />
-                        >> number of filters in the Convolutional Network<br />
+  >>                       number of filters in the Convolutional Network<br />
   >--use_logit USE_LOGIT<br />
-                        >>Either to use logit function to preprocess the data<br />
+  >>                      Either to use logit function to preprocess the data<br />
   >--learning_rate LEARNING_RATE<br />
 
 The script uses Tensorboard to visualize the loss and samples during training. To launch tensorboard:
