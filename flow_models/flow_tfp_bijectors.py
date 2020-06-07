@@ -100,14 +100,18 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(xb)
-        ya = tf.exp(log_s) * xa + t
+        # s = tf.nn.sigmoid(log_s)
+        s = tf.exp(log_s)
+        ya = s * xa + t
         yb = xb
         return tf.concat([ya, yb], axis=-1)
 
     def _inverse(self, y):
         ya, yb = tf.split(y, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(yb)
-        xa = (ya - t) / tf.exp(log_s)
+        # s = tf.nn.sigmoid(log_s)
+        s = tf.exp(log_s)
+        xa = (ya - t) / s
         xb = yb
         return tf.concat([xa, xb], axis=-1)
 

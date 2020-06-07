@@ -58,7 +58,8 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         self.activation_2 = tfk.layers.Activation('relu', dtype=dtype)
 
         self.conv3 = tfk.layers.Conv2D(
-            filters=2 * input_shape[-1], kernel_size=3, padding='same', dtype=dtype)
+            filters=2 * input_shape[-1], kernel_size=3, padding='same', dtype=dtype,
+            kernel_initializer='zeros', bias_initializer='zeros')
         self.activation_log_s = tfk.layers.Activation('tanh', dtype=dtype)
 
     def call(self, inputs):
