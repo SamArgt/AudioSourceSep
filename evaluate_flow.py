@@ -173,6 +173,8 @@ if __name__ == '__main__':
         description='Evaluate Flow model on MNIST dataset')
     parser.add_argument('RESTORE', type=str,
                         help='directory of saved weights')
+    parser.add_argument('--output', type=str, default='results.txt',
+                        help="File where to save the results")
     parser.add_argument('--K', type=int, default=16,
                         help="Number of Step of Flow in each Block")
     parser.add_argument('--batch_size', type=int, default=256)
