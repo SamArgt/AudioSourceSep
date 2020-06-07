@@ -14,18 +14,18 @@ python mnist_train_tfp_distributed.py [-h] [--output OUTPUT]
 ```
 Train Flow model on MNIST dataset
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --output OUTPUT       output dirpath for savings
-  --n_epochs N_EPOCHS   number of epochs to train
-  --restore RESTORE     directory of saved weights (optional)
-  --K K                 Number of Step of Flow in each Block
-  --batch_size BATCH_SIZE
-  --n_filters N_FILTERS
-                        number of filters in the Convolutional Network
-  --use_logit USE_LOGIT
-                        Either to use logit function to preprocess the data
-  --learning_rate LEARNING_RATE
+optional arguments: <br />
+  -h, --help            show this help message and exit<br />
+  --output OUTPUT       output dirpath for savings<br />
+  --n_epochs N_EPOCHS   number of epochs to train<br />
+  --restore RESTORE     directory of saved weights (optional)<br />
+  --K K                 Number of Step of Flow in each Block<br />
+  --batch_size BATCH_SIZE<br />
+  --n_filters N_FILTERS<br />
+                        number of filters in the Convolutional Network<br />
+  --use_logit USE_LOGIT<br />
+                        Either to use logit function to preprocess the data<br />
+  --learning_rate LEARNING_RATE<br />
 
 The script uses Tensorboard to visualize the loss and samples during training. To launch tensorboard:
 ```bash

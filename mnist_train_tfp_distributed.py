@@ -28,6 +28,7 @@ def load_data(mirrored_strategy, args):
     ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
                                                 minval=0., maxval=1. / 256.))
     ds = ds.map(lambda x: x / 256.)
+    # ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     ds = ds.shuffle(buffer_size).batch(global_batch_size)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
@@ -38,6 +39,7 @@ def load_data(mirrored_strategy, args):
     ds_val = ds_val.map(
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
     ds_val = ds_val.map(lambda x: x / 256.)
+    # ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     ds_val = ds_val.batch(5000)
     ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
