@@ -119,6 +119,7 @@ class AffineCouplingLayerSplit(tfb.Bijector):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, _ = self.shift_and_log_scale_fn(xb)
         s = tf.nn.sigmoid(log_s)
+        # s = tf.exp(log_s)
         return tf.reduce_sum(tf.math.log(s), axis=[1, 2, 3])
 
 

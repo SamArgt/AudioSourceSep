@@ -74,7 +74,12 @@ def build_flow(mirrored_strategy, args, minibatch):
 def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
     with mirrored_strategy.scope():
-        optimizer = tfk.optimizers.Adam(lr=lr)
+        if args.optimizer == 'adam':
+            optimizer = tfk.optimizers.Adam(lr=lr)
+        elif args.optimizer == 'adamax':
+            optimizer = tfk.optimizers.Adamax(lr=lr)
+        else:
+            raise ValueError("optimizer argument should be adam or adamax")
     return optimizer
 
 
@@ -310,20 +315,27 @@ if __name__ == '__main__':
         description='Train Flow model on MNIST dataset')
     parser.add_argument('--output', type=str, default='mnist_trained_flow',
                         help='output dirpath for savings')
-    parser.add_argument('--n_epochs', type=int, default=100,
-                        help='number of epochs to train')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')
+
+    # Model hyperparameters
     parser.add_argument('--K', type=int, default=16,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--n_filters', type=int, default=256,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--use_logit', action="store_true",
                         help="Either to use logit function to preprocess the data")
+
+    # Optimization parameters
+    parser.add_argument('--n_epochs', type=int, default=100,
+                        help='number of epochs to train')
+    parser.add_argument("--optimizer", type=str,
+                        default="adamax", help="adam or adamax")
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.)')
+
     args = parser.parse_args()
 
     main(args)
