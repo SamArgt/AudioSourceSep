@@ -31,7 +31,7 @@ def load_data(mirrored_strategy, args):
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x)
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
-    ds = ds.shuffle(buffer_size).batch(global_batch_size)
+    ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
     # Validation Set
