@@ -74,7 +74,7 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
         # Get nan !!
-        log_s = self.activation_log_s(log_s)
+        # log_s = self.activation_log_s(log_s)
         return log_s, t
 
 

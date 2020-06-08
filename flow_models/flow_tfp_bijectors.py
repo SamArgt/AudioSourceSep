@@ -100,8 +100,8 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(xb)
-        # s = tf.nn.sigmoid(log_s)
-        s = tf.exp(log_s)
+        s = tf.nn.sigmoid(log_s)
+        # s = tf.exp(log_s)
         ya = s * xa + t
         yb = xb
         return tf.concat([ya, yb], axis=-1)
@@ -109,8 +109,8 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _inverse(self, y):
         ya, yb = tf.split(y, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(yb)
-        # s = tf.nn.sigmoid(log_s)
-        s = tf.exp(log_s)
+        s = tf.nn.sigmoid(log_s)
+        # s = tf.exp(log_s)
         xa = (ya - t) / s
         xb = yb
         return tf.concat([xa, xb], axis=-1)
@@ -118,7 +118,8 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _forward_log_det_jacobian(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, _ = self.shift_and_log_scale_fn(xb)
-        return tf.reduce_sum(log_s, axis=[1, 2, 3])
+        s = tf.nn.sigmoid(log_s)
+        return tf.reduce_sum(tf.math.log(s), axis=[1, 2, 3])
 
 
 class Squeeze(tfb.Reshape):
