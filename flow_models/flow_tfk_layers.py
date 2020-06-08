@@ -48,14 +48,12 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
                                        input_shape=input_shape,
                                        data_format=data_format,
                                        activation='relu', padding='same', dtype=dtype)
-        # self.batch_norm_1 = tfk.layers.BatchNormalization(dtype=dtype)
-        # self.activation_1 = tfk.layers.Activation('relu', dtype=dtype)
+        self.batch_norm_1 = tfk.layers.BatchNormalization(dtype=dtype)
 
         self.conv2 = tfk.layers.Conv2D(
             filters=n_filters, kernel_size=1, activation='relu',
             padding='same', dtype=dtype)
-        # self.batch_norm_2 = tfk.layers.BatchNormalization(dtype=dtype)
-        # self.activation_2 = tfk.layers.Activation('relu', dtype=dtype)
+        self.batch_norm_2 = tfk.layers.BatchNormalization(dtype=dtype)
 
         self.conv3 = tfk.layers.Conv2D(
             filters=2 * input_shape[-1], kernel_size=3, padding='same', dtype=dtype,
@@ -65,11 +63,9 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     def call(self, inputs):
         # if dtype = tf.float64, batch norm layers return an error
         x = self.conv1(inputs)
-        # x = self.batch_norm_1(x)
-        # x = self.activation_1(x)
+        x = self.batch_norm_1(x)
         x = self.conv2(x)
-        # x = self.batch_norm_2(x)
-        # x = self.activation_2(x)
+        x = self.batch_norm_2(x)
         x = self.conv3(x)
         log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
         # !! Without the hyperbolic tangeant activation:
