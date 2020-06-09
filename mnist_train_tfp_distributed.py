@@ -27,7 +27,7 @@ def load_data(mirrored_strategy, args):
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
                                                 minval=0., maxval=1. / 256.))
-    ds = ds.map(lambda x: x / 256.)
+    ds = ds.map(lambda x: x / 256. - 0.5)
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x)
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
@@ -40,7 +40,7 @@ def load_data(mirrored_strategy, args):
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
     ds_val = ds_val.map(
         lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
-    ds_val = ds_val.map(lambda x: x / 256.)
+    ds_val = ds_val.map(lambda x: x / 256. - 0.5)
     if args.use_logit:
         ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x)
         ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
