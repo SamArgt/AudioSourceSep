@@ -77,7 +77,7 @@ def setUp_optimizer(mirrored_strategy, args):
         if args.optimizer == 'adam':
             optimizer = tfk.optimizers.Adam(lr=lr)
         elif args.optimizer == 'adamax':
-            optimizer = tfk.optimizers.Adamax(lr=lr, clipvalue=5.0)
+            optimizer = tfk.optimizers.Adamax(lr=lr, clipvalue=5.0, clipnorm=1.0)
         else:
             raise ValueError("optimizer argument should be adam or adamax")
     return optimizer
