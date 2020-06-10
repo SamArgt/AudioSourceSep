@@ -42,22 +42,31 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     splitting along the channel dimension to obtain log(s) and t
     """
 
-    def __init__(self, input_shape, n_filters, data_format='channels_last', name='ShiftAndLogScaleResNet', dtype=tf.float32):
+    def __init__(self, input_shape, n_filters, data_format='channels_last',
+                 name='ShiftAndLogScaleResNet', l2_reg=None, dtype=tf.float32):
         super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype, name=name)
+
+        def l2_regularizer(l2_reg):
+            if l2_reg is None:
+                return None
+            else:
+                return tf.keras.regularizers.l2(l2_reg)
+
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, kernel_size=3,
                                        input_shape=input_shape,
                                        data_format=data_format,
-                                       activation='relu', padding='same', dtype=dtype)
+                                       activation='relu', padding='same', kernel_regularizer=l2_regularizer(l2_reg),
+                                       dtype=dtype)
         self.batch_norm_1 = tfk.layers.BatchNormalization(dtype=dtype)
 
         self.conv2 = tfk.layers.Conv2D(
             filters=n_filters, kernel_size=1, activation='relu',
-            padding='same', dtype=dtype)
+            kernel_regularizer=l2_regularizer(l2_reg), padding='same', dtype=dtype)
         self.batch_norm_2 = tfk.layers.BatchNormalization(dtype=dtype)
 
         self.conv3 = tfk.layers.Conv2D(
             filters=2 * input_shape[-1], kernel_size=3, padding='same', dtype=dtype,
-            kernel_initializer='zeros', bias_initializer='zeros')
+            kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=l2_regularizer(l2_reg))
         self.activation_log_s = tfk.layers.Activation('tanh', dtype=dtype)
 
     def call(self, inputs):

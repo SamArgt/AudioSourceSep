@@ -19,31 +19,40 @@ tfk = tf.keras
 
 
 def load_data(mirrored_strategy, args):
+
+    if args.dataset == 'mnist':
+        data_shape = (28, 28, 1)
+    elif args.dataset == 'cifar10':
+        data_shape = (32, 32, 3)
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
     buffer_size = 2048
     global_batch_size = args.batch_size
-    ds = tfds.load('mnist', split='train', shuffle_files=True)
+    ds = tfds.load(args.dataset, split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: x + tf.random.uniform(shape=(28, 28, 1),
+    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
                                                 minval=0., maxval=1. / 256.))
-    ds = ds.map(lambda x: x / 256. - 0.5)
     if args.use_logit:
-        ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x)
+        ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+    else:
+        ds = ds.map(lambda x: x / 256. - 0.5)
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
     # Validation Set
-    ds_val = tfds.load('mnist', split='test', shuffle_files=True)
+    ds_val = tfds.load(args.dataset, split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
     ds_val = ds_val.map(
-        lambda x: x + tf.random.uniform(shape=(28, 28, 1), minval=0., maxval=1. / 256.))
-    ds_val = ds_val.map(lambda x: x / 256. - 0.5)
+        lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
     if args.use_logit:
-        ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x)
+        ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+    else:
+        ds_val = ds_val.map(lambda x: x / 256. - 0.5)
     ds_val = ds_val.batch(5000)
     ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
@@ -54,16 +63,29 @@ def build_flow(mirrored_strategy, args, minibatch):
     tfk.backend.clear_session()
 
     # Set flow parameters
-    data_shape = [28, 28, 1]  # (H, W, C)
-    base_distr_shape = (7, 7, 16)  # (H//4, W//4, C*16)
-    K = args.K
+    if args.dataset == 'mnist':
+        data_shape = [28, 28, 1]
+    elif args.dataset == 'cifar10':
+        data_shape = [32, 32, 3]
+    if args.L == 2:
+        base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[3] * 16]
+    elif args.L == 3:
+        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[3] * 32]
+    else:
+        raise ValueError("L should be 2 or 3")
+
     shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-    n_filters_base = args.n_filters
 
     # Build Flow and Optimizer
     with mirrored_strategy.scope():
-        bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
-                                                  shift_and_log_scale_layer, n_filters_base, minibatch)
+        if args.L == 2:
+            bijector = flow_glow.GlowBijector_2blocks(args.K, data_shape,
+                                                      shift_and_log_scale_layer,
+                                                      args.n_filters, minibatch, **args.l2_reg)
+        elif args.L == 3:
+            bijector = flow_glow.GlowBijector_3blocks(args.K, data_shape,
+                                                      shift_and_log_scale_layer,
+                                                      args.n_filters, minibatch, **args.l2_reg)
         inv_bijector = tfb.Invert(bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
@@ -75,9 +97,9 @@ def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
     with mirrored_strategy.scope():
         if args.optimizer == 'adam':
-            optimizer = tfk.optimizers.Adam(lr=lr)
+            optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
         elif args.optimizer == 'adamax':
-            optimizer = tfk.optimizers.Adamax(lr=lr, clipvalue=5.0, clipnorm=1.0)
+            optimizer = tfk.optimizers.Adamax(lr=lr)
         else:
             raise ValueError("optimizer argument should be adam or adamax")
     return optimizer
@@ -247,7 +269,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    output_dirname = 'glow_mnist_' + \
+    output_dirname = 'glow' + '_' + args.dataset + '_' + str(args.L) + \
         str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
     if args.use_logit:
         output_dirname += '_logit'
@@ -313,18 +335,22 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
+    parser.add_argument('--dataset', type=str, default="mnist",
+                        help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='mnist_trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')
 
     # Model hyperparameters
+    parser.add_argument('--L', default=2, type=int,
+                        help='Depth level')
     parser.add_argument('--K', type=int, default=16,
                         help="Number of Step of Flow in each Block")
     parser.add_argument('--n_filters', type=int, default=256,
                         help="number of filters in the Convolutional Network")
-    parser.add_argument('--use_logit', action="store_true",
-                        help="Either to use logit function to preprocess the data")
+    parser.add_argument('--l2_reg', type=float, default=None,
+                        help="L2 regularization for the coupling layer")
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,
@@ -333,8 +359,16 @@ if __name__ == '__main__':
                         default="adamax", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--clipvalue', type=float, default=None,
+                        help="Clip value for Adam optimizer")
+    parser.add_argument('--clipnorm', type=float, default=None,
+                        help='Clip norm for Adam optimize')
+
+    # preprocessing parameters
+    parser.add_argument('--use_logit', action="store_true",
+                        help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
-                        help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.)')
+                        help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
 
     args = parser.parse_args()
 

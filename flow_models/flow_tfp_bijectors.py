@@ -88,14 +88,18 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
 
 class AffineCouplingLayerSplit(tfb.Bijector):
-    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer'):
+    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer', **kwargs):
         super(AffineCouplingLayerSplit, self).__init__(forward_min_event_ndims=3)
 
         self.H, self.W, self.C = event_shape
         assert(self.C % 2 == 0)
 
+        if "l2_reg" in kwargs.items():
+            l2_reg = kwargs["l2_reg"]
+        else:
+            l2_reg = None
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            [self.H, self.W, self.C // 2], n_hidden_units, name=name + '/shiftAndLogScaleLayer')
+            [self.H, self.W, self.C // 2], n_hidden_units, name=name + '/shiftAndLogScaleLayer', l2_reg=l2_reg)
 
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
