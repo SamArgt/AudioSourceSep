@@ -92,7 +92,7 @@ def build_flow(args, minibatch):
     return flow
 
 
-def setUp_optimizer(mirrored_strategy, args):
+def setUp_optimizer(args):
     lr = args.learning_rate
     if args.optimizer == 'adam':
         optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
@@ -220,8 +220,6 @@ if __name__ == '__main__':
                         help="L2 regularization for the coupling layer")
 
     # Optimization parameters
-    parser.add_argument('--n_epochs', type=int, default=100,
-                        help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adamax", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=256)
