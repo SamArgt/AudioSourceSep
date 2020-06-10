@@ -182,7 +182,6 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     t0 = time.time()
     loss_history = []
     count_step = optimizer.iterations.numpy()
-    print(count_step)
     min_val_loss = 0.
     prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
@@ -289,7 +288,7 @@ def main(args):
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    # sys.stdout = log_file
+    sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -317,9 +316,7 @@ def main(args):
 
     # restore
     if args.restore is not None:
-        print("RESTORE PATH: ", abs_restore_path)
         checkpoint_path = tf.train.latest_checkpoint(abs_restore_path)
-        print("CHECKPOINT TO RESTORE: ", checkpoint_path)
         with mirrored_strategy.scope():
             status = ckpt.restore(checkpoint_path)
             status.assert_consumed()
