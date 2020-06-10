@@ -318,8 +318,7 @@ def main(args):
     if args.restore is not None:
         checkpoint_path = tf.train.latest_checkpoint(abs_restore_path)
         with mirrored_strategy.scope():
-            status = ckpt.restore(checkpoint_path)
-            status.assert_consumed()
+            ckpt.restore(checkpoint_path)
             print("Model Restored")
 
     params_dict = vars(args)
