@@ -166,7 +166,7 @@ def evaluate(args_parsed, flow, ds, ds_val):
 def main(args_parsed):
 
     result_file = open(args_parsed.output, "a")
-    # sys.stdout = result_file
+    sys.stdout = result_file
 
     print('_' * 100)
 
