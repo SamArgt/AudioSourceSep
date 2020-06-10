@@ -188,7 +188,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     t0 = time.time()
     loss_history = []
     count_step = optimizer.iterations.numpy()
-    print("count step")
+    print(count_step)
     min_val_loss = 0.
     prev_history_loss_avg = None
     loss_per_epoch = 10  # number of losses per epoch to save
