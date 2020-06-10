@@ -280,10 +280,11 @@ def main(args):
             str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
         if args.use_logit:
             output_dirname += '_logit'
-        output_dirpath = os.path.join(args.output, output_dirname)
     else:
         _, output_dirname = os.path.split(args.restore)
         output_dirname += '_ctd'
+
+    output_dirpath = os.path.join(args.output, output_dirname)
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
