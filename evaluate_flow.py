@@ -168,6 +168,14 @@ def main(args_parsed):
     result_file = open(args_parsed.output, "a")
     sys.stdout = result_file
 
+    ds, ds_val, minibatch = load_data(args_parsed)
+
+    flow = build_flow(args_parsed, minibatch)
+
+    optimizer = setUp_optimizer(args_parsed)
+
+    restore_checkpoint(args_parsed, flow, optimizer)
+
     print('_' * 100)
 
     params_dict = vars(args_parsed)
@@ -176,14 +184,8 @@ def main(args_parsed):
         template += '{} = {} \n\t '.format(k, v)
     print(template)
 
-    ds, ds_val, minibatch = load_data(args_parsed)
-
-    flow = build_flow(args_parsed, minibatch)
     print("Total Trainable Variables: ", utils.total_trainable_variables(flow))
 
-    optimizer = setUp_optimizer(args_parsed)
-
-    restore_checkpoint(args_parsed, flow, optimizer)
     print("\nWeights restored from {} \n".format(args_parsed.RESTORE))
 
     print('Start Evaluation...\n')
