@@ -32,13 +32,13 @@ def load_data(mirrored_strategy, args):
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                minval=0., maxval=1. / 256.))
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     else:
         ds = ds.map(lambda x: x / 256. - 0.5)
+        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                    minval=0., maxval=1. / 256.))
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
@@ -46,13 +46,13 @@ def load_data(mirrored_strategy, args):
     ds_val = tfds.load(args.dataset, split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
-    ds_val = ds_val.map(
-        lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
     if args.use_logit:
         ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
+        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
         ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     else:
         ds_val = ds_val.map(lambda x: x / 256. - 0.5)
+        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
     ds_val = ds_val.batch(5000)
     ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
@@ -131,7 +131,7 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
         ckpt = tf.train.Checkpoint(
             variables=flow.variables, optimizer=optimizer)
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
-        # if huge jump in the loss, save weights here
+        # Debugging: if huge jump in the loss, save weights here
         manager_issues = tf.train.CheckpointManager(
             ckpt, './tf_ckpts_issues', max_to_keep=3)
         # Restore weights if specified

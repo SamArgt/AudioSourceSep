@@ -231,11 +231,13 @@ def main(args):
     log_file = open('out.log', 'w')
     sys.stdout = log_file
 
-    setUp_tensorboard()
+    train_summary_writer, test_summary_writer = setUp_tensorboard()
 
-    restore_dict = {}
+    sigmas = np.linspace(0.01, 1., num=10)
+    sigmas = np.flip(sigmas)
+    restore_dict = {sigma: args.RESTORE + '_' + str(sigma) for sigma in sigmas}
     t0 = time.time()
-    mixed, x1, x2, gt1, gt2 = basis_outer_loop(restore_dict, args)
+    mixed, x1, x2, gt1, gt2 = basis_outer_loop(restore_dict, args, train_summary_writer)
     t1 = time.time()
 
     x1 = x1.numpy()
@@ -250,13 +252,13 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
+    parser.add_argument('RESTORE', type=str, default=None,
+                        help='directory of saved models')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='mnist_trained_flow',
                         help='output dirpath for savings')
-    parser.add_argument('--restore', type=str, default=None,
-                        help='directory of saved weights (optional)')
-
+    
     # BASIS hyperparameters
     parser.add_argument("--T", type=int, default=100,
                         help="Number of iteration in the inner loop")
