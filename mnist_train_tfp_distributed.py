@@ -317,6 +317,7 @@ def main(args):
     # restore
     if args.restore is not None:
         restore_abs_dirpath = os.path.abspath(args.restore)
+        print(restore_abs_dirpath)
         with mirrored_strategy.scope():
             status = ckpt.restore(tf.train.latest_checkpoint(
                                   os.path.join(restore_abs_dirpath, 'tf_ckpts')))
