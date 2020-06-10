@@ -140,6 +140,7 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
         if args.restore is not None:
             ckpt.restore(tf.train.latest_checkpoint(
                 os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+            print("Model Restored")
 
     return ckpt, manager, manager_issues
 
@@ -292,7 +293,7 @@ def main(args):
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    # sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
