@@ -99,6 +99,10 @@ def main(args):
         ds_dist, ds_val_dist, minibatch = train_flow.load_data(
             mirrored_strategy, args)
 
+        params_dict = vars(args)
+        template = 'Glow Flow \n\t '
+        for k, v in params_dict.items():
+            template += '{} = {} \n\t '.format(k, v)
         with train_summary_writer.as_default():
             tf.summary.text(name='Parameters',
                             data=tf.constant(template), step=0)
