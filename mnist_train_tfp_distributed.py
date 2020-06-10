@@ -318,8 +318,9 @@ def main(args):
     if args.restore is not None:
         restore_abs_dirpath = os.path.abspath(args.restore)
         with mirrored_strategy.scope():
-            ckpt.restore(tf.train.latest_checkpoint(
-                         os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+            status = ckpt.restore(tf.train.latest_checkpoint(
+                                  os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+            status.assert_consumed()
             print("Model Restored")
 
     params_dict = vars(args)
