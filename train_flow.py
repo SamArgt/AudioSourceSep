@@ -41,6 +41,10 @@ def load_data(mirrored_strategy, args):
         ds = ds.map(lambda x: x / 256. - 0.5)
         ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
                                                     minval=0., maxval=1. / 256.))
+
+    if args.noise is not None:
+        ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape, mean=0, stddev=args.noise))
+
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
@@ -55,6 +59,9 @@ def load_data(mirrored_strategy, args):
     else:
         ds_val = ds_val.map(lambda x: x / 256. - 0.5)
         ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
+
+    if args.noise is not None:
+        ds_val = ds_val.map(lambda x: x + tf.random.normal(shape=data_shape, mean=0, stddev=args.noise))
     ds_val = ds_val.batch(5000)
     ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
@@ -270,17 +277,21 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    if args.restore is None:
-        output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
-            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
-        if args.use_logit:
-            output_dirname += '_logit'
-    else:
-        _, output_dirname = os.path.split(args.restore)
-        output_dirname += '_ctd'
-        abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
+    if args.output == 'mnist_trained_flow':
+        if args.restore is None:
+            output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
+                str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+            if args.use_logit:
+                output_dirname += '_logit'
+        else:
+            _, output_dirname = os.path.split(args.restore)
+            output_dirname += '_ctd'
+            abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
 
-    output_dirpath = os.path.join(args.output, output_dirname)
+        output_dirpath = os.path.join(args.output, output_dirname)
+    else:
+        output_dirpath = args.output
+
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
@@ -388,6 +399,7 @@ if __name__ == '__main__':
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
+    parser.add_argument('--noise', type=float, default=None, help='noise level for BASIS separation')
 
     args = parser.parse_args()
 
