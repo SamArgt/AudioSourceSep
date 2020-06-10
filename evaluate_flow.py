@@ -184,7 +184,7 @@ def main(args_parsed):
     optimizer = setUp_optimizer(args_parsed)
 
     restore_checkpoint(args_parsed, flow, optimizer)
-    print("\nWeights restored \n")
+    print("\nWeights restored from {} \n".format(args_parsed.RESTORE))
 
     print('Start Evaluation...\n')
     t0 = time.time()
@@ -202,12 +202,12 @@ def main(args_parsed):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Flow model on MNIST dataset')
+    parser.add_argument('RESTORE', type=str, default=None,
+                        help='directory of saved weights')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
-    parser.add_argument('--output', type=str, default='mnist_trained_flow',
+    parser.add_argument('--output', type=str, default='evaluation.txt',
                         help='output dirpath for savings')
-    parser.add_argument('--restore', type=str, default=None,
-                        help='directory of saved weights (optional)')
 
     # Model hyperparameters
     parser.add_argument('--L', default=2, type=int,
@@ -237,6 +237,6 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
 
-    args = parser.parse_args()
+    args_parsed = parser.parse_args()
 
     main(args_parsed)
