@@ -276,6 +276,8 @@ def main(args):
             str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
         if args.use_logit:
             output_dirname += '_logit'
+
+        abs_restore_path = os.path.abspath(args.restore)
     else:
         _, output_dirname = os.path.split(args.restore)
         output_dirname += '_ctd'
@@ -316,8 +318,8 @@ def main(args):
 
     # restore
     if args.restore is not None:
-        print("RESTORE PATH: ", args.restore)
-        checkpoint_path = tf.train.latest_checkpoint(args.restore)
+        print("RESTORE PATH: ", abs_restore_path)
+        checkpoint_path = tf.train.latest_checkpoint(abs_restore_path)
         print("CHECKPOINT TO RESTORE: ", checkpoint_path)
         with mirrored_strategy.scope():
             status = ckpt.restore(checkpoint_path)
