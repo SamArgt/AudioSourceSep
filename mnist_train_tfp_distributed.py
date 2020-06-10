@@ -34,6 +34,8 @@ def load_data(mirrored_strategy, args):
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
+        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                    minval=0., maxval=1. / 256.))
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     else:
         ds = ds.map(lambda x: x / 256. - 0.5)
@@ -280,7 +282,8 @@ def main(args):
             output_dirname += '_logit'
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
-        _, output_dirname = os.path.split(args.restore) + '_ctd'
+        _, output_dirname = os.path.split(args.restore)
+        output_dirname += + '_ctd'
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
