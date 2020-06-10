@@ -278,7 +278,7 @@ def main(args):
     else:
         _, output_dirname = os.path.split(args.restore)
         output_dirname += '_ctd'
-        abs_restore_path = os.path.abspath(args.restore)
+        abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
 
     output_dirpath = os.path.join(args.output, output_dirname)
     try:
