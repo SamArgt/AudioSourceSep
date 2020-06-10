@@ -68,9 +68,9 @@ def build_flow(mirrored_strategy, args, minibatch):
     elif args.dataset == 'cifar10':
         data_shape = [32, 32, 3]
     if args.L == 2:
-        base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[3] * 16]
+        base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
     elif args.L == 3:
-        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[3] * 32]
+        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[2] * 32]
     else:
         raise ValueError("L should be 2 or 3")
 
@@ -81,11 +81,11 @@ def build_flow(mirrored_strategy, args, minibatch):
         if args.L == 2:
             bijector = flow_glow.GlowBijector_2blocks(args.K, data_shape,
                                                       shift_and_log_scale_layer,
-                                                      args.n_filters, minibatch, **args.l2_reg)
+                                                      args.n_filters, minibatch, **{'l2_reg': args.l2_reg})
         elif args.L == 3:
             bijector = flow_glow.GlowBijector_3blocks(args.K, data_shape,
                                                       shift_and_log_scale_layer,
-                                                      args.n_filters, minibatch, **args.l2_reg)
+                                                      args.n_filters, minibatch, **{'l2_reg': args.l2_reg})
         inv_bijector = tfb.Invert(bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)
@@ -269,7 +269,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    output_dirname = 'glow' + '_' + args.dataset + '_' + str(args.L) + \
+    output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
         str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
     if args.use_logit:
         output_dirname += '_logit'
@@ -281,7 +281,7 @@ def main(args):
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    # sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
