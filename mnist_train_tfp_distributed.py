@@ -192,6 +192,10 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     test_loss = tfk.metrics.Mean(name='test_loss')
     history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
     epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
+    if args.dataset == 'mnist':
+        n_train = 60000
+    elif args.dataset == 'cifar10':
+        n_train = 50000
     print("Start Training on {} epochs".format(N_EPOCHS))
     # Custom Training Loop
     for epoch in range(N_EPOCHS):
@@ -207,7 +211,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             count_step += 1
 
             # every loss_per_epoch train step
-            if count_step % (60000 // (batch_size * loss_per_epoch)) == 0:
+            if count_step % (n_train // (batch_size * loss_per_epoch)) == 0:
                 # check nan loss
                 if tf.math.is_nan(loss):
                     print('Nan Loss')
@@ -218,7 +222,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 curr_loss_history = history_loss_avg.result()
                 loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch * count_step * batch_size / 60000)
+                    step_int = int(loss_per_epoch * count_step * batch_size / n_train)
                     tf.summary.scalar(
                         'loss', curr_loss_history, step=step_int)
 
@@ -244,7 +248,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_loss.reset_states()
             for elt in ds_val_dist:
                 test_loss.update_state(distributed_test_step(elt))
-            step_int = int(loss_per_epoch * count_step * batch_size / 60000)
+            step_int = int(loss_per_epoch * count_step * batch_size / n_train)
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
@@ -269,11 +273,14 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
-        str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
-    if args.use_logit:
-        output_dirname += '_logit'
-    output_dirpath = os.path.join(args.output, output_dirname)
+    if args.restore is None:
+        output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
+            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+        if args.use_logit:
+            output_dirname += '_logit'
+        output_dirpath = os.path.join(args.output, output_dirname)
+    else:
+        _, output_dirname = os.path.split(args.restore) + '_ctd'
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
@@ -312,13 +319,18 @@ def main(args):
     for k, v in params_dict.items():
         template += '{} = {} \n\t '.format(k, v)
     print(template)
+
+    with mirrored_strategy.scope():
+        print("flow sample shape: ", flow.sample(1).shape)
+
+    total_trainable_variables = utils.total_trainable_variables(flow)
+    print("Total Trainable Variables: ", total_trainable_variables)
+
     with train_summary_writer.as_default():
         tf.summary.text(name='Parameters',
                         data=tf.constant(template), step=0)
-    with mirrored_strategy.scope():
-        print("flow sample shape: ", flow.sample(1).shape)
-        print("Total Trainable Variables: ",
-              utils.total_trainable_variables(flow))
+        tf.summary.text(name="Total Trainable Variables",
+                        data=tf.constant(str(total_trainable_variables)), step=0)
 
     # Train
     training_time = train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
