@@ -78,7 +78,7 @@ def main(args):
             os.mkdir('sigma_{}'.format(sigma))
             os.chdir('sigma_{}'.format(sigma))
         except FileExistsError:
-            os.chdir('sigma_{}').format(sigma)
+            os.chdir('sigma_{}'.format(sigma))
 
         print("_" * 100)
         print("Training at noise level {}".format(sigma))
