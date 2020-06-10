@@ -276,11 +276,10 @@ def main(args):
             str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
         if args.use_logit:
             output_dirname += '_logit'
-
-        abs_restore_path = os.path.abspath(args.restore)
     else:
         _, output_dirname = os.path.split(args.restore)
         output_dirname += '_ctd'
+        abs_restore_path = os.path.abspath(args.restore)
 
     output_dirpath = os.path.join(args.output, output_dirname)
     try:
