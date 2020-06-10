@@ -317,8 +317,10 @@ def main(args):
     # restore
     if args.restore is not None:
         print("RESTORE PATH: ", args.restore)
+        checkpoint_path = tf.train.latest_checkpoint(args.restore)
+        print("CHECKPOINT TO RESTORE: ", checkpoint_path)
         with mirrored_strategy.scope():
-            status = ckpt.restore(tf.train.latest_checkpoint(args.restore))
+            status = ckpt.restore(checkpoint_path)
             status.assert_consumed()
             print("Model Restored")
 
