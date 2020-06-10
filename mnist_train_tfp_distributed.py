@@ -126,8 +126,7 @@ def setUp_tensorboard():
 
 
 def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
-    if args.restore is not None:
-        restore_abs_dirpath = os.path.abspath(args.restore)
+    
     # Checkpoint object
     with mirrored_strategy.scope():
         ckpt = tf.train.Checkpoint(
@@ -135,12 +134,7 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
         # Debugging: if huge jump in the loss, save weights here
         manager_issues = tf.train.CheckpointManager(
-            ckpt, './tf_ckpts_issues', max_to_keep=3)
-        # Restore weights if specified
-        if args.restore is not None:
-            ckpt.restore(tf.train.latest_checkpoint(
-                os.path.join(restore_abs_dirpath, 'tf_ckpts')))
-            print("Model Restored")
+            ckpt, './tf_ckpts_issues', max_to_keep=3)            
 
     return ckpt, manager, manager_issues
 
@@ -319,6 +313,14 @@ def main(args):
     # Set up checkpoint
     ckpt, manager, manager_issues = setUp_checkpoint(
         mirrored_strategy, args, flow, optimizer)
+
+    # restore
+    if args.restore is not None:
+        restore_abs_dirpath = os.path.abspath(args.restore)
+        with mirrored_strategy.scope():
+            ckpt.restore(tf.train.latest_checkpoint(
+                         os.path.join(restore_abs_dirpath, 'tf_ckpts')))
+            print("Model Restored")
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
