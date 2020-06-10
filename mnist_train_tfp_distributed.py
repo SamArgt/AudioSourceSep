@@ -283,7 +283,7 @@ def main(args):
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
         _, output_dirname = os.path.split(args.restore)
-        output_dirname += + '_ctd'
+        output_dirname += '_ctd'
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
