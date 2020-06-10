@@ -160,7 +160,7 @@ class ActNorm(tfb.Bijector):
         minibatch: [N, H, W, C]
     """
 
-    def __init__(self, event_shape, minibatch, name='ActNorm'):
+    def __init__(self, event_shape, minibatch, normalize='channel', name='ActNorm'):
         super(ActNorm, self).__init__(forward_min_event_ndims=3)
 
         self.H, self.W, self.C = event_shape
@@ -169,8 +169,14 @@ class ActNorm(tfb.Bijector):
         assert(self.W == minibatch_W)
         assert(self.C == minibatch_C)
 
-        mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
-        std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
+        if normalize == 'channel':
+            mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
+            std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
+
+        elif normalize == 'all':
+            mean_init, var_init = tf.nn.moments(minibatch, axis=[0])
+            std_init = tf.math.sqrt(var_init) + tf.constant(10**(-8), dtype=tf.float32)
+
         scale_init = 1 / std_init
         log_scale_init = tf.math.log(scale_init)
         shift_init = - mean_init / std_init
@@ -264,12 +270,12 @@ class Preprocessing(tfp.bijectors.Bijector):
         self.H, self.W, self.C = event_shape
 
     def _forward(self, x):
-        x = self.alpha + (1 - self.alpha) * x
+        x = self.alpha + (1 - self.alpha) * x / 256.
         return tf.math.log(x / (1 - x))
 
     def _inverse(self, y):
         y = 1 / (tf.exp(-y) + 1)
-        return (y - self.alpha) / (1 - self.alpha)
+        return (y - self.alpha) * 256. / (1 - self.alpha)
 
     def _forward_log_det_jacobian(self, x):
         u = self.alpha + (1 - self.alpha) * x

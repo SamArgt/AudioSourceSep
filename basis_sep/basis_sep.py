@@ -31,13 +31,15 @@ def load_data(args):
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                minval=0., maxval=1. / 256.))
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
+        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                    minval=0., maxval=1. / 256.))
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
     else:
         ds = ds.map(lambda x: x / 256. - 0.5)
+        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                    minval=0., maxval=1. / 256.))
     ds = ds.batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
     # ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
@@ -49,9 +51,11 @@ def load_data(args):
         lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
     if args.use_logit:
         ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
+        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
         ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
     else:
         ds_val = ds_val.map(lambda x: x / 256. - 0.5)
+        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
     ds_val = ds_val.batch(5000)
     # ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
 
@@ -258,7 +262,7 @@ if __name__ == "__main__":
                         help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='mnist_trained_flow',
                         help='output dirpath for savings')
-    
+
     # BASIS hyperparameters
     parser.add_argument("--T", type=int, default=100,
                         help="Number of iteration in the inner loop")
