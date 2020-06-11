@@ -1,5 +1,4 @@
 from .flow_glow import *
-from .flow_models import flow_tfk_layers
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
@@ -26,7 +25,7 @@ def build_flow(L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None, mirrored_
     else:
         raise ValueError("L should be 2 or 3")
 
-    shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
+    shift_and_log_scale_layer = flow_glow.flow_tfk_layers.ShiftAndLogScaleResNet
 
     # Build Flow and Optimizer
     if mirrored_strategy is not None:
