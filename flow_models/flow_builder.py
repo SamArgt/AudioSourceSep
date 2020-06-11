@@ -7,7 +7,7 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-def build_flow(L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None, mirrored_strategy=None):
+def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None, mirrored_strategy=None):
     tfk.backend.clear_session()
     # Set flow parameters
     if dataset == 'mnist':
