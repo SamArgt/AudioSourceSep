@@ -20,9 +20,11 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None
     if L == 2:
         base_distr_shape = [data_shape[0] // 4,
                             data_shape[1] // 4, data_shape[2] * 16]
+        bijector_cls = GlowBijector_2blocks
     elif L == 3:
         base_distr_shape = [data_shape[0] // 8,
                             data_shape[1] // 8, data_shape[2] * 64]
+        bijector_cls = GlowBijector_3blocks
     else:
         raise ValueError("L should be 2 or 3")
 
@@ -31,27 +33,18 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None
     # Build Flow and Optimizer
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
-            if L == 2:
-                bijector = GlowBijector_2blocks(K, data_shape,
-                                                shift_and_log_scale_layer,
-                                                n_filters, minibatch, **{'l2_reg': l2_reg})
-            elif L == 3:
-                bijector = GlowBijector_3blocks(K, data_shape,
-                                                shift_and_log_scale_layer,
-                                                n_filters, minibatch, **{'l2_reg': l2_reg})
+
+            bijector = bijector_cls(K, data_shape,
+                                    shift_and_log_scale_layer,
+                                    n_filters, minibatch, **{'l2_reg': l2_reg})
             inv_bijector = tfb.Invert(bijector)
             flow = tfd.TransformedDistribution(tfd.Normal(
                 0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
-        if L == 2:
-            bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
-                                                      shift_and_log_scale_layer,
-                                                      n_filters, minibatch, **{'l2_reg': l2_reg})
-        elif L == 3:
-            bijector = flow_glow.GlowBijector_3blocks(K, data_shape,
-                                                      shift_and_log_scale_layer,
-                                                      n_filters, minibatch, **{'l2_reg': l2_reg})
+        bijector = bijector_cls(K, data_shape,
+                                shift_and_log_scale_layer,
+                                n_filters, minibatch, **{'l2_reg': l2_reg})
         inv_bijector = tfb.Invert(bijector)
         flow = tfd.TransformedDistribution(tfd.Normal(
             0., 1.), inv_bijector, event_shape=base_distr_shape)

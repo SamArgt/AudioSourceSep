@@ -120,7 +120,7 @@ def main(args_parsed):
     for m in tfk_metrics:
         print("{}: {}".format(m.name, m.result()))
 
-    print('Duration: {}'.format(round(t1 - t0, 3)))
+    print('\nDuration: {} seconds'.format(round(t1 - t0, 3)))
     print('_' * 100)
     result_file.close()
 
