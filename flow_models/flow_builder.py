@@ -1,4 +1,5 @@
 from .flow_glow import *
+from .flow_models import flow_tfk_layers
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
