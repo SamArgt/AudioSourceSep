@@ -19,19 +19,16 @@ tfk = tf.keras
 
 
 def load_data(mirrored_strategy, args):
+    data_shape = (32, 32, 3)
 
-    if args.dataset == 'mnist':
-        data_shape = (28, 28, 1)
-    elif args.dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
     buffer_size = 2048
     global_batch_size = args.batch_size
     ds = tfds.load(args.dataset, split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
+    if args.dataset == 'mnist':
+        ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
@@ -52,6 +49,8 @@ def load_data(mirrored_strategy, args):
     ds_val = tfds.load(args.dataset, split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
+    if args.dataset == 'mnist':
+        ds_val = ds_val.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
     if args.use_logit:
         ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
@@ -72,10 +71,8 @@ def build_flow(mirrored_strategy, args, minibatch):
     tfk.backend.clear_session()
 
     # Set flow parameters
-    if args.dataset == 'mnist':
-        data_shape = [28, 28, 1]
-    elif args.dataset == 'cifar10':
-        data_shape = [32, 32, 3]
+    data_shape = [32, 32, 1]
+
     if args.L == 2:
         base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
     elif args.L == 3:
@@ -230,20 +227,21 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                     tf.summary.scalar(
                         'loss', curr_loss_history, step=step_int)
 
-                # look for huge jump in the loss
-                if prev_history_loss_avg is None:
-                    prev_history_loss_avg = curr_loss_history
-                elif curr_loss_history - prev_history_loss_avg > 10**6:
-                    print("Huge gap in the loss")
-                    save_path = manager_issues.save()
-                    print("Model weights saved at {}".format(save_path))
-                    with train_summary_writer.as_default():
-                        tf.summary.text(name='Loss Jump',
-                                        data=tf.constant(
-                                            "Huge jump in the loss. Model weights saved at {}".format(save_path)),
-                                        step=step_int)
+                if manager_issues is not None:
+                    # look for huge jump in the loss
+                    if prev_history_loss_avg is None:
+                        prev_history_loss_avg = curr_loss_history
+                    elif curr_loss_history - prev_history_loss_avg > 10**6:
+                        print("Huge gap in the loss")
+                        save_path = manager_issues.save()
+                        print("Model weights saved at {}".format(save_path))
+                        with train_summary_writer.as_default():
+                            tf.summary.text(name='Loss Jump',
+                                            data=tf.constant(
+                                                "Huge jump in the loss. Model weights saved at {}".format(save_path)),
+                                            step=step_int)
 
-                prev_history_loss_avg = curr_loss_history
+                    prev_history_loss_avg = curr_loss_history
                 history_loss_avg.reset_states()
 
         # every 10 epochs
@@ -373,11 +371,11 @@ if __name__ == '__main__':
                         help='directory of saved weights (optional)')
 
     # Model hyperparameters
-    parser.add_argument('--L', default=2, type=int,
+    parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
-    parser.add_argument('--K', type=int, default=16,
+    parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=256,
+    parser.add_argument('--n_filters', type=int, default=512,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")

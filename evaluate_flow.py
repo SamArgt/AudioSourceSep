@@ -20,18 +20,16 @@ tfk = tf.keras
 
 def load_data(args):
 
-    if args.dataset == 'mnist':
-        data_shape = (28, 28, 1)
-    elif args.dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
+    data_shape = (32, 32, 3)
+
     buffer_size = 2048
     global_batch_size = args.batch_size
     ds = tfds.load(args.dataset, split='train', shuffle_files=True)
     # Build your input pipeline
     ds = ds.map(lambda x: x['image'])
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
+    if args.dataset == 'mnist':
+        ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
     if args.use_logit:
         ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
@@ -47,6 +45,8 @@ def load_data(args):
     ds_val = tfds.load(args.dataset, split='test', shuffle_files=True)
     ds_val = ds_val.map(lambda x: x['image'])
     ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
+    if args.dataset == 'mnist':
+        ds_val = ds_val.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
     if args.use_logit:
         ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
         ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
@@ -63,10 +63,7 @@ def build_flow(args, minibatch):
     tfk.backend.clear_session()
 
     # Set flow parameters
-    if args.dataset == 'mnist':
-        data_shape = [28, 28, 1]
-    elif args.dataset == 'cifar10':
-        data_shape = [32, 32, 3]
+    data_shape = [32, 32, 3]
     if args.L == 2:
         base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
     elif args.L == 3:
@@ -212,11 +209,11 @@ if __name__ == '__main__':
                         help='output dirpath for savings')
 
     # Model hyperparameters
-    parser.add_argument('--L', default=2, type=int,
+    parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
-    parser.add_argument('--K', type=int, default=16,
+    parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=256,
+    parser.add_argument('--n_filters', type=int, default=512,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")

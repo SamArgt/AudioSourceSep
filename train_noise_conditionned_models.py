@@ -18,6 +18,16 @@ tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
 
+def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
+
+    # Checkpoint object
+    with mirrored_strategy.scope():
+        ckpt = tf.train.Checkpoint(
+            variables=flow.variables, optimizer=optimizer)
+        manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+
+    return ckpt, manager
+
 
 def main(args):
 
@@ -75,18 +85,18 @@ def main(args):
     for sigma in sigmas:
         os.chdir(output_dirpath)
         try:
-            os.mkdir('sigma_{}'.format(sigma))
-            os.chdir('sigma_{}'.format(sigma))
+            os.mkdir('sigma_{}'.format(round(sigma, 2)))
+            os.chdir('sigma_{}'.format(round(sigma, 2)))
         except FileExistsError:
-            os.chdir('sigma_{}'.format(sigma))
+            os.chdir('sigma_{}'.format(round(sigma, 2)))
 
         print("_" * 100)
-        print("Training at noise level {}".format(sigma))
+        print("Training at noise level {}".format(round(sigma, 2)))
         # Set up tensorboard
         train_summary_writer, test_summary_writer = train_flow.setUp_tensorboard()
 
         # Set up checkpoint
-        ckpt, manager, manager_issues = train_flow.setUp_checkpoint(
+        ckpt, manager = setUp_checkpoint(
             mirrored_strategy, args, flow, optimizer)
 
         # restore
@@ -111,7 +121,7 @@ def main(args):
 
         # Train
         training_time = train_flow.train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
-                                         manager, manager_issues, train_summary_writer, test_summary_writer)
+                                         manager, None, train_summary_writer, test_summary_writer)
         print("Training time: ", np.round(training_time, 2), ' seconds')
 
         # Saving the last variables
@@ -138,11 +148,11 @@ if __name__ == '__main__':
     parser.add_argument('--n_sigmas', type=float, default=10)
 
     # Model hyperparameters
-    parser.add_argument('--L', default=2, type=int,
+    parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
-    parser.add_argument('--K', type=int, default=16,
+    parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=256,
+    parser.add_argument('--n_filters', type=int, default=512,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")

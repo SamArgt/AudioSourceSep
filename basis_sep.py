@@ -73,17 +73,14 @@ def get_mixture_dataset(args):
 def get_mixture(args):
 
     if args.dataset == 'mnist':
-        data_shape = (28, 28, 1)
+        data_shape = [args.batch_size, 28, 28, 1]
     elif args.dataset == 'cifar10':
-        data_shape = (32, 32, 3)
+        data_shape = [args.batch_size, 32, 32, 3]
     else:
         raise ValueError("args.dataset should be mnist or cifar10")
 
     ds_mix, minibatch = get_mixture_dataset(args)
-    gt1, gt2, mixed = list(ds_mix.as_numpy_iterator())[0]
-    gt1 = gt1[0]
-    gt2 = gt2[0]
-    mixed = mixed[0]
+    gt1, gt2, mixed = ds_mix.take(1)
 
     x1 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
     x2 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
@@ -176,9 +173,9 @@ def compute_grad_logprob(X, model):
 def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args):
 
     if args.dataset == 'mnist':
-        data_shape = [28, 28, 1]
+        data_shape = [args.batch_size, 28, 28, 1]
     elif args.dataset == 'cifar10':
-        data_shape == [32, 32, 3]
+        data_shape == [args.batch_size, 32, 32, 3]
 
     eta = .00003 * (sigma / .01) ** 2
     lambda_recon = 1.0 / (sigma ** 2)
@@ -200,7 +197,8 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
     mixed, x1, x2, gt1, gt2, minibatch = get_mixture(args)
 
     with train_summary_writer.as_default():
-        tf.summary.image("Mix and originals", np.array([mixed, gt1, gt2], step=0))
+        tf.summary.image("Mix and originals",
+                         np.concatenate((mixed[:5], gt1[:5], gt2[:5]), axis=0), step=0)
 
     model = build_flow(args, minibatch)
 
@@ -216,7 +214,7 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
         step += 1
 
         with train_summary_writer.as_default():
-            tf.summary.image("Components", np.array([x1, x2]), max_outputs=10, step=step)
+            tf.summary.image("Components", np.concatenate((x1[:5], x2[:5]), axis=0), max_outputs=10, step=step)
 
         print("inner loop done")
         print("_" * 100)
