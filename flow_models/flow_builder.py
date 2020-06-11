@@ -25,19 +25,19 @@ def build_flow(L=3, K=32, n_filters=512, dataset='mnist', l2_reg=None, mirrored_
     else:
         raise ValueError("L should be 2 or 3")
 
-    shift_and_log_scale_layer = flow_glow.flow_tfk_layers.ShiftAndLogScaleResNet
+    shift_and_log_scale_layer = ShiftAndLogScaleResNet
 
     # Build Flow and Optimizer
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
             if L == 2:
-                bijector = flow_glow.GlowBijector_2blocks(K, data_shape,
-                                                          shift_and_log_scale_layer,
-                                                          n_filters, minibatch, **{'l2_reg': l2_reg})
+                bijector = GlowBijector_2blocks(K, data_shape,
+                                                shift_and_log_scale_layer,
+                                                n_filters, minibatch, **{'l2_reg': l2_reg})
             elif L == 3:
-                bijector = flow_glow.GlowBijector_3blocks(K, data_shape,
-                                                          shift_and_log_scale_layer,
-                                                          n_filters, minibatch, **{'l2_reg': l2_reg})
+                bijector = GlowBijector_3blocks(K, data_shape,
+                                                shift_and_log_scale_layer,
+                                                n_filters, minibatch, **{'l2_reg': l2_reg})
             inv_bijector = tfb.Invert(bijector)
             flow = tfd.TransformedDistribution(tfd.Normal(
                 0., 1.), inv_bijector, event_shape=base_distr_shape)
