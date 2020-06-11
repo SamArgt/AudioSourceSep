@@ -20,7 +20,12 @@ tfk = tf.keras
 
 def load_data(args):
 
-    data_shape = (32, 32, 3)
+    if args.dataset == 'mnist':
+        data_shape = (32, 32, 1)
+    elif args.dataset == 'cifar10':
+        data_shape = (32, 32, 3)
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
 
     buffer_size = 2048
     global_batch_size = args.batch_size
@@ -63,7 +68,12 @@ def build_flow(args, minibatch):
     tfk.backend.clear_session()
 
     # Set flow parameters
-    data_shape = [32, 32, 3]
+    if args.dataset == 'mnist':
+        data_shape = (32, 32, 1)
+    elif args.dataset == 'cifar10':
+        data_shape = (32, 32, 3)
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
     if args.L == 2:
         base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
     elif args.L == 3:
