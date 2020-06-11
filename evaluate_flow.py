@@ -1,11 +1,5 @@
-import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import tensorflow_datasets as tfds
-from flow_models import flow_tfk_layers
-from flow_models import flow_glow
-from flow_models import flow_real_nvp
-from flow_models import flow_tfp_bijectors
 from flow_models import flow_builder
 from flow_models import utils
 from pipeline import data_loader
@@ -13,8 +7,6 @@ import argparse
 import time
 import os
 import sys
-import shutil
-import datetime
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras

@@ -1,14 +1,9 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import tensorflow_datasets as tfds
-from flow_models import flow_tfk_layers
-from flow_models import flow_glow
-from flow_models import flow_real_nvp
-from flow_models import flow_tfp_bijectors
-from flow_models import utils
 from flow_models import flow_builder
 from pipeline import data_loader
+from basis_sep import basis_sep
 import argparse
 import time
 import os
@@ -69,27 +64,6 @@ def compute_grad_logprob(X, model):
     gradients = tape.gradient(loss, model.trainable_variables)
     return gradients
 
-def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args):
-
-    if args.dataset == 'mnist':
-        data_shape = [args.batch_size, 28, 28, 1]
-    elif args.dataset == 'cifar10':
-        data_shape == [args.batch_size, 32, 32, 3]
-
-    eta = .00003 * (sigma / .01) ** 2
-    lambda_recon = 1.0 / (sigma ** 2)
-    for t in range(args.T):
-
-        epsilon1 = tf.math.sqrt(2 * eta) * tf.random.normal(data_shape)
-        epsilon2 = tf.math.sqrt(2 * eta) * tf.random.normal(data_shape)
-
-        grad_logprob1 = compute_grad_logprob(x1, model1)
-        grad_logprob2 = compute_grad_logprob(x2, model2)
-        x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2 * mixed)) + epsilon1
-        x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2 * mixed)) + epsilon2
-
-    return x1, x2
-
 
 def basis_outer_loop(restore_dict, args, train_summary_writer):
 
@@ -112,7 +86,8 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
         print("Model restored")
         model1 = model2 = model
 
-        x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args)
+        x1, x2 = basis_sep.basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
+                                            delta=2e-5, T=100, dataset=args.dataset)
         step += 1
 
         with train_summary_writer.as_default():
@@ -166,6 +141,8 @@ if __name__ == "__main__":
     # BASIS hyperparameters
     parser.add_argument("--T", type=int, default=100,
                         help="Number of iteration in the inner loop")
+    parser.add_argument('--n_mixed', type=int, default=10,
+                        help="number of mixture to separate")
 
     # Model hyperparameters
     parser.add_argument('--L', default=2, type=int,
@@ -182,7 +159,6 @@ if __name__ == "__main__":
                         help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adamax", help="adam or adamax")
-    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--clipvalue', type=float, default=None,
                         help="Clip value for Adam optimizer")
