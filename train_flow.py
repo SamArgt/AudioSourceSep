@@ -235,7 +235,7 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset='mnist', batch_size=args.batch_size,
+    ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
                                                             use_logit=args.use_logit, alpha=args.alpha,
                                                             noise=args.noise, mirrored_strategy=mirrored_strategy)
 

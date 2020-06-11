@@ -88,7 +88,7 @@ def main(args_parsed):
     result_file = open(args_parsed.output, "a")
     sys.stdout = result_file
 
-    ds, ds_val, minibatch = data_loader.load_data(dataset='mnist', batch_size=args_parsed.batch_size,
+    ds, ds_val, minibatch = data_loader.load_data(dataset=args_parsed.dataset, batch_size=args_parsed.batch_size,
                                                   use_logit=args_parsed.use_logit, alpha=args_parsed.alpha,
                                                   noise=args_parsed.noise, mirrored_strategy=None)
 
