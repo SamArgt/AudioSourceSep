@@ -7,6 +7,8 @@ from flow_models import flow_glow
 from flow_models import flow_real_nvp
 from flow_models import flow_tfp_bijectors
 from flow_models import utils
+from flow_models import flow_builder
+from pipeline import data_loader
 import argparse
 import time
 import os
@@ -17,7 +19,7 @@ tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
 
-
+"""
 def load_data(mirrored_strategy, args):
 
     if args.dataset == 'mnist':
@@ -108,7 +110,7 @@ def build_flow(mirrored_strategy, args, minibatch):
             0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     return flow
-
+"""
 
 def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
@@ -158,6 +160,14 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
           manager, manager_issues, train_summary_writer, test_summary_writer):
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
+
+    if args.dataset == 'mnist':
+        data_shape = [32, 32, 1]
+    elif args.dataset == 'cifar10':
+        data_shape = [32, 32, 3]
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
+
     with mirrored_strategy.scope():
         def compute_train_loss(X):
             per_example_loss = -flow.log_prob(X)
@@ -269,7 +279,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             # Generate some samples and visualize them on tensoboard
             with mirrored_strategy.scope():
                 samples = flow.sample(9)
-            samples = samples.numpy().reshape((9, 28, 28, 1))
+            samples = samples.numpy().reshape([9] + data_shape)
             with train_summary_writer.as_default():
                 tf.summary.image("9 generated samples", samples,
                                  max_outputs=27, step=epoch)
@@ -322,10 +332,13 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    ds_dist, ds_val_dist, minibatch = load_data(mirrored_strategy, args)
+    ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset='mnist', batch_size=args.batch_size,
+                                                            use_logit=args.use_logit, alpha=args.alpha,
+                                                            noise=args.noise, mirrored_strategy=mirrored_strategy)
 
     # Build Flow and Set up optimizer
-    flow = build_flow(mirrored_strategy, args, minibatch)
+    flow = flow_builder.build_flow(L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
