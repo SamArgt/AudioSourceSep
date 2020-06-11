@@ -208,7 +208,7 @@ class GlowBijector_3blocks(tfb.Bijector):
         log_det_2 = self.glow_block2.forward_log_det_jacobian(
             h1, event_ndims=3)
         z2, h2 = tf.split(output2, 2, axis=-1)
-        log_det_3 = self.glow_block3._forward_log_det_jacobian(
+        log_det_3 = self.glow_block3.forward_log_det_jacobian(
             h2, event_ndims=3)
         return log_det_1 + log_det_2 + log_det_3
 
