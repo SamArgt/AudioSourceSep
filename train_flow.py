@@ -112,6 +112,7 @@ def build_flow(mirrored_strategy, args, minibatch):
     return flow
 """
 
+
 def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
     with mirrored_strategy.scope():

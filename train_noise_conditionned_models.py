@@ -8,6 +8,8 @@ from flow_models import flow_glow
 from flow_models import flow_real_nvp
 from flow_models import flow_tfp_bijectors
 from flow_models import utils
+from flow_models import flow_builder
+from pipeline import data_loader
 import argparse
 import time
 import os
@@ -17,6 +19,38 @@ import datetime
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
+
+
+def setUp_optimizer(mirrored_strategy, args):
+    lr = args.learning_rate
+    with mirrored_strategy.scope():
+        if args.optimizer == 'adam':
+            optimizer = tfk.optimizers.Adam(
+                lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+        elif args.optimizer == 'adamax':
+            optimizer = tfk.optimizers.Adamax(lr=lr)
+        else:
+            raise ValueError("optimizer argument should be adam or adamax")
+    return optimizer
+
+
+def setUp_tensorboard():
+    # Tensorboard
+    # Clear any logs from previous runs
+    try:
+        shutil.rmtree('tensorboard_logs')
+    except FileNotFoundError:
+        pass
+    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    train_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'train')
+    test_log_dir = os.path.join(
+        'tensorboard_logs', 'gradient_tape', current_time, 'test')
+    train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+    test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+
+    return train_summary_writer, test_summary_writer
+
 
 def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
 
@@ -61,11 +95,13 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    ds_dist, ds_val_dist, minibatch = train_flow.load_data(
-        mirrored_strategy, args)
+    ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset='mnist', batch_size=args.batch_size,
+                                                            use_logit=args.use_logit, alpha=args.alpha,
+                                                            noise=args.noise, mirrored_strategy=mirrored_strategy)
 
     # Build Flow and Set up optimizer
-    flow = train_flow.build_flow(mirrored_strategy, args, minibatch)
+    flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
@@ -80,7 +116,7 @@ def main(args):
     print("Total Trainable Variables: ", total_trainable_variables)
 
     # Set up optimizer
-    optimizer = train_flow.setUp_optimizer(mirrored_strategy, args)
+    optimizer = setUp_optimizer(mirrored_strategy, args)
 
     for sigma in sigmas:
         os.chdir(output_dirpath)
@@ -93,7 +129,7 @@ def main(args):
         print("_" * 100)
         print("Training at noise level {}".format(round(sigma, 2)))
         # Set up tensorboard
-        train_summary_writer, test_summary_writer = train_flow.setUp_tensorboard()
+        train_summary_writer, test_summary_writer = setUp_tensorboard()
 
         # Set up checkpoint
         ckpt, manager = setUp_checkpoint(
@@ -106,8 +142,9 @@ def main(args):
 
         # load noisy data
         args.noise = sigma
-        ds_dist, ds_val_dist, minibatch = train_flow.load_data(
-            mirrored_strategy, args)
+        ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset='mnist', batch_size=args.batch_size,
+                                                                use_logit=args.use_logit, alpha=args.alpha,
+                                                                noise=args.noise, mirrored_strategy=mirrored_strategy)
 
         params_dict = vars(args)
         template = 'Glow Flow \n\t '

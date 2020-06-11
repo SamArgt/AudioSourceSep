@@ -6,7 +6,9 @@ from flow_models import flow_tfk_layers
 from flow_models import flow_glow
 from flow_models import flow_real_nvp
 from flow_models import flow_tfp_bijectors
+from flow_models import flow_builder
 from flow_models import utils
+from pipeline import data_loader
 import argparse
 import time
 import os
@@ -16,87 +18,6 @@ import datetime
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
-
-
-def load_data(args):
-
-    if args.dataset == 'mnist':
-        data_shape = (32, 32, 1)
-    elif args.dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
-
-    buffer_size = 2048
-    global_batch_size = args.batch_size
-    ds = tfds.load(args.dataset, split='train', shuffle_files=True)
-    # Build your input pipeline
-    ds = ds.map(lambda x: x['image'])
-    ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    if args.dataset == 'mnist':
-        ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-    if args.use_logit:
-        ds = ds.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
-        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                    minval=0., maxval=1. / 256.))
-        ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
-    else:
-        ds = ds.map(lambda x: x / 256. - 0.5)
-        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                    minval=0., maxval=1. / 256.))
-    ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
-    minibatch = list(ds.take(1).as_numpy_iterator())[0]
-    # Validation Set
-    ds_val = tfds.load(args.dataset, split='test', shuffle_files=True)
-    ds_val = ds_val.map(lambda x: x['image'])
-    ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
-    if args.dataset == 'mnist':
-        ds_val = ds_val.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-    if args.use_logit:
-        ds_val = ds_val.map(lambda x: args.alpha + (1 - args.alpha) * x / 256.)
-        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
-    else:
-        ds_val = ds_val.map(lambda x: x / 256. - 0.5)
-        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-    ds_val = ds_val.batch(5000)
-
-    return ds, ds_val, minibatch
-
-
-def build_flow(args, minibatch):
-    tfk.backend.clear_session()
-
-    # Set flow parameters
-    if args.dataset == 'mnist':
-        data_shape = (32, 32, 1)
-    elif args.dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
-    if args.L == 2:
-        base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
-    elif args.L == 3:
-        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[2] * 32]
-    else:
-        raise ValueError("L should be 2 or 3")
-
-    shift_and_log_scale_layer = flow_tfk_layers.ShiftAndLogScaleResNet
-
-    # Build Flow and Optimizer
-    if args.L == 2:
-        bijector = flow_glow.GlowBijector_2blocks(args.K, data_shape,
-                                                  shift_and_log_scale_layer,
-                                                  args.n_filters, minibatch, **{'l2_reg': args.l2_reg})
-    elif args.L == 3:
-        bijector = flow_glow.GlowBijector_3blocks(args.K, data_shape,
-                                                  shift_and_log_scale_layer,
-                                                  args.n_filters, minibatch, **{'l2_reg': args.l2_reg})
-    inv_bijector = tfb.Invert(bijector)
-    flow = tfd.TransformedDistribution(tfd.Normal(
-        0., 1.), inv_bijector, event_shape=base_distr_shape)
-
-    return flow
 
 
 def setUp_optimizer(args):
@@ -175,9 +96,13 @@ def main(args_parsed):
     result_file = open(args_parsed.output, "a")
     sys.stdout = result_file
 
-    ds, ds_val, minibatch = load_data(args_parsed)
+    ds, ds_val, minibatch = data_loader.load_data(dataset='mnist', batch_size=args_parsed.batch_size,
+                                                  use_logit=args_parsed.use_logit, alpha=args_parsed.alpha,
+                                                  noise=args_parsed.noise, mirrored_strategy=None)
 
-    flow = build_flow(args_parsed, minibatch)
+    flow = flow_builder.build_flow(minibatch, L=args_parsed.L, K=args_parsed.K, n_filters=args_parsed.n_filters,
+                                   dataset=args_parsed.dataset, l2_reg=args_parsed.l2_reg,
+                                   mirrored_strategy=None)
 
     optimizer = setUp_optimizer(args_parsed)
 

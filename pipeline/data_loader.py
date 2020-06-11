@@ -65,3 +65,30 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, alpha=None, nois
 
     else:
         return ds, ds_val, minibatch
+
+
+def get_mixture_dataset(dataset='mnist', batch_size=256, use_logit=False, alpha=None, noise=0.1, mirrored_strategy=None):
+    ds, ds_val, minibatch = load_data(dataset, batch_size, use_logit, alpha, noise, mirrored_strategy)
+    ds1 = ds.shuffle(2048, seed=42, reshuffle_each_iteration=False)
+    ds2 = ds.shuffle(2048, seed=84, reshuffle_each_iteration=False)
+    ds_zip = tf.data.Dataset.zip((ds1, ds2))
+    ds_mix = ds_zip.map(lambda x, y: (x + y) / 2.)
+    return tf.data.Dataset.zip((ds1, ds2, ds_mix)), minibatch
+
+
+def get_mixture(dataset='mnist', batch_size=256, use_logit=False, alpha=None, noise=0.1, mirrored_strategy=None):
+
+    if dataset == 'mnist':
+        data_shape = [batch_size, 32, 32, 1]
+    elif dataset == 'cifar10':
+        data_shape = [batch_size, 32, 32, 3]
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
+
+    ds_mix, minibatch = get_mixture_dataset(dataset, batch_size, use_logit, alpha, noise, mirrored_strategy)
+    gt1, gt2, mixed = ds_mix.take(1)
+
+    x1 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
+    x2 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
+
+    return mixed, x1, x2, gt1, gt2, minibatch
