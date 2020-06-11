@@ -79,7 +79,7 @@ def shift_and_log_scale_toy(x):
     return log_s, t
 
 
-def shift_and_log_scale_layer_toy(event_shape, n_hidden_units, dtype=tf.float32, name='toy'):
+def shift_and_log_scale_layer_toy(event_shape, n_hidden_units, dtype=tf.float32, name='toy', l2_reg=None):
     return shift_and_log_scale_toy
 
 

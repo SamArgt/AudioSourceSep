@@ -87,7 +87,7 @@ def build_flow(mirrored_strategy, args, minibatch):
     if args.L == 2:
         base_distr_shape = [data_shape[0] // 4, data_shape[1] // 4, data_shape[2] * 16]
     elif args.L == 3:
-        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[2] * 32]
+        base_distr_shape = [data_shape[0] // 8, data_shape[1] // 8, data_shape[2] * 64]
     else:
         raise ValueError("L should be 2 or 3")
 
