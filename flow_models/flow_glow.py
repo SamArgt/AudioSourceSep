@@ -192,10 +192,10 @@ class GlowBijector_3blocks(tfb.Bijector):
         z1, z2_z3 = tf.split(y, 2, axis=-1)
         z2, z3 = tf.split(z2_z3, 2, axis=-1)
         h2 = self.glow_block3.inverse(z3)
-        z2 = tf.reshape(z2, (-1, self.H * 8, self.W * 8, self.C // 16))
+        z2 = tf.reshape(z2, (-1, self.H // 4, self.W // 4, 4 * self.C))
         output2 = tf.concat((z2, h2), axis=-1)
         h1 = self.glow_block2.inverse(output2)
-        z1 = tf.reshape(z1, (-1, self.H * 8, self.W * 8, self.C // 32))
+        z1 = tf.reshape(z1, (-1, self.H // 2, self.W // 2, 2 * self.C))
         output1 = tf.concat((z1, h1), axis=-1)
         return self.glow_block1.inverse(output1)
 
