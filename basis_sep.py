@@ -155,12 +155,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Train Flow model on MNIST dataset')
+        description='BASIS Separatation')
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved models')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
-    parser.add_argument('--output', type=str, default='mnist_trained_flow',
+    parser.add_argument('--output', type=str, default='basis_sep',
                         help='output dirpath for savings')
 
     # BASIS hyperparameters

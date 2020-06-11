@@ -68,7 +68,7 @@ def main(args):
     sigmas = np.linspace(args.sigma1, args.sigmaL, num=args.n_sigmas)
     abs_restore_path = os.path.abspath(args.RESTORE)
 
-    if args.output == 'mnist_noise_conditioned':
+    if args.output == 'noise_conditioned_flow':
         output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
             str(args.K) + '_' + str(args.n_filters) + \
             '_' + str(args.batch_size)
@@ -170,13 +170,13 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model on MNIST dataset')
+        description='Train noise conditioned Flow Model')
 
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights (optional)')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
-    parser.add_argument('--output', type=str, default='mnist_noise_conditioned',
+    parser.add_argument('--output', type=str, default='noise_conditioned_flow',
                         help='output dirpath for savings')
 
     # Noise parameters

@@ -297,7 +297,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    if args.output == 'mnist_trained_flow':
+    if args.output == 'trained_flow':
         if args.restore is None:
             output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
                 str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
@@ -387,10 +387,10 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model on MNIST dataset')
+        description='Train Flow model')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
-    parser.add_argument('--output', type=str, default='mnist_trained_flow',
+    parser.add_argument('--output', type=str, default='trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')

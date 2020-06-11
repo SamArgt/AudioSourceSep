@@ -135,7 +135,7 @@ def main(args_parsed):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model on MNIST dataset')
+        description='Evaluate Flow model')
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights')
     parser.add_argument('--dataset', type=str, default="mnist",
