@@ -83,6 +83,43 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         return log_s, t
 
 
+class GatedConv(tfk.layers.Layer):
+    """
+    Convolutional Layer as described in Flow ++ (origin: Pixel CNN++)
+    """
+
+    def __init__(self, input_shape, n_filters, name="GatedConv"):
+        super(self, GatedConv).__init__()
+
+        self.conv1 = tfk.layers.Conv2D(filters=n_filters, input_shape=input_shape,
+                                       kernel_size=3, padding='same')
+        self.conv2 = tfk.layers.Conv2D(filters=2 * n_filters, kernel_size=1, padding='same')
+
+    def call(self, inputs):
+        x = self.non_linearity(inputs)
+        x = self.conv1(x)
+        x = self.non_linearity(x)
+        res = self.conv2(x)
+        res = self.gate(res)
+        return x + res
+
+    @staticmethod
+    def non_linearity(x):
+        return tf.nn.elu(tf.concat((x, -x), axis=-1))
+
+    @staticmethod
+    def gate(x):
+        a, b = tf.split(x, 2, axis=-1)
+        return a * tf.nn.sigmoid(b)
+
+
+class GatedAttn(tfk.layers.Layer):
+
+    """
+    Attention Layer as described in Flow ++ (origin: Attention is all you need (Transformer))
+    """
+
+
 class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
     """
     Affine Coupling Layer (bijector) using binary masked
