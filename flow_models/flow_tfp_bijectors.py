@@ -95,7 +95,8 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
 class AffineCouplingLayerSplit(tfb.Bijector):
     def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer', **kwargs):
-        super(AffineCouplingLayerSplit, self).__init__(forward_min_event_ndims=3)
+        super(AffineCouplingLayerSplit, self).__init__(
+            forward_min_event_ndims=3)
 
         self.H, self.W, self.C = event_shape
         assert(self.C % 2 == 0)
@@ -171,17 +172,20 @@ class ActNorm(tfb.Bijector):
 
         if normalize == 'channel':
             mean_init = tf.reduce_mean(minibatch, axis=[0, 1, 2])
-            std_init = tf.math.reduce_std(minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
+            std_init = tf.math.reduce_std(
+                minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
 
         elif normalize == 'all':
             mean_init, var_init = tf.nn.moments(minibatch, axis=[0])
-            std_init = tf.math.sqrt(var_init) + tf.constant(10**(-8), dtype=tf.float32)
+            std_init = tf.math.sqrt(var_init) + \
+                tf.constant(10**(-8), dtype=tf.float32)
 
         scale_init = 1 / std_init
         log_scale_init = tf.math.log(scale_init)
         shift_init = - mean_init / std_init
 
-        self.log_scale = tf.Variable(initial_value=log_scale_init, name=name + '/log_scale')
+        self.log_scale = tf.Variable(
+            initial_value=log_scale_init, name=name + '/log_scale')
         # self.scale = tf.Variable(initial_value=scale_init, name=name + '/scale')
         self.shift = tf.Variable(
             initial_value=shift_init, name=name + '/shift')
@@ -225,23 +229,29 @@ class Invertible1x1Conv(tfb.Bijector):
         np_u = np.triu(np_u, k=1)
 
         # Non Trainable Variable
-        self.P = tf.Variable(initial_value=np_p, name=name + '/P', trainable=False, dtype=tf.float32)
+        self.P = tf.Variable(initial_value=np_p, name=name +
+                             '/P', trainable=False, dtype=tf.float32)
         p_inv = tf.linalg.inv(self.P)
-        self.P_inv = tf.Variable(initial_value=p_inv, name=name + '/P_inv', trainable=False, dtype=tf.float32)
+        self.P_inv = tf.Variable(
+            initial_value=p_inv, name=name + '/P_inv', trainable=False, dtype=tf.float32)
         self.Sign_s = tf.Variable(
             name=name + "/sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
 
         # Trainable Variables
-        self.L = tf.Variable(name=name + "/L", initial_value=np_l, dtype=tf.float32)
-        self.Log_s = tf.Variable(name=name + "/log_S", initial_value=np_log_s, dtype=tf.float32)
-        self.U = tf.Variable(name=name + "/U", initial_value=np_u, dtype=tf.float32)
+        self.L = tf.Variable(
+            name=name + "/L", initial_value=np_l, dtype=tf.float32)
+        self.Log_s = tf.Variable(name=name + "/log_S",
+                                 initial_value=np_log_s, dtype=tf.float32)
+        self.U = tf.Variable(
+            name=name + "/U", initial_value=np_u, dtype=tf.float32)
 
         # Triangular mask
         self.l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
 
     def _forward(self, x):
         L = self.L * self.l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
-        u = self.U * np.transpose(self.l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        u = self.U * np.transpose(self.l_mask) + \
+            tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
         w = tf.matmul(self.P, tf.matmul(L, u))
         w = tf.reshape(w, [1, 1, self.C, self.C])
         y = tf.nn.conv2d(x, filters=w, strides=[1, 1, 1, 1], padding='SAME')
@@ -249,7 +259,8 @@ class Invertible1x1Conv(tfb.Bijector):
 
     def _inverse(self, y):
         L = self.L * self.l_mask + tf.eye(*self.w_shape, dtype=tf.float32)
-        u = self.U * np.transpose(self.l_mask) + tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
+        u = self.U * np.transpose(self.l_mask) + \
+            tf.linalg.diag(self.Sign_s * tf.exp(self.Log_s))
         u_inv = tf.linalg.inv(u)
         l_inv = tf.linalg.inv(L)
         w_inv = tf.matmul(u_inv, tf.matmul(l_inv, self.P_inv))
@@ -279,6 +290,128 @@ class Preprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         u = self.alpha + (1 - self.alpha) * x
-        log_det = tf.math.log((1 - self.alpha)) - tf.math.log(u) - tf.math.log(1 - u)
+        log_det = tf.math.log((1 - self.alpha)) - \
+            tf.math.log(u) - tf.math.log(1 - u)
         log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
         return log_det
+
+
+class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
+
+    """
+    Mixture Logistic CDF Layer as described in Flow ++
+    """
+
+    def __init__(self, input_shape, NN, split='channel', n_components=32, n_blocks=10, filters=96,
+                 dropout_p=0., heads=4, name="MixLogCDFAttnCoupling"):
+
+        super(MixLogisticCDFAttnCoupling, self).__init__(
+            forward_min_event_ndims=3)
+        self.H, self.W, self.C = input_shape
+        self.split = split
+        if split == 'channel':
+            assert self.C % 2 == 0
+            nn_input_shape = [self.H, self.W, self.C // 2]
+        elif split == 'checkerboard':
+            assert self.W % 2 == 0
+            nn_input_shape = [self.H, self.W // 2, self.C]
+        else:
+            raise ValueError('split shoulb be channel or checkerboard')
+
+        self.n_components = n_components
+        self.nn = NN(input_shape=nn_input_shape, n_components=n_components,
+                     n_blocks=n_blocks, filters=filters, dropout_p=dropout_p,
+                     heads=heads, name=name + "/ConvAttnNet")
+
+    def _forward(self, x):
+        if self.split == 'channel':
+            x1, x2 = tf.split(x, 2, axis=-1)
+        else:
+            x = tf.reshape(x, (-1, self.H, self.W // 2, 2, self.C))
+            x1, x2 = tf.unstack(x, axis=3)
+
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
+        y2 = self.MixLogCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
+        y2 = self.inv_sigmoid(y2)
+        y2 = y2 * tf.exp(log_s) + t
+
+        if self.split == 'channel':
+            return tf.concat([x1, y2], axis=-1)
+        else:
+            y = tf.stack([x1, y2], axis=3)
+            return tf.reshape(y, (-1, self.H, self.W, self.C))
+
+    def _inverse(self, y):
+        if self.split == "channel":
+            y1, y2 = tf.split(y, 2, axis=-1)
+        else:
+            y = tf.reshape(y, (-1, self.H, self.W // 2, 2, self.C))
+            y1, y2 = tf.unstack(y, axis=3)
+
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(y1)
+        x2 = (y2 - t) / tf.exp(log_s)
+        x2 = tf.math.sigmoid(x2)
+        x2 = self.inv_MixLogCDF(x2, ml_logits, ml_means, ml_logscales, self.n_components)
+
+        if self.split == 'channel':
+            return tf.concat([y1, x2], axis=-1)
+        else:
+            x = tf.stack([y1, x2], axis=3)
+            return tf.reshape(x, (-1, self.H, self.W, self.C))
+
+    def _forward_log_det_jacobian(self, x):
+        if self.split == 'channel':
+            x1, x2 = tf.split(x, 2, axis=-1)
+        else:
+            x = tf.reshape(x, (-1, self.H, self.W // 2, 2, self.C))
+            x1, x2 = tf.unstack(x, axis=3)
+
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
+
+        log_det = self.MixLog_logPDF(x, ml_logits, ml_means, ml_logscales)
+        u = self.MixLogCDF(x, ml_logits, ml_means, ml_logscales)
+        log_det += -tf.math.log(1. - u) - tf.math.log(u)
+        log_det += log_s
+
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
+
+    def MixLogCDF(self, x, p, mu, log_s, n_components, min_log_s=-7.):
+
+        log_s = tf.maximum(log_s, min_log_s)
+        p = tf.nn.softmax(p, axis=-1)
+
+        x = tf.expand_dims(x, axis=-1)
+        x = tf.repeat(x, n_components, axis=-1)
+
+        x = p * tf.math.sigmoid((x - mu) * tf.exp(-log_s))
+        return tf.reduce_sum(x, axis=-1)
+
+    def inv_MixLogCDF(self, y, p, mu, log_s, n_components,
+                      position_tolerance=1e-8, value_tolerance=1e-8):
+
+        def objective_fn(x):
+            return y - self.MixLogCDF(x, p, mu, log_s, n_components)
+
+        results = tfp.math.secant_root(objective_fn, initial_position=0.5,
+                                       position_tolerance=position_tolerance,
+                                       value_tolerance=position_tolerance)
+
+        return results.estimated_root
+
+    def MixLog_logPDF(self, x, p, mu, log_s, n_components, min_log_s=-7.):
+        log_s = tf.maximum(log_s, min_log_s)
+        p = tf.nn.softmax(p, axis=-1)
+
+        x = tf.expand_dims(x, axis=-1)
+        x = tf.repeat(x, n_components, axis=-1)
+
+        sig_x = tf.math.sigmoid((x - mu) * tf.exp(-log_s))
+        det = p * tf.exp(-log_s) * sig_x * (1 - sig_x)
+        log_det = tf.math.log(tf.reduce_sum(det, axis=-1))
+
+        return log_det
+
+    @staticmethod
+    def inv_sigmoid(x):
+        return tf.math.log(x / (1. - x))
+
