@@ -83,34 +83,54 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         return log_s, t
 
 
+class GLU(tfk.layers.Layer):
+    """
+    Gated Linear Unit
+    """
+
+    def __init__(self, n_filters, input_shape):
+        super(Gate, self).__init__()
+
+        assert n_filters % 2 == 0
+
+        self.conv = tfk.layers.Conv2D(n_filters, kernel_size=1, input_shape=input_shape)
+
+        def call(self, x):
+            h = self.conv(x)
+            a, b = tf.split(h, 2, axis=-1)
+            return a * tf.nn.sigmoid(b)
+
+
 class GatedConv(tfk.layers.Layer):
     """
     Convolutional Layer as described in Flow ++ (origin: Pixel CNN++)
     """
 
-    def __init__(self, input_shape, n_filters, name="GatedConv"):
+    def __init__(self, input_shape, n_filters, a, dropout_p, name="GatedConv"):
         super(self, GatedConv).__init__()
 
+        self. H, self.W, self.C = input_shape
         self.conv1 = tfk.layers.Conv2D(filters=n_filters, input_shape=input_shape,
                                        kernel_size=3, padding='same')
-        self.conv2 = tfk.layers.Conv2D(filters=2 * n_filters, kernel_size=1, padding='same')
 
-    def call(self, inputs):
-        x = self.non_linearity(inputs)
-        x = self.conv1(x)
-        x = self.non_linearity(x)
-        res = self.conv2(x)
-        res = self.gate(res)
-        return x + res
+        self.GLU = GLU(n_filters * 2, input_shape=[self.H, self.W, n_filters])
 
-    @staticmethod
-    def non_linearity(x):
-        return tf.nn.elu(tf.concat((x, -x), axis=-1))
+        self.a = a
+        if a is not None:  # add short-cut connection if auxiliary input 'a' is given
+            self.dense = tfk.layers.Dense(units=n_filters)
+        self.dropout_p = dropout_p
+        if dropout_p > 0.:
+            self.dropout = tfk.layers.Dropout(dropout_p)
 
-    @staticmethod
-    def gate(x):
-        a, b = tf.split(x, 2, axis=-1)
-        return a * tf.nn.sigmoid(b)
+    def call(self, x):
+        c1 = self.non_linearity(x)
+        c1 = self.conv1(c1)
+        if self.a is not None:
+            c1 += self.dense(a)
+        c1 = self.non_linearity(c1)
+        if self.dropout_p > 0.:
+            c1 = self.dropout(c1)
+        return x + GLU(c1)
 
 
 class GatedAttn(tfk.layers.Layer):
@@ -118,6 +138,45 @@ class GatedAttn(tfk.layers.Layer):
     """
     Attention Layer as described in Flow ++ (origin: Attention is all you need (Transformer))
     """
+
+    def __init__(self, input_shape, pos_emb, heads, dropout_p):
+        super(self, GatedAttn).__init__()
+
+        self.H, self.W, self.C = input_shape
+        self.pos_emb = pos_emb
+        self.heads = heads
+        self.dropout_p = dropout_p
+
+        self.timesteps = self.H * self.W
+        assert self.C % self.heads == 0
+        self.dim = self.C // self.heads
+
+        self.layer1 = tfk.layers.Conv2D(n_filters=)
+
+        self.dropout_p > 0.:
+        self.dropout = tfk.layers.Dropout(dropout_p)
+
+        def call(self, inputs):
+            # Position Embedding
+            c = inputs + pos_emb[None, :, :, :]
+            c = self.layer1(c)
+            # Split into heads / Q / K / V
+            c = tf.reshape(c, (-1, self.timesteps, 3, self.heads, self.dim))
+            c = tf.transpose(c, [2, 0, 3, 1, 4]) # (3, batch, heads, timesteps, dim)
+            q, k, v = tf.unstack(c, axis=0)
+            # multi-head attention
+            w = tf.linalg.matmul(q, k, transpose_b=True) / tf.math.sqrt(float(self.dim))
+            w = tf.nn.softmax(w)
+            a = tf.linalg.matmul(w, v) # (batch, heads, timesteps, dim)
+            # merge heads
+            a = tf.transpose(a, [0, 2, 1, 3]) # (batch, timesteps, heads, dim)
+            a = tf.reshape(a, [-1, self.timesteps, self.C])
+            c1 = tf.reshape(a, [-1, self.H, self.W, self.C])
+            if self.dropout_p > 0.:
+                c1 = self.dropout(c1)
+            # 
+
+
 
 
 class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
