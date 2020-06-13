@@ -30,8 +30,7 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, alpha=None, nois
                                                     minval=0., maxval=1. / 256.))
 
     if noise is not None:
-        ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape,
-                                                   mean=0, stddev=noise))
+        ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
 
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1).as_numpy_iterator())[0]
@@ -55,7 +54,7 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, alpha=None, nois
 
     if noise is not None:
         ds_val = ds_val.map(
-            lambda x: x + tf.random.normal(shape=data_shape, mean=0, stddev=noise))
+            lambda x: x + tf.random.normal(shape=data_shape) * noise)
     ds_val = ds_val.batch(5000)
 
     if mirrored_strategy is not None:

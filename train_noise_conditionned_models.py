@@ -157,6 +157,8 @@ def main(args):
         # Saving the last variables
         save_path = manager.save()
         print("Model Saved at {}".format(save_path))
+        # Fine tune model serially
+        abs_restore_path = os.path.abspath(save_path)
 
     log_file.close()
 
