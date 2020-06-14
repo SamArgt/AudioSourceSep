@@ -240,15 +240,9 @@ def main(args):
                                                                         use_logit=args.use_logit, alpha=args.alpha,
                                                                         noise=args.noise, mirrored_strategy=mirrored_strategy)
 
-    if args.dataset == 'mnist':
-        data_shape = [32, 32, 1]
-    elif args.dataset == 'cifar10':
-        data_shape = [32, 32, 3]
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
-        sample = sample.reshape([5] + data_shape)
+        sample = sample[:5]
         tf.summary.image("original images", sample, max_outputs=5, step=0)
 
     # Build Flow
