@@ -60,7 +60,7 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, alpha=None, nois
     if mirrored_strategy is not None:
         ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
         ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
-        return ds_dist, ds_val_dist, minibatch
+        return ds, ds_val, ds_dist, ds_val_dist, minibatch
 
     else:
         return ds, ds_val, minibatch
