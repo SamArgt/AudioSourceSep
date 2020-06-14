@@ -224,7 +224,8 @@ def main(args):
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    if args.debug is False:
+        sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -306,6 +307,7 @@ if __name__ == '__main__':
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')
+    parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
     parser.add_argument('--L', default=3, type=int,
