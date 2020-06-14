@@ -267,6 +267,7 @@ def main(args):
             ckpt.restore(checkpoint_path)
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(checkpoint_path))
+            optimizer = setUp_optimizer(mirrored_strategy, args)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
