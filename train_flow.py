@@ -247,7 +247,7 @@ def main(args):
     else:
         raise ValueError("args.dataset should be mnist or cifar10")
     with train_summary_writer.as_default():
-        sample = list(ds.take(1).as_numpy_iterator())[0]
+        sample = ds.take(1).as_numpy_iterator()[0]
         sample = sample.numpy().reshape([5] + data_shape)
         tf.summary.image("original images", sample, max_outputs=5, step=0)
 
