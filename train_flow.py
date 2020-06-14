@@ -200,6 +200,9 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
+    if args.restore is not None:
+        abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
+
     if args.output == 'trained_flow':
         if args.restore is None:
             output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
@@ -209,7 +212,6 @@ def main(args):
         else:
             _, output_dirname = os.path.split(args.restore)
             output_dirname += '_ctd'
-            abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
 
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
