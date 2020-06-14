@@ -261,9 +261,11 @@ def main(args):
     # restore
     if args.restore is not None:
         checkpoint_path = tf.train.latest_checkpoint(abs_restore_path)
+        assert checkpoint_path is not None
         with mirrored_strategy.scope():
             ckpt.restore(checkpoint_path)
-            print("Model Restored")
+            assert optimizer.iterations > 0
+            print("Model Restored from {}".format(checkpoint_path))
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
