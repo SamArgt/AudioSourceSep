@@ -1,3 +1,4 @@
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -238,6 +239,17 @@ def main(args):
     ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
                                                             use_logit=args.use_logit, alpha=args.alpha,
                                                             noise=args.noise, mirrored_strategy=mirrored_strategy)
+
+    if args.dataset == 'mnist':
+        data_shape = [32, 32, 1]
+    elif args.dataset == 'cifar10':
+        data_shape = [32, 32, 3]
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
+    with train_summary_writer.as_default():
+        sample = list(ds_dist.take(1).as_numpy_iterator())[0]
+        sample = sample.numpy().reshape([5] + data_shape)
+        tf.summary.image("original images", sample, max_outputs=5, step=0)
 
     # Build Flow
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,

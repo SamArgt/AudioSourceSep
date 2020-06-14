@@ -132,13 +132,24 @@ def main(args):
         # restore
         with mirrored_strategy.scope():
             ckpt.restore(abs_restore_path)
-            print("Model Restored")
+            print("Model Restored from {}".format(abs_restore_path))
 
         # load noisy data
         args.noise = sigma
         ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset='mnist', batch_size=args.batch_size,
                                                                 use_logit=args.use_logit, alpha=args.alpha,
                                                                 noise=args.noise, mirrored_strategy=mirrored_strategy)
+
+        if args.dataset == 'mnist':
+            data_shape = [32, 32, 1]
+        elif args.dataset == 'cifar10':
+            data_shape = [32, 32, 3]
+        else:
+            raise ValueError("args.dataset should be mnist or cifar10")
+        with train_summary_writer.as_default():
+            sample = list(ds_dist.take(1).as_numpy_iterator())[0]
+            sample = sample.numpy().reshape([5] + data_shape)
+            tf.summary.image("original images", sample, max_outputs=5, step=0)
 
         params_dict = vars(args)
         template = 'Glow Flow \n\t '
