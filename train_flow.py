@@ -250,7 +250,7 @@ def main(args):
 
     # Build Flow
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
-                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy)
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
@@ -267,7 +267,8 @@ def main(args):
             ckpt.restore(checkpoint_path)
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(checkpoint_path))
-            optimizer = setUp_optimizer(mirrored_strategy, args)
+            if args.noise is not None:
+                optimizer = setUp_optimizer(mirrored_strategy, args)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
@@ -319,6 +320,8 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
+    parser.add_argument("--learntop", action="store_true",
+                        help="learnable prior distribution")
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,

@@ -193,6 +193,8 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
+    parser.add_argument("--learntop", action="store_true",
+                        help="learnable prior distribution")
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=20,
