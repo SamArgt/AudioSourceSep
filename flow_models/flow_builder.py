@@ -38,8 +38,20 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                                     shift_and_log_scale_layer,
                                     n_filters, minibatch, **{'l2_reg': l2_reg})
             inv_bijector = tfb.Invert(bijector)
-            flow = tfd.TransformedDistribution(tfd.Normal(
-                0., 1.), inv_bijector, event_shape=base_distr_shape)
+
+            if learntop:
+                prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
+                    loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),
+                    scale_diag=tfp.util.TransformedVariable(
+                        tf.ones(base_distr_shape),
+                        bijector=tfb.Exp()),
+                    name='scale'),
+                    reinterpreted_batch_ndims=2,
+                    name='learnable_mvn_scaled_identity')
+                flow = tfd.TransformedDistribution(prior_distribution, inv_bijector)
+            else:
+                flow = tfd.TransformedDistribution(tfd.Normal(
+                    0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
         bijector = bijector_cls(K, data_shape,
