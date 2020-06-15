@@ -136,7 +136,7 @@ def main(args):
             print("Model Restored from {}".format(abs_restore_path))
 
         # Set up optimizer
-        optimizer = setUp_optimizer(mirrored_strategy, args)
+        # optimizer = setUp_optimizer(mirrored_strategy, args)
 
         # load noisy data
         args.noise = sigma
