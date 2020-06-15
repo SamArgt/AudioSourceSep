@@ -164,6 +164,7 @@ def main(args):
         print("Model Saved at {}".format(save_path))
         # Fine tune model serially
         abs_restore_path = os.path.abspath(save_path)
+        args.RESTORE = abs_restore_path
 
     log_file.close()
 
