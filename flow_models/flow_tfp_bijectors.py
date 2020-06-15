@@ -229,8 +229,7 @@ class Invertible1x1Conv(tfb.Bijector):
         np_u = np.triu(np_u, k=1)
 
         # Non Trainable Variable
-        self.P = tf.Variable(initial_value=np_p, name=name +
-                             '/P', trainable=False, dtype=tf.float32)
+        self.P = tf.Variable(initial_value=np_p, name=name + '/P', trainable=False, dtype=tf.float32)
         p_inv = tf.linalg.inv(self.P)
         self.P_inv = tf.Variable(
             initial_value=p_inv, name=name + '/P_inv', trainable=False, dtype=tf.float32)
@@ -275,24 +274,40 @@ class Invertible1x1Conv(tfb.Bijector):
 
 
 class Preprocessing(tfp.bijectors.Bijector):
-    def __init__(self, event_shape, alpha=0.05):
+    def __init__(self, event_shape, use_logit=False, alpha=0.05, noise=None):
         super(Preprocessing, self).__init__(forward_min_event_ndims=3)
         self.alpha = alpha
+        self.use_logit = use_logit
+        self.event_shape = event_shape
+        self.noise = noise
         self.H, self.W, self.C = event_shape
+        self.event_shape = event_shape
 
     def _forward(self, x):
-        x = self.alpha + (1 - self.alpha) * x / 256.
-        return tf.math.log(x / (1 - x))
+        x = x / 256. - 0.5
+        x += tf.random.uniform(x.shape, minval=0., maxval=1. / 256.)
+        if self.noise is not None:
+            x += tf.random.normal(x.shape) * self.noise
+        if self.use_logit:
+            x = self.alpha + (1 - self.alpha) * x / 256.
+            x = tf.math.log(x / (1 - x))
+        return x
 
     def _inverse(self, y):
-        y = 1 / (tf.exp(-y) + 1)
-        return (y - self.alpha) * 256. / (1 - self.alpha)
+        y = (y + 0.5) * 256.
+        if self.use_logit:
+            y = 1 / (tf.exp(-y) + 1)
+            y = (y - self.alpha) * 256. / (1 - self.alpha)
+        return y
 
     def _forward_log_det_jacobian(self, x):
-        u = self.alpha + (1 - self.alpha) * x
-        log_det = tf.math.log((1 - self.alpha)) - \
-            tf.math.log(u) - tf.math.log(1 - u)
-        log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
+        log_det = -tf.math.log(256.) * self.H * self.W * self.C
+        log_det = tf.repeat(log_det, x.shape[0], axis=0)
+        if self.use_logit:
+            u = self.alpha + (1 - self.alpha) * x
+            log_det += tf.math.log((1 - self.alpha)) - \
+                tf.math.log(u) - tf.math.log(1 - u)
+            log_det += tf.reduce_sum(log_det, axis=[1, 2, 3])
         return log_det
 
 

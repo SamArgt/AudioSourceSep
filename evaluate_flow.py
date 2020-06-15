@@ -45,10 +45,7 @@ def evaluate(args_parsed, flow, ds, ds_val):
 
         log_lik = losses
         if args_parsed.use_logit:
-            log_lik += D * tf.math.log((1 - args_parsed.alpha) / 256.)
             log_lik -= tf.reduce_sum(tf.math.sigmoid(inputs) * (1 - tf.math.sigmoid(inputs)), axis=[1, 2, 3])
-        else:
-            log_lik += D * tf.math.log(1. / 256.)
 
         bits_per_pixel = - log_lik / (D * tf.math.log(2.))
 

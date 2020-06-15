@@ -1,5 +1,6 @@
 from .flow_glow import *
 from .flow_tfk_layers import *
+from .flow_tfp_bijectors import *
 from .flow_flowpp import *
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -8,7 +9,8 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=True, l2_reg=None, mirrored_strategy=None):
+def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=True, l2_reg=None,
+               use_logit=False, alpha=0.05, noise=None, mirrored_strategy=None):
     tfk.backend.clear_session()
     # Set flow parameters
     if dataset == 'mnist':
@@ -35,9 +37,14 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            bijector = bijector_cls(K, data_shape,
-                                    shift_and_log_scale_layer,
-                                    n_filters, minibatch, **{'l2_reg': l2_reg})
+            preprocessing = Preprocessing(data_shape, use_logit=use_logit, alpha=alpha, noise=noise)
+
+            minibatch_updated = preprocessing.forward(minibatch)
+            flow_bijector = bijector_cls(K, data_shape,
+                                         shift_and_log_scale_layer,
+                                         n_filters, minibatch_updated, **{'l2_reg': l2_reg})
+
+            bijector = tfb.Chain([flow_bijector, preprocessing])
             inv_bijector = tfb.Invert(bijector)
 
             if learntop:
@@ -55,9 +62,13 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                     0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
+        preprocessing = Preprocessing(data_shape, use_logit=use_logit, alpha=alpha, noise=noise)
+        minibatch_updated = preprocessing(minibatch)
         bijector = bijector_cls(K, data_shape,
                                 shift_and_log_scale_layer,
-                                n_filters, minibatch, **{'l2_reg': l2_reg})
+                                n_filters, minibatch_updated, **{'l2_reg': l2_reg})
+
+        bijector = tfb.Chain([flow_bijector, preprocessing])
         inv_bijector = tfb.Invert(bijector)
 
         if learntop:

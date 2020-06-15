@@ -180,7 +180,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), test_loss.result()))
-            # Generate some samples and visualize them on tensoboard
+            # Generate some samples and visualize them on tensorboard
             with mirrored_strategy.scope():
                 samples = flow.sample(9)
             samples = samples.numpy().reshape([9] + data_shape)
@@ -200,7 +200,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    abs_restore_path = os.path.abspath(args.restore)
+    if args.restore is not None:
+        abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
         if args.restore is None:
@@ -239,8 +240,7 @@ def main(args):
 
     # Load Dataset
     ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                        use_logit=args.use_logit, alpha=args.alpha,
-                                                                        noise=args.noise, mirrored_strategy=mirrored_strategy)
+                                                                        mirrored_strategy=mirrored_strategy)
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
@@ -249,7 +249,8 @@ def main(args):
 
     # Build Flow
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
-                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop)
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
+                                   use_logit=args.use_logit, alpha=args.alpha, noise=args.noise)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
