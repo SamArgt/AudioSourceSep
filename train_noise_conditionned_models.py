@@ -59,7 +59,7 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
 
 def main(args):
 
-    sigmas = np.linspace(args.sigmaL, args.sigma1, num=args.n_sigmas)
+    sigmas = np.logspace(np.log(args.sigmaL) / np.log(10), np.logspace(args.sigma1) / np.log(10), num=args.n_sigmas)
     abs_restore_path = os.path.abspath(args.RESTORE)
 
     if args.output == 'noise_conditioned_flow':
