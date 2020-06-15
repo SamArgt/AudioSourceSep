@@ -33,7 +33,7 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, alpha=None, nois
         ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
 
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
-    minibatch = list(ds.take(1).as_numpy_iterator())[0]
+    minibatch = list(ds.take(1))[0]
 
     # Validation Set
     ds_val = tfds.load(dataset, split='test', shuffle_files=True)

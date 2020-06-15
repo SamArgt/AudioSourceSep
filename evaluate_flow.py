@@ -94,7 +94,7 @@ def main(args_parsed):
 
     flow = flow_builder.build_flow(minibatch, L=args_parsed.L, K=args_parsed.K, n_filters=args_parsed.n_filters,
                                    dataset=args_parsed.dataset, l2_reg=args_parsed.l2_reg,
-                                   mirrored_strategy=None)
+                                   mirrored_strategy=None, learntop=args_parsed.learntop)
 
     optimizer = setUp_optimizer(args_parsed)
 
@@ -144,6 +144,8 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
+    parser.add_argument("--learntop", action="store_true",
+                        help="learnable prior distribution")
 
     # Optimization parameters
     parser.add_argument("--optimizer", type=str,

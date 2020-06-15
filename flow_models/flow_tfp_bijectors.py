@@ -176,7 +176,7 @@ class ActNorm(tfb.Bijector):
                 minibatch, axis=[0, 1, 2]) + tf.constant(10**(-8), dtype=tf.float32)
 
         elif normalize == 'all':
-            mean_init, var_init = tf.nn.moments(minibatch, axis=[0])
+            mean_init, var_init = tf.nn.moments(minibatch, axes=[0])
             std_init = tf.math.sqrt(var_init) + \
                 tf.constant(10**(-8), dtype=tf.float32)
 
@@ -302,13 +302,14 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
     Mixture Logistic CDF Layer as described in Flow ++
     """
 
-    def __init__(self, input_shape, NN, split='channel', n_components=32, n_blocks=10, filters=96,
+    def __init__(self, input_shape, NN, split='channel', split_state=0, n_components=32, n_blocks=10, filters=96,
                  dropout_p=0., heads=4, name="MixLogCDFAttnCoupling"):
 
         super(MixLogisticCDFAttnCoupling, self).__init__(
             forward_min_event_ndims=3)
         self.H, self.W, self.C = input_shape
         self.split = split
+        self.split_state = split_state
         if split == 'channel':
             assert self.C % 2 == 0
             nn_input_shape = [self.H, self.W, self.C // 2]
@@ -316,7 +317,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             assert self.W % 2 == 0
             nn_input_shape = [self.H, self.W // 2, self.C]
         else:
-            raise ValueError('split shoulb be channel or checkerboard')
+            raise ValueError('split should be channel or checkerboard')
 
         self.n_components = n_components
         self.nn = NN(input_shape=nn_input_shape, n_components=n_components,
@@ -329,6 +330,9 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         else:
             x = tf.reshape(x, (-1, self.H, self.W // 2, 2, self.C))
             x1, x2 = tf.unstack(x, axis=3)
+
+        if self.split_state:
+            x2, x1 = x1, x2
 
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
         y2 = self.MixLogCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
@@ -348,6 +352,9 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             y = tf.reshape(y, (-1, self.H, self.W // 2, 2, self.C))
             y1, y2 = tf.unstack(y, axis=3)
 
+        if self.split_state:
+            y2, y1 = y1, y2
+
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(y1)
         x2 = (y2 - t) / tf.exp(log_s)
         x2 = tf.math.sigmoid(x2)
@@ -366,11 +373,14 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             x = tf.reshape(x, (-1, self.H, self.W // 2, 2, self.C))
             x1, x2 = tf.unstack(x, axis=3)
 
+        if self.split_state:
+            x2, x1 = x1, x2
+
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
 
-        log_det = self.MixLog_logPDF(x, ml_logits, ml_means, ml_logscales)
-        u = self.MixLogCDF(x, ml_logits, ml_means, ml_logscales)
-        log_det += -tf.math.log(1. - u) - tf.math.log(u)
+        log_det = self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
+        y2 = self.MixLogCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
+        log_det += -tf.math.log(1. - y2) - tf.math.log(y2)
         log_det += log_s
 
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
@@ -394,7 +404,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
         results = tfp.math.secant_root(objective_fn, initial_position=0.5,
                                        position_tolerance=position_tolerance,
-                                       value_tolerance=position_tolerance)
+                                       value_tolerance=value_tolerance)
 
         return results.estimated_root
 
@@ -404,6 +414,8 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
         x = tf.expand_dims(x, axis=-1)
         x = tf.repeat(x, n_components, axis=-1)
+
+        assert x.shape == p.shape == mu.shape == log_s.shape
 
         sig_x = tf.math.sigmoid((x - mu) * tf.exp(-log_s))
         det = p * tf.exp(-log_s) * sig_x * (1 - sig_x)
