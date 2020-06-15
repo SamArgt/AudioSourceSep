@@ -141,10 +141,10 @@ class DequantFlowpp(tfp.bijectors.Bijector):
                                     dropout_p=0., heads=4, name=name + "flow_block")
 
     def _forward(self, x):
-        return self.bijector.forward(x)
+        return self.bijector.forward(x) + x
 
     def _inverse(self, y):
-        return self.bijector.inverse(y)
+        return self.bijector.inverse(y) + y
 
     def _forward_log_det_jacobian(self, x):
         return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
