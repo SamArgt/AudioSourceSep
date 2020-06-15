@@ -162,6 +162,7 @@ if __name__ == '__main__':
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
+    parser.add_argument('--noise', type=float, default=None, help='noise level for BASIS separation')
 
     args_parsed = parser.parse_args()
 
