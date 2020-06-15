@@ -89,9 +89,9 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                            use_logit=args.use_logit, alpha=args.alpha,
-                                                            noise=args.noise, mirrored_strategy=mirrored_strategy)
+    ds, _, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
+                                                                   use_logit=args.use_logit, alpha=args.alpha,
+                                                                   noise=args.noise, mirrored_strategy=mirrored_strategy)
 
     # Build Flow and Set up optimizer
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
