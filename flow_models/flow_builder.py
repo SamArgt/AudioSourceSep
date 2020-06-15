@@ -74,3 +74,9 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                 0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     return flow
+
+
+# def build_flowpp(input_shape, minibatch, n_components=32, n_blocks_flow=32, n_blocks_dequant=2, filters=96,
+#               dropout_p=0., heads=4, name="dequant_flowpp"):
+
+    

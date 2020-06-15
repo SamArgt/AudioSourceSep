@@ -127,3 +127,24 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
     def _inverse_event_shape(self, output_shape):
         H, W, C = output_shape
         return (H * 2, W * 2, C // 4)
+
+
+class DequantFlowpp(tfp.bijectors.Bijector):
+
+    def __init__(self, input_shape, minibatch, n_components=32, n_blocks=2, filters=96,
+                 dropout_p=0., heads=4, name="dequant_flowpp"):
+
+        super(DequantFlowpp, self).__init__(forward_min_event_ndims=3)
+
+        self.bijector = FlowppBlock(input_shape, minibatch, 4, split="checkerboard",
+                                    n_components=32, n_blocks=2, filters=96,
+                                    dropout_p=0., heads=4, name=name + "flow_block")
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, y):
+        return self.bijector.inverse(y)
+
+    def _forward_log_det_jacobian(self, x):
+        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)

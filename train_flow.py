@@ -200,8 +200,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
-    if args.restore is not None:
-        abs_restore_path = os.path.join(os.path.abspath(args.restore), 'tf_ckpts')
+    abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
         if args.restore is None:
@@ -261,12 +260,10 @@ def main(args):
 
     # restore
     if args.restore is not None:
-        checkpoint_path = tf.train.latest_checkpoint(abs_restore_path)
-        assert checkpoint_path is not None
         with mirrored_strategy.scope():
-            ckpt.restore(checkpoint_path)
+            ckpt.restore(abs_restore_path)
             assert optimizer.iterations > 0
-            print("Model Restored from {}".format(checkpoint_path))
+            print("Model Restored from {}".format(abs_restore_path))
             if args.noise is not None:
                 optimizer = setUp_optimizer(mirrored_strategy, args)
 
