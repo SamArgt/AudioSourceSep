@@ -274,8 +274,6 @@ def main(args):
             status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(abs_restore_path))
-            # if args.noise is not None:
-                # optimizer = setUp_optimizer(mirrored_strategy, args)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
@@ -296,8 +294,8 @@ def main(args):
                         data=tf.constant(str(total_trainable_variables)), step=0)
 
     # Train
-    training_time = train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
-                          manager, manager_issues, train_summary_writer, test_summary_writer)
+    training_time, _ = train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
+                             manager, manager_issues, train_summary_writer, test_summary_writer)
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
     # Saving the last variables

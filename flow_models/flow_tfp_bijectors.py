@@ -351,14 +351,16 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             x2, x1 = x1, x2
 
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
-        y2 = self.MixLogCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
+
+        y1 = x1
+        y2 = tf.exp(self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
         y2 = self.inv_sigmoid(y2)
         y2 = y2 * tf.exp(log_s) + t
 
         if self.split == 'channel':
-            return tf.concat([x1, y2], axis=-1)
+            return tf.concat([y1, y2], axis=-1)
         else:
-            y = tf.stack([x1, y2], axis=3)
+            y = tf.stack([y1, y2], axis=3)
             return tf.reshape(y, (-1, self.H, self.W, self.C))
 
     def _inverse(self, y):
@@ -372,14 +374,16 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             y2, y1 = y1, y2
 
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(y1)
+
+        x1 = y1
         x2 = (y2 - t) / tf.exp(log_s)
         x2 = tf.math.sigmoid(x2)
         x2 = self.inv_MixLogCDF(x2, ml_logits, ml_means, ml_logscales, self.n_components)
 
         if self.split == 'channel':
-            return tf.concat([y1, x2], axis=-1)
+            return tf.concat([x1, x2], axis=-1)
         else:
-            x = tf.stack([y1, x2], axis=3)
+            x = tf.stack([x1, x2], axis=3)
             return tf.reshape(x, (-1, self.H, self.W, self.C))
 
     def _forward_log_det_jacobian(self, x):
@@ -401,18 +405,19 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
-    def MixLogCDF(self, x, p, mu, log_s, n_components, min_log_s=-7.):
-
+    def MixLog_logCDF(self, x, p, mu, log_s, n_components, min_log_s=-7.):
         log_s = tf.maximum(log_s, min_log_s)
-        p = tf.nn.softmax(p, axis=-1)
+        log_p = tf.nn.log_softmax(p, axis=-1)
 
         x = tf.expand_dims(x, axis=-1)
         x = tf.repeat(x, n_components, axis=-1)
 
         assert x.shape == p.shape == mu.shape == log_s.shape
 
-        x = p * tf.math.sigmoid((x - mu) * tf.exp(-log_s))
-        return tf.reduce_sum(x, axis=-1)
+        log_sig_x = tf.math.log_sigmoid((x - mu) * tf.exp(-log_s))
+        z = log_p + log_sig_x
+
+        return tf.reduce_logsumexp(z)
 
     def inv_MixLogCDF(self, y, p, mu, log_s, n_components,
                       position_tolerance=1e-8, value_tolerance=1e-8):
@@ -433,18 +438,17 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
     def MixLog_logPDF(self, x, p, mu, log_s, n_components, min_log_s=-7.):
         log_s = tf.maximum(log_s, min_log_s)
-        p = tf.nn.softmax(p, axis=-1)
+        log_p = tf.nn.log_softmax(p, axis=-1)
 
         x = tf.expand_dims(x, axis=-1)
         x = tf.repeat(x, n_components, axis=-1)
 
         assert x.shape == p.shape == mu.shape == log_s.shape
 
-        sig_x = tf.math.sigmoid((x - mu) * tf.exp(-log_s))
-        det = p * tf.exp(-log_s) * sig_x * (1 - sig_x)
-        log_det = tf.math.log(tf.reduce_sum(det, axis=-1))
+        log_sig_x = tf.math.log_sigmoid((x - mu) * tf.exp(-log_s))
+        z = log_p - log_s + log_sig_x - 2 * tf.nn.softplus(log_sig_x)
 
-        return log_det
+        return tf.reduce_logsumexp(z)
 
     @staticmethod
     def inv_sigmoid(x):

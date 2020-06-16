@@ -15,7 +15,7 @@ class FlowppCouplingLayer(tfp.bijectors.Bijector):
         super(FlowppCouplingLayer, self).__init__(forward_min_event_ndims=3)
 
         self.actnorm = ActNorm(input_shape, minibatch,
-                               normalize='all', name=name + "actnorm")
+                               normalize='all', name=name + "/actnorm")
         self.inv1x1conv = Invertible1x1Conv(
             input_shape, name=name + '/inv1x1conv')
         NN = ConvAttnNet
