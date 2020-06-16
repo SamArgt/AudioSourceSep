@@ -240,7 +240,8 @@ def main(args):
 
     # Load Dataset
     ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                        mirrored_strategy=mirrored_strategy)
+                                                                        mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
+                                                                        noise=args.noise, alpha=args.alpha)
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
@@ -250,7 +251,7 @@ def main(args):
     # Build Flow
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                    l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                   use_logit=args.use_logit, alpha=args.alpha, noise=args.noise)
+                                   )
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)

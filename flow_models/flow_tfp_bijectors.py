@@ -294,6 +294,7 @@ class Preprocessing(tfp.bijectors.Bijector):
         return x
 
     def _inverse(self, y):
+        y = tf.clip_by_value(y, -0.5, 0.5)
         y = (y + 0.5) * 256.
         if self.use_logit:
             y = 1 / (tf.exp(-y) + 1)
