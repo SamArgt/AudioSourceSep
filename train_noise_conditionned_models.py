@@ -160,13 +160,10 @@ def main(args):
                             data=tf.constant(str(total_trainable_variables)), step=0)
 
         # Train
-        training_time = train_flow.train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
-                                         manager, None, train_summary_writer, test_summary_writer)
+        training_time, save_path = train_flow.train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
+                                                    manager, None, train_summary_writer, test_summary_writer)
         print("Training time: ", np.round(training_time, 2), ' seconds')
 
-        # Saving the last variables
-        save_path = manager.save()
-        print("Model Saved at {}".format(save_path))
         # Fine tune model serially
         abs_restore_path = os.path.abspath(save_path)
         args.RESTORE = abs_restore_path

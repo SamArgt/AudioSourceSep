@@ -202,7 +202,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 min_val_loss = curr_val_loss
 
     training_time = time.time() - t0
-    return training_time
+    return training_time, save_path
 
 
 def main(args):

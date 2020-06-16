@@ -409,18 +409,25 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         x = tf.expand_dims(x, axis=-1)
         x = tf.repeat(x, n_components, axis=-1)
 
+        assert x.shape == p.shape == mu.shape == log_s.shape
+
         x = p * tf.math.sigmoid((x - mu) * tf.exp(-log_s))
         return tf.reduce_sum(x, axis=-1)
 
     def inv_MixLogCDF(self, y, p, mu, log_s, n_components,
                       position_tolerance=1e-8, value_tolerance=1e-8):
 
+        with tf.control_dependencies([self.assert_in_range(y, min=0., max=1.)]):
+            y = tf.identity(y)
+
+        init_x = tf.zeros_like(y)
+
         def objective_fn(x):
             return y - self.MixLogCDF(x, p, mu, log_s, n_components)
 
-        results = tfp.math.secant_root(objective_fn, initial_position=0.5,
+        results = tfp.math.secant_root(objective_fn, initial_position=init_x,
                                        position_tolerance=position_tolerance,
-                                       value_tolerance=value_tolerance)
+                                       value_tolerance=position_tolerance)
 
         return results.estimated_root
 
@@ -443,3 +450,10 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
     def inv_sigmoid(x):
         return tf.math.log(x / (1. - x))
 
+    @staticmethod
+    def assert_in_range(x, *, min, max):
+        """Asserts that x is in [min, max] elementwise"""
+        return tf.Assert(tf.logical_and(
+            tf.greater_equal(tf.reduce_min(x), min),
+            tf.less_equal(tf.reduce_max(x), max)
+        ), [x])

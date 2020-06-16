@@ -53,7 +53,7 @@ class FlowppBlock(tfp.bijectors.Bijector):
                                                  n_blocks=n_blocks, filters=filters,
                                                  dropout_p=dropout_p, heads=heads,
                                                  name=name + "/FlowppCouplingLayer" + str(i))
-            minibatch_updated = coupling_layer(minibatch_updated)
+            minibatch_updated = coupling_layer.forward(minibatch_updated)
             self.coupling_layers.append(coupling_layer)
             split_state = split_state + 1 % 2
 
