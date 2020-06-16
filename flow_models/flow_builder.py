@@ -62,7 +62,7 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                                      shift_and_log_scale_layer,
                                      n_filters, minibatch, **{'l2_reg': l2_reg})
 
-        inv_bijector = tfb.Invert(bijector)
+        inv_bijector = tfb.Invert(flow_bijector)
 
         if learntop:
             prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
