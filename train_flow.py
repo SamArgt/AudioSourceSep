@@ -106,6 +106,13 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
+    with mirrored_strategy.scope():
+        samples = flow.sample(9)
+    samples = samples.numpy().reshape([9] + data_shape)
+    with train_summary_writer.as_default():
+        tf.summary.image("9 generated samples", samples,
+                         max_outputs=9, step=0)
+
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
     t0 = time.time()
@@ -124,7 +131,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         n_train = 50000
     print("Start Training on {} epochs".format(N_EPOCHS))
     # Custom Training Loop
-    for epoch in range(N_EPOCHS):
+    for epoch in range(1, N_EPOCHS + 1):
         epoch_loss_avg.reset_states()
 
         if is_nan_loss:
@@ -263,11 +270,12 @@ def main(args):
     # restore
     if args.restore is not None:
         with mirrored_strategy.scope():
-            ckpt.restore(abs_restore_path)
+            status = ckpt.restore(abs_restore_path)
+            status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(abs_restore_path))
-            if args.noise is not None:
-                optimizer = setUp_optimizer(mirrored_strategy, args)
+            # if args.noise is not None:
+                # optimizer = setUp_optimizer(mirrored_strategy, args)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '

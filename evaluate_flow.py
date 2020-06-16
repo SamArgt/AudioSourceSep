@@ -30,7 +30,8 @@ def restore_checkpoint(args_parsed, flow, optimizer):
     ckpt = tf.train.Checkpoint(
         variables=flow.variables, optimizer=optimizer)
     # Restore weights if specified
-    ckpt.restore(restore_abs_dirpath)
+    status = ckpt.restore(restore_abs_dirpath)
+    status.assert_existing_objects_matched()
 
     return ckpt
 
@@ -44,7 +45,7 @@ def evaluate(args_parsed, flow, ds, ds_val):
         losses = flow.log_prob(inputs)
 
         log_lik = losses
-        log_lik += tf.math.log(256.) * D
+        log_lik -= tf.math.log(256.) * D
         if args_parsed.use_logit:
             log_lik -= tf.reduce_sum(tf.math.sigmoid(inputs) * (1 - tf.math.sigmoid(inputs)), axis=[1, 2, 3])
 

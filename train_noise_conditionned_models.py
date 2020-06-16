@@ -131,8 +131,9 @@ def main(args):
 
         # restore
         with mirrored_strategy.scope():
-            ckpt.restore(abs_restore_path)
+            status = ckpt.restore(abs_restore_path)
             assert optimizer.iterations > 0
+            status.assert_existing_objects_matched()
             print("Model Restored from {}".format(abs_restore_path))
 
         # Set up optimizer

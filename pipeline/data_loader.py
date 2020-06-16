@@ -19,18 +19,15 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None, alph
     ds = ds.map(lambda x: tf.cast(x, tf.float32))
     if dataset == 'mnist':
         ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-    if use_logit:
-        ds = ds.map(lambda x: alpha + (1 - alpha) * x / 256.)
-        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                    minval=0., maxval=1. / 256.))
-        ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
-    else:
-        ds = ds.map(lambda x: x / 256. - 0.5)
-        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                    minval=0., maxval=1. / 256.))
 
+    ds = ds.map(lambda x: x / 256. - 0.5)
     if noise is not None:
         ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
+    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                minval=0., maxval=1. / 256.))
+    if use_logit:
+        ds = ds.map(lambda x: alpha + (1 - alpha) * x)
+        ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
 
     ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1))[0]
@@ -42,16 +39,17 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None, alph
     if dataset == 'mnist':
         ds_val = ds_val.map(lambda x: tf.pad(
             x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-    if use_logit:
-        ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x / 256.)
-        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
-    else:
-        ds_val = ds_val.map(lambda x: x / 256. - 0.5)
-        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
+
+    ds_val = ds_val.map(lambda x: x / 256. - 0.5)
+    ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
 
     if noise is not None:
         ds_val = ds_val.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
+
+    if use_logit:
+        ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x)
+        ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+
     ds_val = ds_val.batch(5000)
 
     if mirrored_strategy is not None:
