@@ -79,7 +79,7 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     for gt1, gt2 in zip(ds1, ds2):
         gt1, gt2 = gt1, gt2
 
-    mixed = (gt1 + gt2) / 2
+    mixed = (gt1 + gt2) / 2.
 
     x1 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
     x2 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)

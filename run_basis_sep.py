@@ -165,9 +165,9 @@ def main(args):
             n_display = 5
         else:
             n_display = args.n_mixed
-        tf.summary.image("Mix", mixed[:n_display], step=0)
+        tf.summary.image("Mix", mixed[:n_display], step=0, max_outputs=5)
         tf.summary.image("Originals",
-                         np.concatenate((gt1[:n_display], gt2[:n_display]), axis=0), step=0)
+                         np.concatenate((gt1[:n_display], gt2[:n_display]), axis=0), step=0, max_outputs=10)
 
     # build model
     model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
