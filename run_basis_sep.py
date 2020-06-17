@@ -90,7 +90,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01,
 
 def basis_outer_loop(restore_dict, args, train_summary_writer):
 
-    mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture(dataset=args.dataset, batch_size=args.batch_size,
+    mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture(dataset=args.dataset, n_mixed=args.n_mixed,
                                                                  use_logit=args.use_logit, alpha=args.alpha, noise=args.noise,
                                                                  mirrored_strategy=None)
 
