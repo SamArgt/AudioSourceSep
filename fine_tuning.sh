@@ -1,1 +1,0 @@
-nohup python train_flow.py noise_conditionned_flow/glow_mnist_3_16_256_256/sigma0.01/tf_ckpts/ckpt-67 --L 3 --K 16 --n_filters 256 --batch_size 256 --learntop --n_epochs 50 --noise 0.01 --output noise_conditionned_flow/glow_mnist_3_16_256_256/sigma_0.01_bis

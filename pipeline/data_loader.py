@@ -2,7 +2,8 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 
-def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None, alpha=0.01, mirrored_strategy=None):
+def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None,
+              alpha=0.01, mirrored_strategy=None, reshuffle=True):
 
     if dataset == 'mnist':
         data_shape = (32, 32, 1)
@@ -29,7 +30,8 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None, alph
         ds = ds.map(lambda x: alpha + (1 - alpha) * x)
         ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
 
-    ds = ds.shuffle(buffer_size).batch(global_batch_size, drop_remainder=True)
+    ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
+    ds = ds.batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1))[0]
 
     # Validation Set
@@ -61,15 +63,6 @@ def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None, alph
         return ds, ds_val, minibatch
 
 
-def get_mixture_dataset(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=0.1, mirrored_strategy=None):
-    ds, ds_val, minibatch = load_data(dataset, n_mixed, use_logit, alpha, noise, mirrored_strategy)
-    ds1 = ds.shuffle(2048, seed=42, reshuffle_each_iteration=False)
-    ds2 = ds.shuffle(2048, seed=84, reshuffle_each_iteration=False)
-    ds_zip = tf.data.Dataset.zip((ds1, ds2))
-    ds_mix = ds_zip.map(lambda x, y: (x + y) / 2.)
-    return tf.data.Dataset.zip((ds1, ds2, ds_mix)), minibatch
-
-
 def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=0.1, mirrored_strategy=None):
 
     if dataset == 'mnist':
@@ -79,8 +72,14 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     else:
         raise ValueError("args.dataset should be mnist or cifar10")
 
-    ds_mix, minibatch = get_mixture_dataset(dataset, n_mixed, use_logit, alpha, noise, mirrored_strategy)
-    gt1, gt2, mixed = ds_mix.take(1)
+    ds, _, minibatch = load_data(dataset, n_mixed, use_logit, alpha, noise, mirrored_strategy)
+
+    ds1 = ds.take(1)
+    ds2 = ds.take(1)
+    for gt1, gt2 in zip(ds1, ds2):
+        gt1, gt2 = gt1, gt2
+
+    mixed = (gt1 + gt2) / 2
 
     x1 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)
     x2 = tf.random.uniform(data_shape, minval=-.5, maxval=.5)

@@ -3,7 +3,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from flow_models import flow_builder
 from pipeline import data_loader
-from basis_sep import basis_sep
 import argparse
 import time
 import os
@@ -26,14 +25,16 @@ def setUp_optimizer(args):
     return optimizer
 
 
-def restore_checkpoint(restore_path, args, flow, optimizer):
-    restore_abs_dirpath = os.path.abspath(restore_path)
-
+def restore_checkpoint(restore_path, args, flow, optimizer, latest=True):
+    if latest:
+        restore_path = tf.train.latest_checkpoint(restore_path)
+        assert restore_path is not None
     # Checkpoint object
     ckpt = tf.train.Checkpoint(
         variables=flow.variables, optimizer=optimizer)
     # Restore weights if specified
-    ckpt.restore(restore_abs_dirpath)
+    status = ckpt.restore(restore_path)
+    status.assert_existing_objects_matched()
 
     return ckpt
 
@@ -59,10 +60,32 @@ def setUp_tensorboard():
 @tf.function
 def compute_grad_logprob(X, model):
     with tf.GradientTape() as tape:
-        tape.watch(model.trainable_variables)
+        tape.watch(X)
         loss = -tf.reduce_mean(model.log_prob(X))
-    gradients = tape.gradient(loss, model.trainable_variables)
+    gradients = tape.gradient(loss, X)
     return gradients
+
+
+def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01, delta=2e-5, T=100, dataset="mnist"):
+
+    if dataset == 'mnist':
+        data_shape = [n_mixed, 32, 32, 1]
+    elif dataset == 'cifar10':
+        data_shape == [n_mixed, 32, 32, 3]
+
+    eta = delta * (sigma / sigmaL) ** 2
+    lambda_recon = 1.0 / (sigma ** 2)
+    for t in range(T):
+
+        epsilon1 = tf.math.sqrt(2 * eta) * tf.random.normal(data_shape)
+        epsilon2 = tf.math.sqrt(2 * eta) * tf.random.normal(data_shape)
+
+        grad_logprob1 = compute_grad_logprob(x1, model1)
+        grad_logprob2 = compute_grad_logprob(x2, model2)
+        x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2 * mixed)) + epsilon1
+        x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2 * mixed)) + epsilon2
+
+    return x1, x2
 
 
 def basis_outer_loop(restore_dict, args, train_summary_writer):
@@ -81,17 +104,21 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
     optimizer = setUp_optimizer(args)
     step = 0
     for sigma, restore_path in restore_dict.items():
-        print("Sigma = {}".format(sigma))
         restore_checkpoint(restore_path, args, model, optimizer)
-        print("Model restored")
+        print("Model at noise level {} restored from {}".format(sigma, restore_path))
         model1 = model2 = model
 
-        x1, x2 = basis_sep.basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
-                                            delta=2e-5, T=100, dataset=args.dataset)
+        x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
+                                  delta=2e-5, T=100, dataset=args.dataset)
         step += 1
 
         with train_summary_writer.as_default():
-            tf.summary.image("Components", np.concatenate((x1[:5], x2[:5]), axis=0), max_outputs=10, step=step)
+            if args.n_mixed > 5:
+                n_display = 5
+            else:
+                n_display = args.n_mixed
+            tf.summary.image("Components", np.concatenate((x1[:n_display], x2[:n_display]), axis=0),
+                             max_outputs=10, step=step)
 
         print("inner loop done")
         print("_" * 100)
@@ -101,6 +128,8 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
 
 def main(args):
 
+    abs_restore_path = os.path.abspath(args.RESTORE)
+
     try:
         os.mkdir(args.output)
         os.chdir(args.output)
@@ -108,13 +137,16 @@ def main(args):
         os.chdir(args.output)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    if args.debug is False:
+        sys.stdout = log_file
 
     train_summary_writer, test_summary_writer = setUp_tensorboard()
 
-    sigmas = np.linspace(0.01, 1., num=10)
-    sigmas = np.flip(sigmas)
-    restore_dict = {sigma: args.RESTORE + '_' + str(sigma) for sigma in sigmas}
+    sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
+    restore_dict = {sigma: os.path.join(abs_restore_path, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
+
+    restore_dict[sigmas[0]] = "sigma_0.01_bis"
+
     t0 = time.time()
     mixed, x1, x2, gt1, gt2 = basis_outer_loop(restore_dict, args, train_summary_writer)
     t1 = time.time()
@@ -137,12 +169,16 @@ if __name__ == "__main__":
                         help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='basis_sep',
                         help='output dirpath for savings')
+    parser.add_argument('--debug', action="store_true")
 
     # BASIS hyperparameters
     parser.add_argument("--T", type=int, default=100,
                         help="Number of iteration in the inner loop")
     parser.add_argument('--n_mixed', type=int, default=10,
                         help="number of mixture to separate")
+    parser.add_argument('--sigma1', type=float, default=1.0)
+    parser.add_argument('--sigmaL', type=float, default=0.01)
+    parser.add_argument('--n_sigmas', type=float, default=10)
 
     # Model hyperparameters
     parser.add_argument('--L', default=2, type=int,
@@ -153,6 +189,8 @@ if __name__ == "__main__":
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
+    parser.add_argument("--learntop", action="store_true",
+                        help="learnable prior distribution")
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,
