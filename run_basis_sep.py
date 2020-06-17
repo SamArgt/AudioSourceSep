@@ -147,13 +147,27 @@ def main(args):
     # set up tensorboard
     train_summary_writer, test_summary_writer = setUp_tensorboard()
 
+    params_dict = vars(args)
+    template = 'BASIS Separation \n\t '
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
+    with train_summary_writer.as_default():
+        tf.summary.text(name='Parameters',
+                        data=tf.constant(template), step=0)
+
     # get mixture
     mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture(dataset=args.dataset, n_mixed=args.n_mixed,
                                                                  use_logit=args.use_logit, alpha=args.alpha, noise=None,
                                                                  mirrored_strategy=None)
     with train_summary_writer.as_default():
-        tf.summary.image("Mix and originals",
-                         np.concatenate((mixed[:5], gt1[:5], gt2[:5]), axis=0), step=0)
+        if args.n_mixed > 5:
+            n_display = 5
+        else:
+            n_display = args.n_mixed
+        tf.summary.image("Mix", mixed[:n_display], step=0)
+        tf.summary.image("Originals",
+                         np.concatenate((gt1[:n_display], gt2[:n_display]), axis=0), step=0)
 
     # build model
     model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
