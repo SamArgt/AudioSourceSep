@@ -145,9 +145,9 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             else:
                 n_display = args.n_mixed
 
-            sample_mix = mixed.numpy()[:n_display]
-            sample_x1 = x1.numpy()[:n_display]
-            sample_x2 = x2.numpy()[:n_display]
+            sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
+            sample_x1 = x1.numpy()[:n_display].reshape((n_display, 32, 32))
+            sample_x2 = x2.numpy()[:n_display].reshape((n_display, 32, 32))
             figure = image_grid(n_display, sample_mix, sample_x1, sample_x2)
             tf.summary.image("Components", plot_to_image(figure),
                              max_outputs=10, step=step)
@@ -203,9 +203,9 @@ def main(args):
         else:
             n_display = args.n_mixed
 
-        sample_mix = mixed.numpy()[:n_display]
-        sample_x1 = gt1.numpy()[:n_display]
-        sample_x2 = gt2.numpy()[:n_display]
+        sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
+        sample_x1 = gt1.numpy()[:n_display].reshape((n_display, 32, 32))
+        sample_x2 = gt2.numpy()[:n_display].reshape((n_display, 32, 32))
         figure = image_grid(n_display, sample_mix, sample_x1, sample_x2)
         tf.summary.image("Originals", plot_to_image(figure),
                          max_outputs=1, step=0)
