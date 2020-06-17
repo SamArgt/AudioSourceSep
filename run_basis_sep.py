@@ -25,7 +25,18 @@ def setUp_optimizer(args):
     return optimizer
 
 
-def restore_checkpoint(restore_path, args, flow, optimizer, latest=True):
+def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
+
+    # Checkpoint object
+    with mirrored_strategy.scope():
+        ckpt = tf.train.Checkpoint(
+            variables=flow.variables, optimizer=optimizer)
+        manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+
+    return ckpt, manager
+
+
+def restore_checkpoint(ckpt, restore_path, args, flow, optimizer, latest=True):
     if latest:
         checkpoint_restore_path = tf.train.latest_checkpoint(restore_path)
         assert restore_path is not None, restore_path
@@ -90,23 +101,12 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01,
     return x1, x2
 
 
-def basis_outer_loop(restore_dict, args, train_summary_writer):
+def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
+                     ckpt, args, train_summary_writer):
 
-    mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture(dataset=args.dataset, n_mixed=args.n_mixed,
-                                                                 use_logit=args.use_logit, alpha=args.alpha, noise=None,
-                                                                 mirrored_strategy=None)
-
-    with train_summary_writer.as_default():
-        tf.summary.image("Mix and originals",
-                         np.concatenate((mixed[:5], gt1[:5], gt2[:5]), axis=0), step=0)
-
-    model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
-                                    l2_reg=args.l2_reg, mirrored_strategy=None)
-
-    optimizer = setUp_optimizer(args)
     step = 0
     for sigma, restore_path in restore_dict.items():
-        restore_checkpoint(restore_path, args, model, optimizer)
+        restore_checkpoint(ckpt, restore_path, args, model, optimizer)
         print("Model at noise level {} restored from {}".format(sigma, restore_path))
         model1 = model2 = model
 
@@ -125,7 +125,7 @@ def basis_outer_loop(restore_dict, args, train_summary_writer):
         print("inner loop done")
         print("_" * 100)
 
-    return mixed, x1, x2, gt1, gt2
+    return x1, x2
 
 
 def main(args):
@@ -142,26 +142,44 @@ def main(args):
     if args.debug is False:
         sys.stdout = log_file
 
+    # set up tensorboard
     train_summary_writer, test_summary_writer = setUp_tensorboard()
 
+    # noise conditionned models
     sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
     restore_dict = {sigma: os.path.join(abs_restore_path, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
-
+    restore_dict[sigmas[0]] = "sigma_0.01_bis"
     if args.debug:
         for k, v in restore_dict.items():
             print("{}: {}".format(round(k, 2), v))
 
-    restore_dict[sigmas[0]] = "sigma_0.01_bis"
+    # get mixture
+    mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture(dataset=args.dataset, n_mixed=args.n_mixed,
+                                                                 use_logit=args.use_logit, alpha=args.alpha, noise=None,
+                                                                 mirrored_strategy=None)
+    with train_summary_writer.as_default():
+        tf.summary.image("Mix and originals",
+                         np.concatenate((mixed[:5], gt1[:5], gt2[:5]), axis=0), step=0)
 
+    # build model
+    model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+                                    l2_reg=args.l2_reg, mirrored_strategy=None)
+    # set up optimizer
+    optimizer = setUp_optimizer(args)
+    # checkpoint
+    ckpt = setUp_checkpoint(None, args, model, optimizer)
+
+    # run BASIS separation
     t0 = time.time()
-    mixed, x1, x2, gt1, gt2 = basis_outer_loop(restore_dict, args, train_summary_writer)
+    x1, x2 = basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
+                              ckpt, args, train_summary_writer)
     t1 = time.time()
+    print("Duration: {} seconds".format(round(t1 - t0, 3)))
 
+    # Save results
     x1 = x1.numpy()
     x2 = x2.numpy()
     np.savez('results', x1=x1, x2=x2, gt1=gt1, gt2=gt2, mixed=mixed)
-
-    print("Duration: {} seconds".format(round(t1 - t0, 3)))
 
     log_file.close()
 
