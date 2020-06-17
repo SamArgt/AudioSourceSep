@@ -65,37 +65,6 @@ def setUp_tensorboard():
     return train_summary_writer, test_summary_writer
 
 
-@tf.function
-def compute_grad_logprob(X, model):
-    with tf.GradientTape() as tape:
-        tape.watch(X)
-        loss = -tf.reduce_mean(model.log_prob(X))
-    gradients = tape.gradient(loss, X)
-    return gradients
-
-
-def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01, delta=2e-5, T=100, dataset="mnist"):
-
-    if dataset == 'mnist':
-        data_shape = [n_mixed, 32, 32, 1]
-    elif dataset == 'cifar10':
-        data_shape == [n_mixed, 32, 32, 3]
-
-    eta = float(delta * (sigma / sigmaL) ** 2)
-    lambda_recon = 1.0 / (sigma ** 2)
-    for t in range(T):
-
-        epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
-        epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
-
-        grad_logprob1 = compute_grad_logprob(x1, model1)
-        grad_logprob2 = compute_grad_logprob(x2, model2)
-        x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon1
-        x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon2
-
-    return x1, x2
-
-
 def plot_to_image(figure):
     """Converts the matplotlib plot specified by 'figure' to a PNG image and
     returns it. The supplied figure is closed and inaccessible after this call."""
@@ -126,6 +95,45 @@ def image_grid(n_display, sample_mix, sample_gt1, sample_gt2):
         ax3.set_axis_off()
     return f
 
+
+@tf.function
+def compute_grad_logprob(X, model, debug=False):
+    with tf.GradientTape() as tape:
+        tape.watch(X)
+        loss = -tf.reduce_mean(model.log_prob(X))
+    gradients = tape.gradient(loss, X)
+    if debug:
+        assert gradients.shape == X.shape
+        assert tf.math.is_nan(gradients).numpy().any()
+    return gradients
+
+
+def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
+                     sigmaL=0.01, delta=3e-5, T=100, dataset="mnist", debug=False):
+
+    if dataset == 'mnist':
+        data_shape = [n_mixed, 32, 32, 1]
+    elif dataset == 'cifar10':
+        data_shape == [n_mixed, 32, 32, 3]
+
+    eta = float(delta * (sigma / sigmaL) ** 2)
+    lambda_recon = 1.0 / (sigma ** 2)
+    for t in range(T):
+
+        epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
+        epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
+
+        grad_logprob1 = compute_grad_logprob(x1, model1, debug)
+        grad_logprob2 = compute_grad_logprob(x2, model2, debug)
+        x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon1
+        x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon2
+
+    if debug:
+        assert tf.math.is_nan(x1).numpy().any()
+        assert tf.math.is_nan(x2).numpy().any()
+
+    return x1, x2
+
 def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
                      ckpt, args, train_summary_writer):
 
@@ -136,7 +144,7 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
         model1 = model2 = model
 
         x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
-                                  delta=2e-5, T=100, dataset=args.dataset)
+                                  delta=3e-5, T=args.T, dataset=args.dataset, debug=args.debug)
         step += 1
 
         with train_summary_writer.as_default():
