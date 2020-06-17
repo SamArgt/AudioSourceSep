@@ -25,13 +25,12 @@ def setUp_optimizer(args):
     return optimizer
 
 
-def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
+def setUp_checkpoint(args, flow, optimizer):
 
     # Checkpoint object
-    with mirrored_strategy.scope():
-        ckpt = tf.train.Checkpoint(
-            variables=flow.variables, optimizer=optimizer)
-        manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+    ckpt = tf.train.Checkpoint(
+        variables=flow.variables, optimizer=optimizer)
+    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
 
     return ckpt, manager
 
@@ -167,7 +166,7 @@ def main(args):
     # set up optimizer
     optimizer = setUp_optimizer(args)
     # checkpoint
-    ckpt = setUp_checkpoint(None, args, model, optimizer)
+    ckpt = setUp_checkpoint(args, model, optimizer)
 
     # run BASIS separation
     t0 = time.time()
