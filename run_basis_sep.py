@@ -117,7 +117,6 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
     eta = float(delta * (sigma / sigmaL) ** 2)
     lambda_recon = 1.0 / (sigma ** 2)
     for t in range(T):
-        print(t)
         epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
 
