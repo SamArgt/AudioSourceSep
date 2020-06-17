@@ -25,17 +25,7 @@ def setUp_optimizer(args):
     return optimizer
 
 
-def setUp_checkpoint(args, flow, optimizer):
-
-    # Checkpoint object
-    ckpt = tf.train.Checkpoint(
-        variables=flow.variables, optimizer=optimizer)
-    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
-
-    return ckpt, manager
-
-
-def restore_checkpoint(ckpt, restore_path, args, flow, optimizer, latest=True):
+def restore_checkpoint(restore_path, model, optimizer, latest=True):
     if latest:
         checkpoint_restore_path = tf.train.latest_checkpoint(restore_path)
         assert restore_path is not None, restore_path
@@ -43,7 +33,7 @@ def restore_checkpoint(ckpt, restore_path, args, flow, optimizer, latest=True):
         checkpoint_restore_path = restore_path
     # Checkpoint object
     ckpt = tf.train.Checkpoint(
-        variables=flow.variables, optimizer=optimizer)
+        variables=model.variables, optimizer=optimizer)
     # Restore weights if specified
     status = ckpt.restore(checkpoint_restore_path)
     status.assert_existing_objects_matched()
@@ -101,11 +91,11 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01,
 
 
 def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
-                     ckpt, args, train_summary_writer):
+                     args, train_summary_writer):
 
     step = 0
     for sigma, restore_path in restore_dict.items():
-        restore_checkpoint(ckpt, restore_path, args, model, optimizer)
+        restore_checkpoint(restore_path, model, optimizer)
         print("Model at noise level {} restored from {}".format(sigma, restore_path))
         model1 = model2 = model
 
@@ -165,13 +155,11 @@ def main(args):
                                     l2_reg=args.l2_reg, mirrored_strategy=None)
     # set up optimizer
     optimizer = setUp_optimizer(args)
-    # checkpoint
-    ckpt = setUp_checkpoint(args, model, optimizer)
 
     # run BASIS separation
     t0 = time.time()
     x1, x2 = basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
-                              ckpt, args, train_summary_writer)
+                              args, train_summary_writer)
     t1 = time.time()
     print("Duration: {} seconds".format(round(t1 - t0, 3)))
 
