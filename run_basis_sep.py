@@ -9,6 +9,8 @@ import os
 import sys
 import shutil
 import datetime
+import io
+import matplotlib.pyplot as plt
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -94,6 +96,36 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed, sigmaL=0.01,
     return x1, x2
 
 
+def plot_to_image(figure):
+    """Converts the matplotlib plot specified by 'figure' to a PNG image and
+    returns it. The supplied figure is closed and inaccessible after this call."""
+    # Save the plot to a PNG in memory.
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    # Closing the figure prevents it from being displayed directly inside
+    # the notebook.
+    plt.close(figure)
+    buf.seek(0)
+    # Convert PNG buffer to TF image
+    image = tf.image.decode_png(buf.getvalue(), channels=4)
+    # Add the batch dimension
+    image = tf.expand_dims(image, 0)
+    return image
+
+
+def image_grid(n_display, sample_mix, sample_gt1, sample_gt2):
+    # Create a figure to contain the plot.
+    f, axes = plt.subplots(nrows=n_display, ncols=3, figsize=(6, 8))
+    for i in range(n_display):
+        ax1, ax2, ax3 = axes[i]
+        ax1.imshow(sample_gt1[i], cmap=plt.cm.binary)
+        ax2.imshow(sample_gt2[i], cmap=plt.cm.binary)
+        ax3.imshow(sample_mix[i], cmap=plt.cm.binary)
+        ax1.set_axis_off()
+        ax2.set_axis_off()
+        ax3.set_axis_off()
+    return f
+
 def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
                      ckpt, args, train_summary_writer):
 
@@ -112,7 +144,12 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
                 n_display = 5
             else:
                 n_display = args.n_mixed
-            tf.summary.image("Components", np.concatenate((x1[:n_display], x2[:n_display]), axis=0),
+
+            sample_mix = mixed.numpy()[:n_display]
+            sample_x1 = x1.numpy()[:n_display]
+            sample_x2 = x2.numpy()[:n_display]
+            figure = image_grid(n_display, sample_mix, sample_x1, sample_x2)
+            tf.summary.image("Components", plot_to_image(figure),
                              max_outputs=10, step=step)
 
         print("inner loop done")
@@ -165,9 +202,13 @@ def main(args):
             n_display = 5
         else:
             n_display = args.n_mixed
-        tf.summary.image("Mix", mixed[:n_display], step=0, max_outputs=5)
-        tf.summary.image("Originals",
-                         np.concatenate((gt1[:n_display], gt2[:n_display]), axis=0), step=0, max_outputs=10)
+
+        sample_mix = mixed.numpy()[:n_display]
+        sample_x1 = gt1.numpy()[:n_display]
+        sample_x2 = gt2.numpy()[:n_display]
+        figure = image_grid(n_display, sample_mix, sample_x1, sample_x2)
+        tf.summary.image("Originals", plot_to_image(figure),
+                         max_outputs=1, step=0)
 
     # build model
     model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
