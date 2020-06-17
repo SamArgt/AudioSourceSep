@@ -28,7 +28,7 @@ def setUp_optimizer(args):
 def restore_checkpoint(restore_path, args, flow, optimizer, latest=True):
     if latest:
         checkpoint_restore_path = tf.train.latest_checkpoint(restore_path)
-        assert restore_path is not None, print(restore_path)
+        assert restore_path is not None, restore_path
     else:
         checkpoint_restore_path = restore_path
     # Checkpoint object
