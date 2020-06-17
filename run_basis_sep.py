@@ -102,14 +102,12 @@ def compute_grad_logprob(X, model, debug=False):
         tape.watch(X)
         loss = -tf.reduce_mean(model.log_prob(X))
     gradients = tape.gradient(loss, X)
-    if debug:
-        assert gradients.shape == X.shape
-        assert tf.math.is_nan(gradients).numpy().any()
+
     return gradients
 
 
 def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
-                     sigmaL=0.01, delta=3e-5, T=100, dataset="mnist", debug=False):
+                     sigmaL=0.01, delta=3e-5, T=100, dataset="mnist", debug=True):
 
     if dataset == 'mnist':
         data_shape = [n_mixed, 32, 32, 1]
@@ -119,20 +117,28 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
     eta = float(delta * (sigma / sigmaL) ** 2)
     lambda_recon = 1.0 / (sigma ** 2)
     for t in range(T):
-
+        print(t)
         epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(data_shape)
 
-        grad_logprob1 = compute_grad_logprob(x1, model1, debug)
-        grad_logprob2 = compute_grad_logprob(x2, model2, debug)
+        grad_logprob1 = compute_grad_logprob(x1, model1)
+        grad_logprob2 = compute_grad_logprob(x2, model2)
+
+        if debug:
+            assert grad_logprob1.shape == x1.shape
+            assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
+            assert grad_logprob2.shape == x2.shape
+            assert bool(tf.math.is_nan(grad_logprob2).numpy().any()) is False, (sigma, t)
+
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon2
 
     if debug:
-        assert tf.math.is_nan(x1).numpy().any()
-        assert tf.math.is_nan(x2).numpy().any()
+        assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
+        assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
     return x1, x2
+
 
 def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
                      ckpt, args, train_summary_writer):
