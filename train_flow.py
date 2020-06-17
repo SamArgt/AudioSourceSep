@@ -270,7 +270,12 @@ def main(args):
     # restore
     if args.restore is not None:
         with mirrored_strategy.scope():
-            status = ckpt.restore(abs_restore_path)
+            if args.latest:
+                checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
+                assert checkpoint_restore_path is not None, abs_restore_path
+            else:
+                checkpoint_restore_path = abs_restore_path
+            status = ckpt.restore(checkpoint_restore_path)
             status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(abs_restore_path))
@@ -314,6 +319,7 @@ if __name__ == '__main__':
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')
+    parser.add_argument('--latest', action="store_true", help="Restore latest checkpoint from restore directory")
     parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters

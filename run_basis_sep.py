@@ -183,8 +183,6 @@ def main(args):
     abs_restore_path = os.path.abspath(args.RESTORE)
     sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
     restore_dict = {sigma: os.path.join(abs_restore_path, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
-    # EXCEPTION
-    restore_dict[sigmas[-1]] = os.path.join(abs_restore_path, "sigma_0.01_bis", "tf_ckpts")
 
     if args.debug:
         for k, v in restore_dict.items():
