@@ -82,7 +82,7 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(n_display, x, y, z):
+def image_grid(n_display, x, y, z, separation=True):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(nrows=n_display, ncols=3, figsize=(6, 8))
     for i in range(n_display):
@@ -93,6 +93,12 @@ def image_grid(n_display, x, y, z):
         ax1.set_axis_off()
         ax2.set_axis_off()
         ax3.set_axis_off()
+
+    if separation:
+        title = "Separation: Mixture = Component 1 + Component 2"
+    else:
+        title = "Mixing: Component 1 + Component 2 = Mixture"
+    f.suptitle(title)
     return f
 
 
@@ -161,7 +167,7 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
             sample_x1 = x1.numpy()[:n_display].reshape((n_display, 32, 32))
             sample_x2 = x2.numpy()[:n_display].reshape((n_display, 32, 32))
-            figure = image_grid(n_display, sample_x1, sample_x2, sample_mix)
+            figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
             tf.summary.image("Components", plot_to_image(figure),
                              max_outputs=10, step=step)
 
@@ -219,7 +225,7 @@ def main(args):
         sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
         sample_gt1 = gt1.numpy()[:n_display].reshape((n_display, 32, 32))
         sample_gt2 = gt2.numpy()[:n_display].reshape((n_display, 32, 32))
-        figure = image_grid(n_display, sample_mix, sample_gt1, sample_gt2)
+        figure = image_grid(n_display, sample_gt1, sample_gt2, sample_mix, separation=False)
         tf.summary.image("Originals", plot_to_image(figure),
                          max_outputs=1, step=0)
 
