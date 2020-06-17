@@ -147,6 +147,10 @@ def main(args):
     sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
     restore_dict = {sigma: os.path.join(abs_restore_path, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
 
+    if args.debug:
+        for k, v in restore_dict.items():
+            print("{}: {}".format(round(k, 2), v))
+
     restore_dict[sigmas[0]] = "sigma_0.01_bis"
 
     t0 = time.time()
