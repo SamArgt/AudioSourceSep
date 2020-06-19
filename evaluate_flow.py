@@ -133,6 +133,8 @@ if __name__ == '__main__':
         description='Evaluate Flow model')
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights')
+    parser.add_argument('--latest', action="store_true",
+                        help="Restore latest checkpoint from restore directory")
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='evaluation.txt',
