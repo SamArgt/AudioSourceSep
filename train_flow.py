@@ -241,13 +241,11 @@ def main(args):
         abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
-        if args.restore is None:
-            output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
-                str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
-            if args.use_logit:
-                output_dirname += '_logit'
-        else:
-            _, output_dirname = os.path.split(args.restore)
+        output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
+            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+        if args.use_logit:
+            output_dirname += '_logit'
+        if args.restore is not None:
             output_dirname += '_ctd'
 
         output_dirpath = os.path.join(args.output, output_dirname)
