@@ -11,6 +11,8 @@ import os
 import sys
 import shutil
 import datetime
+import matplotlib.pyplot as plt
+import io
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -58,6 +60,33 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
             ckpt, './tf_ckpts_issues', max_to_keep=3)
 
     return ckpt, manager, manager_issues
+
+
+def plot_to_image(figure):
+    """Converts the matplotlib plot specified by 'figure' to a PNG image and
+    returns it. The supplied figure is closed and inaccessible after this call."""
+    # Save the plot to a PNG in memory.
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    # Closing the figure prevents it from being displayed directly inside
+    # the notebook.
+    plt.close(figure)
+    buf.seek(0)
+    # Convert PNG buffer to TF image
+    image = tf.image.decode_png(buf.getvalue(), channels=4)
+    # Add the batch dimension
+    image = tf.expand_dims(image, 0)
+    return image
+
+
+def image_grid(sample):
+    # Create a figure to contain the plot.
+    f, axes = plt.subplots(4, 8, figsize=(12, 6))
+    axes = axes.flatten()
+    for i, ax in enumerate(axes):
+        ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
+        ax.set_axis_off()
+    return f
 
 
 def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
@@ -189,11 +218,12 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 epoch, epoch_loss_avg.result(), test_loss.result()))
             # Generate some samples and visualize them on tensorboard
             with mirrored_strategy.scope():
-                samples = flow.sample(9)
-            samples = samples.numpy().reshape([9] + data_shape)
+                samples = flow.sample(32)
+            samples = samples.numpy().reshape([32] + data_shape)
+            figure = image_grid(samples)
             with train_summary_writer.as_default():
-                tf.summary.image("9 generated samples", samples,
-                                 max_outputs=27, step=epoch)
+                tf.summary.image("32 generated samples", plot_to_image(figure),
+                                 max_outputs=50, step=epoch)
             # If minimum validation loss is reached, save model
             curr_val_loss = test_loss.result()
             if curr_val_loss < min_val_loss:
@@ -252,8 +282,9 @@ def main(args):
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
-        sample = sample[:5]
-        tf.summary.image("original images", sample, max_outputs=5, step=0)
+        sample = sample[:32]
+        figure = image_grid(sample)
+        tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
     flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,

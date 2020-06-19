@@ -10,6 +10,8 @@ import os
 import shutil
 import datetime
 import sys
+import io
+import matplotlib.pyplot as plt
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -55,6 +57,33 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
 
     return ckpt, manager
+
+
+def plot_to_image(figure):
+    """Converts the matplotlib plot specified by 'figure' to a PNG image and
+    returns it. The supplied figure is closed and inaccessible after this call."""
+    # Save the plot to a PNG in memory.
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    # Closing the figure prevents it from being displayed directly inside
+    # the notebook.
+    plt.close(figure)
+    buf.seek(0)
+    # Convert PNG buffer to TF image
+    image = tf.image.decode_png(buf.getvalue(), channels=4)
+    # Add the batch dimension
+    image = tf.expand_dims(image, 0)
+    return image
+
+
+def image_grid(sample):
+    # Create a figure to contain the plot.
+    f, axes = plt.subplots(4, 8, figsize=(12, 6))
+    axes = axes.flatten()
+    for i, ax in enumerate(axes):
+        ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
+        ax.set_axis_off()
+    return f
 
 
 def main(args):
@@ -146,8 +175,9 @@ def main(args):
                                                                        noise=args.noise, mirrored_strategy=mirrored_strategy)
         with train_summary_writer.as_default():
             sample = list(ds.take(1).as_numpy_iterator())[0]
-            sample = sample[:5]
-            tf.summary.image("original images", sample, max_outputs=5, step=0)
+            sample = sample[:32]
+            figure = image_grid(sample)
+            tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
         params_dict = vars(args)
         template = 'Glow Flow \n\t '
