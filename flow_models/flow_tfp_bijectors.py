@@ -354,6 +354,8 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
         y1 = x1
         y2 = tf.exp(self.MixLog_logCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
+        assert tf.reduce_all(y2 > 0.), tf.reduce_min(y2)
+        assert tf.reduce_all(y2 < 1.), tf.reduce_max(y2)
         y2 = self.inv_sigmoid(y2)
         y2 = y2 * tf.exp(log_s) + t
 
@@ -417,7 +419,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         log_sig_x = tf.math.log_sigmoid((x - mu) * tf.exp(-log_s))
         z = log_p + log_sig_x
 
-        return tf.reduce_logsumexp(z)
+        return tf.reduce_logsumexp(z, axis=-1)
 
     def inv_MixLogCDF(self, y, p, mu, log_s, n_components,
                       position_tolerance=1e-8, value_tolerance=1e-8):
@@ -448,11 +450,12 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         log_sig_x = tf.math.log_sigmoid((x - mu) * tf.exp(-log_s))
         z = log_p - log_s + log_sig_x - 2 * tf.nn.softplus(log_sig_x)
 
-        return tf.reduce_logsumexp(z)
+        return tf.reduce_logsumexp(z, axis=-1)
 
     @staticmethod
     def inv_sigmoid(x):
-        return tf.math.log(x / (1. - x))
+        assert tf.reduce_all(x > 0.)
+        return -tf.math.log(tf.math.reciprocal(x) - 1.)
 
     @staticmethod
     def assert_in_range(x, *, min, max):
