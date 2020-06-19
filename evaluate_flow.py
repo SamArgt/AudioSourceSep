@@ -25,12 +25,16 @@ def setUp_optimizer(args):
 
 def restore_checkpoint(args_parsed, flow, optimizer):
     restore_abs_dirpath = os.path.abspath(args_parsed.RESTORE)
+    if args_parsed.latest:
+        checkpoint_restore_path = tf.train.latest_checkpoint(restore_abs_dirpath)
+    else:
+        checkpoint_restore_path = restore_abs_dirpath
 
     # Checkpoint object
     ckpt = tf.train.Checkpoint(
         variables=flow.variables, optimizer=optimizer)
     # Restore weights if specified
-    status = ckpt.restore(restore_abs_dirpath)
+    status = ckpt.restore(checkpoint_restore_path)
     status.assert_existing_objects_matched()
 
     return ckpt
