@@ -353,7 +353,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
 
         y1 = x1
-        y2 = tf.exp(self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
+        y2 = tf.exp(self.MixLog_logCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
         y2 = self.inv_sigmoid(y2)
         y2 = y2 * tf.exp(log_s) + t
 
@@ -399,7 +399,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
 
         log_det = self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
-        y2 = self.MixLogCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
+        y2 = tf.exp(self.MixLog_logCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
         log_det += -tf.math.log(1. - y2) - tf.math.log(y2)
         log_det += log_s
 
@@ -428,7 +428,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         init_x = tf.zeros_like(y)
 
         def objective_fn(x):
-            return y - self.MixLogCDF(x, p, mu, log_s, n_components)
+            return y - tf.exp(self.MixLog_logCDF(x, p, mu, log_s, n_components))
 
         results = tfp.math.secant_root(objective_fn, initial_position=init_x,
                                        position_tolerance=position_tolerance,

@@ -42,7 +42,12 @@ def restore_checkpoint(args_parsed, flow, optimizer):
 
 def evaluate(args_parsed, flow, ds, ds_val):
 
-    D = tf.constant(28 * 28 * 1, dtype=tf.float32)  # dimension of the data
+    if args_parsed.dataset == 'mnist':
+        D = tf.constant(32 * 32 * 1, dtype=tf.float32)  # dimension of the data
+    elif args_parsed.dataset == 'cifar10':
+        D = tf.constant(32 * 32 * 3, dtype=tf.float32)
+    else:
+        raise ValueError("dataset should be mnist or cifar10")
 
     @tf.function
     def eval_step(inputs):
@@ -50,10 +55,11 @@ def evaluate(args_parsed, flow, ds, ds_val):
 
         log_lik = losses
         log_lik -= tf.math.log(256.) * D
+
         if args_parsed.use_logit:
             log_lik -= tf.reduce_sum(tf.math.sigmoid(inputs) * (1 - tf.math.sigmoid(inputs)), axis=[1, 2, 3])
 
-        bits_per_pixel = - log_lik / (D * tf.math.log(2.))
+        bits_per_pixel = -log_lik / (D * tf.math.log(2.))
 
         avg_loss = -tf.reduce_mean(losses)
         avg_neg_log_lik = -tf.reduce_mean(log_lik)
