@@ -136,11 +136,11 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
     with mirrored_strategy.scope():
-        samples = flow.sample(9)
-    samples = samples.numpy().reshape([9] + data_shape)
+        samples = flow.sample(32)
+    samples = samples.numpy().reshape([32] + data_shape)
+    figure = image_grid(samples)
     with train_summary_writer.as_default():
-        tf.summary.image("9 generated samples", samples,
-                         max_outputs=9, step=0)
+        tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
 
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
