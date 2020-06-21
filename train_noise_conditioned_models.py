@@ -107,7 +107,8 @@ def main(args):
         os.chdir(output_dirpath)
 
     log_file = open('out.log', 'w')
-    sys.stdout = log_file
+    if args.debug is False:
+        sys.stdout = log_file
 
     print("TensorFlow version: {}".format(tf.__version__))
     print("Eager execution: {}".format(tf.executing_eagerly()))
@@ -211,6 +212,7 @@ if __name__ == '__main__':
                         help="mnist or cifar10")
     parser.add_argument('--output', type=str, default='noise_conditioned_flows',
                         help='output dirpath for savings')
+    parser.add_argument('--debug', action="store_true")
 
     # Noise parameters
     parser.add_argument('--sigma1', type=float, default=1.0)
