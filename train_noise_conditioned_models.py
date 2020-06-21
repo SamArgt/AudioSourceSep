@@ -91,7 +91,7 @@ def main(args):
     sigmas = np.logspace(np.log(args.sigmaL) / np.log(10), np.log(args.sigma1) / np.log(10), num=args.n_sigmas)
     abs_restore_path = os.path.abspath(args.RESTORE)
 
-    if args.output == 'noise_conditioned_flow':
+    if args.output == 'noise_conditioned_flows':
         output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
             str(args.K) + '_' + str(args.n_filters) + \
             '_' + str(args.batch_size)
