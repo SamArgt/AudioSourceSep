@@ -209,7 +209,7 @@ if __name__ == '__main__':
                         help='directory of saved weights (optional)')
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10")
-    parser.add_argument('--output', type=str, default='noise_conditioned_flow',
+    parser.add_argument('--output', type=str, default='noise_conditioned_flows',
                         help='output dirpath for savings')
 
     # Noise parameters
