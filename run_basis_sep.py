@@ -87,9 +87,9 @@ def image_grid(n_display, x, y, z, separation=True):
     f, axes = plt.subplots(nrows=n_display, ncols=3, figsize=(6, 8))
     for i in range(n_display):
         ax1, ax2, ax3 = axes[i]
-        ax1.imshow(x[i], cmap=plt.cm.binary)
-        ax2.imshow(y[i], cmap=plt.cm.binary)
-        ax3.imshow(z[i], cmap=plt.cm.binary)
+        ax1.imshow(np.clip(x[i] + 0.5, 0., 1.))
+        ax2.imshow(np.clip(y[i] + 0.5, 0., 1.))
+        ax3.imshow(np.clip(z[i] + 0.5, 0., 1.))
         ax1.set_axis_off()
         ax2.set_axis_off()
         ax3.set_axis_off()
