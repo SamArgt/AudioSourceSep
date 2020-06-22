@@ -272,11 +272,11 @@ if __name__ == "__main__":
     parser.add_argument('--n_sigmas', type=float, default=10)
 
     # Model hyperparameters
-    parser.add_argument('--L', default=2, type=int,
+    parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
-    parser.add_argument('--K', type=int, default=16,
+    parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=256,
+    parser.add_argument('--n_filters', type=int, default=512,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
@@ -284,15 +284,8 @@ if __name__ == "__main__":
                         help="learnable prior distribution")
 
     # Optimization parameters
-    parser.add_argument('--n_epochs', type=int, default=100,
-                        help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adamax", help="adam or adamax")
-    parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--clipvalue', type=float, default=None,
-                        help="Clip value for Adam optimizer")
-    parser.add_argument('--clipnorm', type=float, default=None,
-                        help='Clip norm for Adam optimize')
 
     # preprocessing parameters
     parser.add_argument('--use_logit', action="store_true",
