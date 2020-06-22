@@ -184,6 +184,13 @@ def main(args):
     sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
     restore_dict = {sigma: os.path.join(abs_restore_path, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
 
+    if args.dataset == 'mnist':
+        data_shape = [32, 32, 1]
+    elif args.dataset == 'cifar10':
+        data_shape = [32, 32, 3]
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
+
     if args.debug:
         for k, v in restore_dict.items():
             print("{}: {}".format(round(k, 2), v))
@@ -220,9 +227,9 @@ def main(args):
         else:
             n_display = args.n_mixed
 
-        sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
-        sample_gt1 = gt1.numpy()[:n_display].reshape((n_display, 32, 32))
-        sample_gt2 = gt2.numpy()[:n_display].reshape((n_display, 32, 32))
+        sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
+        sample_gt1 = gt1.numpy()[:n_display].reshape([n_display] + data_shape)
+        sample_gt2 = gt2.numpy()[:n_display].reshape([n_display] + data_shape)
         figure = image_grid(n_display, sample_gt1, sample_gt2, sample_mix, separation=False)
         tf.summary.image("Originals", plot_to_image(figure),
                          max_outputs=1, step=0)
