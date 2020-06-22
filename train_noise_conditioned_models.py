@@ -217,7 +217,7 @@ if __name__ == '__main__':
     # Noise parameters
     parser.add_argument('--sigma1', type=float, default=1.0)
     parser.add_argument('--sigmaL', type=float, default=0.01)
-    parser.add_argument('--n_sigmas', type=float, default=10)
+    parser.add_argument('--n_sigmas', type=int, default=10)
 
     # Model hyperparameters
     parser.add_argument('--L', default=3, type=int,
