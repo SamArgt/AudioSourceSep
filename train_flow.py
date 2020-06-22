@@ -231,6 +231,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 print("Model Saved at {}".format(save_path))
                 min_val_loss = curr_val_loss
 
+    save_path = manager.save()
+    print("Model Saved at {}".format(save_path))
     training_time = time.time() - t0
     return training_time, save_path
 
@@ -331,10 +333,6 @@ def main(args):
     training_time, _ = train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                              manager, manager_issues, train_summary_writer, test_summary_writer)
     print("Training time: ", np.round(training_time, 2), ' seconds')
-
-    # Saving the last variables
-    save_path = manager.save()
-    print("Model Saved at {}".format(save_path))
 
     log_file.close()
 

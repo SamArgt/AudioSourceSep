@@ -106,7 +106,7 @@ def main(args):
     except FileExistsError:
         os.chdir(output_dirpath)
 
-    log_file = open('out.log', 'w')
+    log_file = open('out.log', 'a')
     if args.debug is False:
         sys.stdout = log_file
 
