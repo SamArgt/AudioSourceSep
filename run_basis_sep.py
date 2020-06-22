@@ -118,7 +118,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
     if dataset == 'mnist':
         data_shape = [n_mixed, 32, 32, 1]
     elif dataset == 'cifar10':
-        data_shape == [n_mixed, 32, 32, 3]
+        data_shape = [n_mixed, 32, 32, 3]
+    else:
+        raise ValueError("dataset should be mnist or cifar10")
 
     eta = float(delta * (sigma / sigmaL) ** 2)
     lambda_recon = 1.0 / (sigma ** 2)
