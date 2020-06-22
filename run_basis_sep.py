@@ -150,6 +150,13 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
 def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
                      ckpt, args, train_summary_writer):
 
+    if args.dataset == 'mnist':
+        data_shape = [32, 32, 1]
+    elif args.dataset == 'cifar10':
+        data_shape = [32, 32, 3]
+    else:
+        raise ValueError("args.dataset should be mnist or cifar10")
+
     step = 0
     for sigma, restore_path in restore_dict.items():
         restore_checkpoint(ckpt, restore_path, model, optimizer)
@@ -166,9 +173,9 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             else:
                 n_display = args.n_mixed
 
-            sample_mix = mixed.numpy()[:n_display].reshape((n_display, 32, 32))
-            sample_x1 = x1.numpy()[:n_display].reshape((n_display, 32, 32))
-            sample_x2 = x2.numpy()[:n_display].reshape((n_display, 32, 32))
+            sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
+            sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape)
+            sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
             figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
             tf.summary.image("Components", plot_to_image(figure),
                              max_outputs=10, step=step)
