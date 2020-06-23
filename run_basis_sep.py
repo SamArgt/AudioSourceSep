@@ -143,14 +143,14 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             with train_summary_writer.as_default():
-                if args.n_mixed > 5:
+                if n_mixed > 5:
                     n_display = 5
                 else:
-                    n_display = args.n_mixed
+                    n_display = n_mixed
 
-                sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
-                sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape)
-                sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
+                sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape[1:])
+                sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape[1:])
+                sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape[1:])
                 figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
                 tf.summary.image("Components", plot_to_image(figure),
                                  max_outputs=10, step=step + (t * 5 // T))
