@@ -113,7 +113,8 @@ def compute_grad_logprob(X, model, debug=False):
 
 
 def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
-                     sigmaL=0.01, delta=3e-5, T=100, dataset="mnist", debug=True):
+                     sigmaL=0.01, delta=3e-5, T=100, dataset="mnist", debug=True,
+                     train_summary_writer=None, step=None):
 
     if dataset == 'mnist':
         data_shape = [n_mixed, 32, 32, 1]
@@ -140,6 +141,20 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * (x1 + x2 - 2. * mixed)) + epsilon2
 
+        if (train_summary_writer is not None) and (t % (T // 5) == 0):
+            with train_summary_writer.as_default():
+                if args.n_mixed > 5:
+                    n_display = 5
+                else:
+                    n_display = args.n_mixed
+
+                sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
+                sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape)
+                sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
+                figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
+                tf.summary.image("Components", plot_to_image(figure),
+                                 max_outputs=10, step=step + (t * 5 // T))
+
     if debug:
         assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
         assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
@@ -159,13 +174,14 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
 
     step = 0
     for sigma, restore_path in restore_dict.items():
+        step += 1
         restore_checkpoint(ckpt, restore_path, model, optimizer)
         print("Model at noise level {} restored from {}".format(sigma, restore_path))
         model1 = model2 = model
 
         x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
-                                  delta=3e-5, T=args.T, dataset=args.dataset, debug=args.debug)
-        step += 1
+                                  delta=3e-5, T=args.T, dataset=args.dataset, debug=args.debug,
+                                  train_summary_writer=train_summary_writer, step=step)
 
         with train_summary_writer.as_default():
             if args.n_mixed > 5:
@@ -178,7 +194,7 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
             figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
             tf.summary.image("Components", plot_to_image(figure),
-                             max_outputs=10, step=step)
+                             max_outputs=10, step=step * args.T)
 
         print("inner loop done")
         print("_" * 100)
