@@ -153,7 +153,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
                 sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape[1:])
                 figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
                 tf.summary.image("Components", plot_to_image(figure),
-                                 max_outputs=10, step=step + (t * 5 // T))
+                                 max_outputs=50, step=step + t)
 
     if debug:
         assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
@@ -174,15 +174,16 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
 
     step = 0
     for sigma, restore_path in restore_dict.items():
-        step += 1
+
         restore_checkpoint(ckpt, restore_path, model, optimizer)
         print("Model at noise level {} restored from {}".format(sigma, restore_path))
         model1 = model2 = model
 
         x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma, args.n_mixed, sigmaL=args.sigmaL,
                                   delta=3e-5, T=args.T, dataset=args.dataset, debug=args.debug,
-                                  train_summary_writer=train_summary_writer, step=step)
+                                  train_summary_writer=train_summary_writer, step=step * args.T)
 
+        step += 1
         with train_summary_writer.as_default():
             if args.n_mixed > 5:
                 n_display = 5
@@ -194,7 +195,7 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
             figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
             tf.summary.image("Components", plot_to_image(figure),
-                             max_outputs=10, step=step * args.T)
+                             max_outputs=50, step=step * args.T)
 
         print("inner loop done")
         print("_" * 100)
