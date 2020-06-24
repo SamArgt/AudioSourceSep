@@ -137,8 +137,8 @@ class DequantFlowpp(tfp.bijectors.Bijector):
         super(DequantFlowpp, self).__init__(forward_min_event_ndims=3)
 
         self.bijector = FlowppBlock(input_shape, minibatch, 4, split="checkerboard",
-                                    n_components=32, n_blocks=2, filters=96,
-                                    dropout_p=0., heads=4, name=name + "flow_block")
+                                    n_components=n_components, n_blocks=n_blocks, filters=filters,
+                                    dropout_p=dropout_p, heads=heads, name=name + "flow_block")
 
     def _forward(self, x):
         return self.bijector.forward(x) + x

@@ -374,7 +374,7 @@ if __name__ == '__main__':
                         help='Depth level')
     parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=512,
+    parser.add_argument('--n_filters', type=int, default=256,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
