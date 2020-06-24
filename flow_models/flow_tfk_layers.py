@@ -98,8 +98,7 @@ class GLU(tfk.layers.Layer):
 
         assert filters % 2 == 0
 
-        self.conv = tfa.layers.WeightNormalization(tfk.layers.Conv2D(
-            filters, kernel_size=1, input_shape=input_shape, padding='same'))
+        self.conv = tfk.layers.Conv2D(filters, kernel_size=1, input_shape=input_shape, padding='same')
 
     def call(self, x):
         h = self.conv(x)
@@ -116,9 +115,9 @@ class GatedConv(tfk.layers.Layer):
         super(GatedConv, self).__init__(name=name)
 
         self. H, self.W, self.C = input_shape
-        self.conv1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(filters=filters,
-                                                                      input_shape=[self.H, self.W, 2 * self.C],
-                                                                      kernel_size=3, padding='same'))
+        self.conv1 = tfk.layers.Conv2D(filters=filters,
+                                       input_shape=[self.H, self.W, 2 * self.C],
+                                       kernel_size=3, padding='same')
 
         self.GLU = GLU(input_shape=[self.H, self.W, 2 * filters],
                        filters=2 * filters)
@@ -159,7 +158,7 @@ class GatedAttn(tfk.layers.Layer):
         assert self.C % self.heads == 0
         self.dim = self.C // self.heads
 
-        self.layer1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape))
+        self.layer1 = tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape)
         self.GLU = GLU(input_shape=input_shape, filters=2 * self.C)
 
         if self.dropout_p > 0.:
