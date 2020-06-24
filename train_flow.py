@@ -294,10 +294,10 @@ def main(args):
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
                                        )
     elif args.model == 'flowpp':
-        flow_builder.build_flowpp(minibatch, dataset=args.dataset, n_components=args.n_components,
-                                  n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
-                                  filters=args.filters, dropout_p=args.dropout_p, heads=args.heads,
-                                  learntop=args.learntop, mirrored_strategy=mirrored_strategy)
+        flow = flow_builder.build_flowpp(minibatch, dataset=args.dataset, n_components=args.n_components,
+                                         n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
+                                         filters=args.filters, dropout_p=args.dropout_p, heads=args.heads,
+                                         learntop=args.learntop, mirrored_strategy=mirrored_strategy)
     else:
         raise ValueError("model should be glow or flowpp")
 
@@ -361,6 +361,9 @@ if __name__ == '__main__':
 
     # Model hyperparameters
     parser.add_argument('--model', default='glow', type=str, help='glow or flowpp')
+    parser.add_argument("--learntop", action="store_true",
+                        help="learnable prior distribution")
+    # Glow hyperparameters
     parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
     parser.add_argument('--K', type=int, default=32,
@@ -369,8 +372,13 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
-    parser.add_argument("--learntop", action="store_true",
-                        help="learnable prior distribution")
+    # Flow++ hyperparameters
+    parser.add_argument('--n_components', type=int, default=32)
+    parser.add_argument('--n_blocks_flow', type=int, default=10)
+    parser.add_argument('--n_blocks_dequant', type=int, default=2)
+    parser.add_argument('--filters', type=int, default=96)
+    parser.add_argument('--dropout_p', type=float, default=0.2)
+    parser.add_argument('--heads', type=int, default=4)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,
