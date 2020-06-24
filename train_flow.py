@@ -245,8 +245,14 @@ def main(args):
         abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
-        output_dirname = args.model + '_' + args.dataset + '_' + str(args.L) + '_' + \
-            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+
+        if args.model == 'glow':
+            output_dirname = args.model + '_' + args.dataset + '_' + str(args.L) + '_' + \
+                str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+        elif args.model == 'flowpp':
+            output_dirname = args.model + '_' + args.dataset + '_' + str(args.n_components) + '_' + \
+                str(args.n_blocks_flow) + '_' + str(args.filters) + '_' + str(args.batch_size)
+
         if args.use_logit:
             output_dirname += '_logit'
         if args.restore is not None:
