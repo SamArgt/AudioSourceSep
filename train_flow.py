@@ -245,7 +245,7 @@ def main(args):
         abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
-        output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
+        output_dirname = args.model + '_' + args.dataset + '_' + str(args.L) + '_' + \
             str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
         if args.use_logit:
             output_dirname += '_logit'
@@ -322,7 +322,7 @@ def main(args):
             print("Model Restored from {}".format(abs_restore_path))
 
     params_dict = vars(args)
-    template = 'Glow Flow \n\t '
+    template = ''
     for k, v in params_dict.items():
         template += '{} = {} \n\t '.format(k, v)
     print(template)
