@@ -79,10 +79,12 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(sample):
+def image_grid(sample, dataset):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
+    if dataset == 'mnist':
+        sample = sample[:, :, :, 0]
     for i, ax in enumerate(axes):
         ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
         ax.set_axis_off()
@@ -138,7 +140,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     with mirrored_strategy.scope():
         samples = flow.sample(32)
     samples = samples.numpy().reshape([32] + data_shape)
-    figure = image_grid(samples)
+    figure = image_grid(samples, args.dataset)
     with train_summary_writer.as_default():
         tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
 
@@ -220,7 +222,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
             samples = samples.numpy().reshape([32] + data_shape)
-            figure = image_grid(samples)
+            figure = image_grid(samples, args.dataset)
             with train_summary_writer.as_default():
                 tf.summary.image("32 generated samples", plot_to_image(figure),
                                  max_outputs=50, step=epoch)
@@ -283,7 +285,7 @@ def main(args):
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
-        figure = image_grid(sample)
+        figure = image_grid(sample, args.dataset)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow

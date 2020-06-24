@@ -76,10 +76,12 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(sample):
+def image_grid(sample, dataset):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
+    if dataset == 'mnist':
+        sample = sample[:, :, :, 0]
     for i, ax in enumerate(axes):
         ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
         ax.set_axis_off()
@@ -177,7 +179,7 @@ def main(args):
         with train_summary_writer.as_default():
             sample = list(ds.take(1).as_numpy_iterator())[0]
             sample = sample[:32]
-            figure = image_grid(sample)
+            figure = image_grid(sample, args.dataset)
             tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
         params_dict = vars(args)

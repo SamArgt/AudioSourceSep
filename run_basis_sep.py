@@ -82,14 +82,21 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(n_display, x, y, z, separation=True):
+def image_grid(n_display, x, y, z, dataset, separation=True):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(nrows=n_display, ncols=3, figsize=(6, 8))
+    if dataset == 'mnist':
+        cmap = 'binary'
+        x = x[:, :, :, 0]
+        y = y[:, :, :, 0]
+        z = z[:, :, :, 0]
+    else:
+        cmap = None
     for i in range(n_display):
         ax1, ax2, ax3 = axes[i]
-        ax1.imshow(np.clip(x[i] + 0.5, 0., 1.))
-        ax2.imshow(np.clip(y[i] + 0.5, 0., 1.))
-        ax3.imshow(np.clip(z[i] + 0.5, 0., 1.))
+        ax1.imshow(np.clip(x[i] + 0.5, 0., 1.), cmap=cmap)
+        ax2.imshow(np.clip(y[i] + 0.5, 0., 1.), cmap=cmap)
+        ax3.imshow(np.clip(z[i] + 0.5, 0., 1.), cmap=cmap)
         ax1.set_axis_off()
         ax2.set_axis_off()
         ax3.set_axis_off()
@@ -151,7 +158,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma, n_mixed,
                 sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape[1:])
                 sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape[1:])
                 sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape[1:])
-                figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
+                figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, dataset, separation=True)
                 tf.summary.image("Components", plot_to_image(figure),
                                  max_outputs=50, step=step + t)
 
@@ -193,7 +200,7 @@ def basis_outer_loop(mixed, x1, x2, model, optimizer, restore_dict,
             sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
             sample_x1 = x1.numpy()[:n_display].reshape([n_display] + data_shape)
             sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
-            figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True)
+            figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, args.dataset, separation=True)
             tf.summary.image("Components", plot_to_image(figure),
                              max_outputs=50, step=step * args.T)
 
@@ -256,7 +263,7 @@ def main(args):
         sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
         sample_gt1 = gt1.numpy()[:n_display].reshape([n_display] + data_shape)
         sample_gt2 = gt2.numpy()[:n_display].reshape([n_display] + data_shape)
-        figure = image_grid(n_display, sample_gt1, sample_gt2, sample_mix, separation=False)
+        figure = image_grid(n_display, sample_gt1, sample_gt2, sample_mix, args.dataset, separation=False)
         tf.summary.image("Originals", plot_to_image(figure),
                          max_outputs=1, step=0)
 
