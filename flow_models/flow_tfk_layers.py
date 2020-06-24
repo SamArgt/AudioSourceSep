@@ -248,7 +248,7 @@ class ConvAttnNet(tfk.layers.Layer):
         log_s, t = tf.math.tanh(x[:, :, :, :, 0]), x[:, :, :, :, 1]
         ml_logits, ml_means, ml_logscales = tf.split(
             x[:, :, :, :, 2:], 3, axis=4)
-        ml_logscales = tf.math.tanh(ml_logscales)
+        # ml_logscales = tf.math.tanh(ml_logscales)
         return log_s, t, ml_logits, ml_means, ml_logscales
 
 

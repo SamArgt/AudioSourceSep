@@ -289,9 +289,17 @@ def main(args):
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
-    flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
-                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                   )
+    if args.model == 'glow':
+        flow = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+                                       l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
+                                       )
+    elif args.model == 'flowpp':
+        flow_builder.build_flowpp(minibatch, dataset=args.dataset, n_components=args.n_components,
+                                  n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
+                                  filters=args.filters, dropout_p=args.dropout_p, heads=args.heads,
+                                  learntop=args.learntop, mirrored_strategy=mirrored_strategy)
+    else:
+        raise ValueError("model should be glow or flowpp")
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
@@ -352,6 +360,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
+    parser.add_argument('--model', default='glow', type=str, help='glow or flowpp')
     parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
     parser.add_argument('--K', type=int, default=32,

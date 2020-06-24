@@ -268,7 +268,7 @@ def main(args):
                          max_outputs=1, step=0)
 
     # build model
-    model = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+    model = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                     l2_reg=args.l2_reg, mirrored_strategy=None)
     # set up optimizer
     optimizer = setUp_optimizer(args)

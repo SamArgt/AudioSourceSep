@@ -9,7 +9,7 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=True, l2_reg=None,
+def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=True, l2_reg=None,
                mirrored_strategy=None):
     tfk.backend.clear_session()
     # Set flow parameters
@@ -81,7 +81,7 @@ def build_flow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
     return flow
 
 
-def build_flowpp(input_shape, minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
+def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
                  n_blocks_dequant=2, filters=96, dropout_p=0., heads=4,
                  learntop=True, mirrored_strategy=None):
 
@@ -99,11 +99,11 @@ def build_flowpp(input_shape, minibatch, dataset="mnist", n_components=32, n_blo
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            flowpp_cifar10 = Flowpp_cifar10(input_shape, minibatch, n_components=n_components,
+            flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
                                             n_blocks=n_blocks_flow, filters=filters,
                                             dropout_p=dropout_p, heads=heads)
 
-            dequant_flow = DequantFlowpp(input_shape, minibatch, n_components=n_components,
+            dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
                                          n_blocks=n_blocks_dequant, filters=filters,
                                          dropout_p=dropout_p, heads=heads)
 
@@ -125,11 +125,11 @@ def build_flowpp(input_shape, minibatch, dataset="mnist", n_components=32, n_blo
                     0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
-        flowpp_cifar10 = Flowpp_cifar10(input_shape, minibatch, n_components=n_components,
+        flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
                                         n_blocks=n_blocks_flow, filters=filters,
                                         dropout_p=dropout_p, heads=heads)
 
-        dequant_flow = DequantFlowpp(input_shape, minibatch, n_components=n_components,
+        dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
                                      n_blocks=n_blocks_dequant, filters=filters,
                                      dropout_p=dropout_p, heads=heads)
 

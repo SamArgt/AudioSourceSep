@@ -126,7 +126,7 @@ def main(args):
                                                                    noise=args.noise, mirrored_strategy=mirrored_strategy)
 
     # Build Flow and Set up optimizer
-    flow = flow_builder.build_flow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+    flow = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                    l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop)
 
     params_dict = vars(args)
