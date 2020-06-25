@@ -273,6 +273,7 @@ class ShallowProcessor(tfk.layers.Layer):
         self.gated_conv3 = GatedConv(input_shape, filters, dropout_p=dropout_p, use_nin=False)
 
     def call(self, x):
+        x = x / 256. - 0.5
         x = self.conv(x)
         x = self.gated_conv1(x)
         x = self.gated_conv2(x)

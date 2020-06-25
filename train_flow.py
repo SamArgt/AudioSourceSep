@@ -284,9 +284,13 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
+    if args.model == 'flowpp':
+        preprocessing = False
+    else:
+        preprocessing = True
     ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
                                                                         mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
-                                                                        noise=args.noise, alpha=args.alpha)
+                                                                        noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]

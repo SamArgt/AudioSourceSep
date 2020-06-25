@@ -90,6 +90,8 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
 
         super(Flowpp_cifar10, self).__init__(forward_min_event_ndims=3)
 
+        self.preprocessing = Preprocessing(input_shape, use_logit=True, uniform_noise=False, alpha=0.05)
+
         self.flow_block1 = FlowppBlock(input_shape, minibatch, 4, split="checkerboard", n_components=n_components,
                                        n_blocks=n_blocks, filters=filters,
                                        dropout_p=dropout_p, heads=heads,
@@ -115,7 +117,7 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
                                        name=name + "/flowBlock3")
 
         self.bijector = tfb.Chain(
-            [self.flow_block3, self.flow_block2, self.squeeze, self.flow_block1])
+            [self.flow_block3, self.flow_block2, self.squeeze, self.flow_block1, self.preprocessing])
 
     def _forward(self, x):
         return self.bijector.forward(x)

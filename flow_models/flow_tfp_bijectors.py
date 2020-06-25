@@ -275,18 +275,20 @@ class Invertible1x1Conv(tfb.Bijector):
 
 
 class Preprocessing(tfp.bijectors.Bijector):
-    def __init__(self, event_shape, use_logit=False, alpha=0.05, noise=None):
+    def __init__(self, event_shape, use_logit=False, uniform_noise=True, alpha=0.05, noise=None):
         super(Preprocessing, self).__init__(forward_min_event_ndims=3)
         self.alpha = alpha
         self.use_logit = use_logit
         self.event_shape = event_shape
+        self.uniform_noise = uniform_noise
         self.noise = noise
         self.H, self.W, self.C = event_shape
         self.event_shape = event_shape
 
     def _forward(self, x):
         x = x / 256. - 0.5
-        x += tf.random.uniform(x.shape, minval=0., maxval=1. / 256.)
+        if self.uniform_noise:
+            x += tf.random.uniform(x.shape, minval=0., maxval=1. / 256.)
         if self.noise is not None:
             x += tf.random.normal(x.shape) * self.noise
         if self.use_logit:
