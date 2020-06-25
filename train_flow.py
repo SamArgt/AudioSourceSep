@@ -303,7 +303,7 @@ def main(args):
         flow = flow_builder.build_flowpp(minibatch, dataset=args.dataset, n_components=args.n_components,
                                          n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
                                          filters=args.filters, dropout_p=args.dropout_p, heads=args.heads,
-                                         learntop=args.learntop, mirrored_strategy=mirrored_strategy)
+                                         mirrored_strategy=mirrored_strategy)
     else:
         raise ValueError("model should be glow or flowpp")
 
