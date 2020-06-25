@@ -355,8 +355,8 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         y1 = x1
         y2 = tf.exp(self.MixLog_logCDF(x2, ml_logits, ml_means, ml_logscales, self.n_components))
         y2 = tf.clip_by_value(y2, clip_value_min=float(1e-10), clip_value_max=float(1. - 1e-7))
-        #assert tf.reduce_all(y2 < 1.), tf.reduce_max(y2)
-        #assert tf.reduce_all(y2 > 0.), tf.reduce_min(y2)
+        assert tf.reduce_all(y2 < 1.), tf.reduce_max(y2)
+        assert tf.reduce_all(y2 > 0.), tf.reduce_min(y2)
         y2 = self.inv_sigmoid(y2)
         y2 = y2 * tf.exp(log_s) + t
 
@@ -404,8 +404,8 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         log_det = self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
         y2 = tf.exp(self.MixLog_logCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))
         y2 = tf.clip_by_value(y2, clip_value_min=float(1e-10), clip_value_max=float(1. - 1e-7))
-        #assert tf.reduce_all(y2 < 1.), tf.reduce_max(y2)
-        #assert tf.reduce_all(y2 > 0.), tf.reduce_min(y2)
+        assert tf.reduce_all(y2 < 1.), tf.reduce_max(y2)
+        assert tf.reduce_all(y2 > 0.), tf.reduce_min(y2)
         log_det += -tf.math.log(1. - y2) - tf.math.log(y2)
         log_det += log_s
 

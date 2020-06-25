@@ -99,6 +99,7 @@ class GLU(tfk.layers.Layer):
         assert filters % 2 == 0
 
         self.conv = tfk.layers.Conv2D(filters, kernel_size=1, input_shape=input_shape, padding='same')
+        # self.conv = tfa.layers.WeightNormalization(tfk.layers.Conv2D(filters, kernel_size=1, input_shape=input_shape, padding='same'))
 
     def call(self, x):
         h = self.conv(x)
@@ -118,6 +119,9 @@ class GatedConv(tfk.layers.Layer):
         self.conv1 = tfk.layers.Conv2D(filters=filters,
                                        input_shape=[self.H, self.W, 2 * self.C],
                                        kernel_size=3, padding='same')
+        # self.conv1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(filters=filters,
+        #                                            input_shape=[self.H, self.W, 2 * self.C],
+        #                                            kernel_size=3, padding='same'))
 
         self.GLU = GLU(input_shape=[self.H, self.W, 2 * filters],
                        filters=2 * filters)
@@ -159,6 +163,7 @@ class GatedAttn(tfk.layers.Layer):
         self.dim = self.C // self.heads
 
         self.layer1 = tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape)
+        # self.layer1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape))
         self.GLU = GLU(input_shape=input_shape, filters=2 * self.C)
 
         if self.dropout_p > 0.:
@@ -230,6 +235,8 @@ class ConvAttnNet(tfk.layers.Layer):
                                    name=name + "/pos_emb")
         self.conv1 = tfk.layers.Conv2D(
             filters, kernel_size=3, input_shape=input_shape, padding='same', name=name + '/EmbConv')
+        # self.conv1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(
+        #    filters, kernel_size=3, input_shape=input_shape, padding='same', name=name + '/EmbConv'))
         self.blocks = []
         for i in range(n_blocks):
             block_input_shape = [self.H, self.W, filters]
@@ -239,6 +246,8 @@ class ConvAttnNet(tfk.layers.Layer):
 
         self.last_conv = tfk.layers.Conv2D(
             filters=self.C * (2 + 3 * n_components), kernel_size=3, padding='same', name=name + 'LastConv')
+        # self.last_conv = tfa.layers.WeightNormalization(tfk.layers.Conv2D(
+        #    filters=self.C * (2 + 3 * n_components), kernel_size=3, padding='same', name=name + 'LastConv'))
 
     def call(self, x):
         x = self.conv1(x)

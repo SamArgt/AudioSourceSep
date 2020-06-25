@@ -52,7 +52,8 @@ def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                     name='scale'),
                     reinterpreted_batch_ndims=2,
                     name='learnable_mvn_scaled_identity')
-                flow = tfd.TransformedDistribution(prior_distribution, inv_bijector)
+                flow = tfd.TransformedDistribution(
+                    prior_distribution, inv_bijector)
             else:
                 flow = tfd.TransformedDistribution(tfd.Normal(
                     0., 1.), inv_bijector, event_shape=base_distr_shape)
@@ -73,7 +74,8 @@ def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
                 name='scale'),
                 reinterpreted_batch_ndims=2,
                 name='learnable_mvn_scaled_identity')
-            flow = tfd.TransformedDistribution(prior_distribution, inv_bijector)
+            flow = tfd.TransformedDistribution(
+                prior_distribution, inv_bijector)
         else:
             flow = tfd.TransformedDistribution(tfd.Normal(
                 0., 1.), inv_bijector, event_shape=base_distr_shape)
@@ -83,7 +85,7 @@ def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
 
 def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
                  n_blocks_dequant=2, filters=96, dropout_p=0., heads=4,
-                 learntop=True, mirrored_strategy=None):
+                 mirrored_strategy=None):
 
     if dataset == 'mnist':
         data_shape = (32, 32, 1)
@@ -99,55 +101,35 @@ def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
-                                            n_blocks=n_blocks_flow, filters=filters,
-                                            dropout_p=dropout_p, heads=heads)
-
             dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
                                          n_blocks=n_blocks_dequant, filters=filters,
                                          dropout_p=dropout_p, heads=heads)
+            minibatch_updated = dequant_flow.forward(minibatch)
+
+            flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch_updated, n_components=n_components,
+                                            n_blocks=n_blocks_flow, filters=filters,
+                                            dropout_p=dropout_p, heads=heads)
 
             bijector = tfb.Chain([flowpp_cifar10, dequant_flow])
             inv_bijector = tfb.Invert(bijector)
 
-            if learntop:
-                prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
-                    loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),
-                    scale_diag=tfp.util.TransformedVariable(
-                        tf.ones(base_distr_shape),
-                        bijector=tfb.Exp()),
-                    name='scale'),
-                    reinterpreted_batch_ndims=2,
-                    name='learnable_mvn_scaled_identity')
-                flow = tfd.TransformedDistribution(prior_distribution, inv_bijector)
-            else:
-                flow = tfd.TransformedDistribution(tfd.Normal(
-                    0., 1.), inv_bijector, event_shape=base_distr_shape)
+            flow = tfd.TransformedDistribution(tfd.Normal(
+                0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
-        flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
-                                        n_blocks=n_blocks_flow, filters=filters,
-                                        dropout_p=dropout_p, heads=heads)
-
         dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
                                      n_blocks=n_blocks_dequant, filters=filters,
                                      dropout_p=dropout_p, heads=heads)
+        minibatch_updated = dequant_flow.forward(minibatch)
+
+        flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch_updated, n_components=n_components,
+                                        n_blocks=n_blocks_flow, filters=filters,
+                                        dropout_p=dropout_p, heads=heads)
 
         bijector = tfb.Chain([flowpp_cifar10, dequant_flow])
         inv_bijector = tfb.Invert(bijector)
 
-        if learntop:
-            prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
-                loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),
-                scale_diag=tfp.util.TransformedVariable(
-                    tf.ones(base_distr_shape),
-                    bijector=tfb.Exp()),
-                name='scale'),
-                reinterpreted_batch_ndims=2,
-                name='learnable_mvn_scaled_identity')
-            flow = tfd.TransformedDistribution(prior_distribution, inv_bijector)
-        else:
-            flow = tfd.TransformedDistribution(tfd.Normal(
-                0., 1.), inv_bijector, event_shape=base_distr_shape)
+        flow = tfd.TransformedDistribution(tfd.Normal(
+            0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     return flow
