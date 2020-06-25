@@ -101,12 +101,11 @@ def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
+            dequant_flow = DequantFlowpp(data_shape, n_components=n_components,
                                          n_blocks=n_blocks_dequant, filters=filters,
                                          dropout_p=dropout_p, heads=heads)
-            minibatch_updated = dequant_flow.forward(minibatch)
 
-            flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch_updated, n_components=n_components,
+            flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
                                             n_blocks=n_blocks_flow, filters=filters,
                                             dropout_p=dropout_p, heads=heads)
 
@@ -117,12 +116,11 @@ def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
                 0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
-        dequant_flow = DequantFlowpp(data_shape, minibatch, n_components=n_components,
+        dequant_flow = DequantFlowpp(data_shape, n_components=n_components,
                                      n_blocks=n_blocks_dequant, filters=filters,
                                      dropout_p=dropout_p, heads=heads)
-        minibatch_updated = dequant_flow.forward(minibatch)
 
-        flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch_updated, n_components=n_components,
+        flowpp_cifar10 = Flowpp_cifar10(data_shape, minibatch, n_components=n_components,
                                         n_blocks=n_blocks_flow, filters=filters,
                                         dropout_p=dropout_p, heads=heads)
 

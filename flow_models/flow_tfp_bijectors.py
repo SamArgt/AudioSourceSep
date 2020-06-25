@@ -286,34 +286,41 @@ class Preprocessing(tfp.bijectors.Bijector):
         self.event_shape = event_shape
 
     def _forward(self, x):
-        x = x / 256. - 0.5
         if self.uniform_noise:
-            x += tf.random.uniform(x.shape, minval=0., maxval=1. / 256.)
+            x += tf.random.uniform(x.shape, minval=0., maxval=1.)
+
+        if self.use_logit:
+            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+            x = tf.math.log(x) - tf.math.log(1. - x)
+        else:
+            x = x / 256. - .5
+
         if self.noise is not None:
             x += tf.random.normal(x.shape) * self.noise
-        if self.use_logit:
-            x = self.alpha + (1 - self.alpha) * x / 256.
-            x = tf.math.log(x / (1 - x))
+
         return x
 
     def _inverse(self, y):
-        y = tf.clip_by_value(y, -0.5, 0.5)
-        y = (y + 0.5) * 256.
+
         if self.use_logit:
-            y = 1 / (tf.exp(-y) + 1)
-            y = (y - self.alpha) * 256. / (1 - self.alpha)
+            y = tf.math.sigmoid(y)
+            y = (y - self.alpha) * 256. / (1 - 2 * self.alpha)
+        else:
+            y = (y + .5) * 256.
+
         return y
 
     def _forward_log_det_jacobian(self, x):
-        log_det = -tf.math.log(256.) * self.H * self.W * self.C
-        log_det = tf.repeat(log_det, x.shape[0], axis=0)
-        if self.use_logit:
-            u = self.alpha + (1 - self.alpha) * x
-            log_det += tf.math.log((1 - self.alpha)) - \
-                tf.math.log(u) - tf.math.log(1 - u)
-            log_det += tf.reduce_sum(log_det, axis=[1, 2, 3])
-        return log_det
 
+        if self.use_logit:
+            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+            log_det = tf.math.log((1. - 2 * self.alpha) / 256.) - tf.math.log(x) - tf.math.log(1. - x)
+            log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
+        else:
+            log_det = tf.math.log(1. / 256.) * self.H * self.W * self.C
+            log_det = tf.repeat(log_det, x.shape[0], axis=0)
+
+        return log_det
 
 class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 

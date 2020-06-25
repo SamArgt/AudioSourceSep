@@ -91,15 +91,16 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
         super(Flowpp_cifar10, self).__init__(forward_min_event_ndims=3)
 
         self.preprocessing = Preprocessing(input_shape, use_logit=True, uniform_noise=False, alpha=0.05)
+        minibatch_updated = self.preprocessing.forward(minibatch)
 
-        self.flow_block1 = FlowppBlock(input_shape, minibatch, 4, split="checkerboard", n_components=n_components,
+        self.flow_block1 = FlowppBlock(input_shape, minibatch_updated, 4, split="checkerboard", n_components=n_components,
                                        n_blocks=n_blocks, filters=filters,
                                        dropout_p=dropout_p, heads=heads,
                                        name=name + "/flowBlock1")
-        minibatch_updated = self.flow_block1(minibatch)
+        minibatch_updated = self.flow_block1.forward(minibatch)
 
         self.squeeze = Squeeze(input_shape)
-        minibatch_updated = self.squeeze(minibatch_updated)
+        minibatch_updated = self.squeeze.forward(minibatch_updated)
         event_shape_out = self.squeeze.event_shape_out
 
         self.flow_block2 = FlowppBlock(event_shape_out, minibatch_updated, 2, split="channel",
@@ -108,7 +109,7 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
                                        dropout_p=dropout_p, heads=heads,
                                        name=name + "/flowBlock2")
 
-        minibatch_updated = self.flow_block2(minibatch_updated)
+        minibatch_updated = self.flow_block2.forward(minibatch_updated)
 
         self.flow_block3 = FlowppBlock(event_shape_out, minibatch_updated,
                                        3, split="checkerboard", n_components=n_components,
@@ -147,7 +148,7 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
 
 class DequantFlowpp(tfp.bijectors.Bijector):
 
-    def __init__(self, input_shape, minibatch, n_components=32, n_blocks=2, filters=96,
+    def __init__(self, input_shape, n_components=32, n_blocks=2, filters=96,
                  dropout_p=0., heads=4, name="dequant_flowpp"):
 
         super(DequantFlowpp, self).__init__(forward_min_event_ndims=3)
@@ -155,8 +156,8 @@ class DequantFlowpp(tfp.bijectors.Bijector):
         self.H, self.W, self.C = input_shape
         reshaped_shape = [self.H, self.W // 2, 2 * self.C]
         self.processor = ShallowProcessor(reshaped_shape, filters=32, dropout_p=dropout_p)
-
-        self.bijector = FlowppBlock(input_shape, minibatch, 4, split="checkerboard",
+        eps = tf.random.normal([4] + list(input_shape))
+        self.bijector = FlowppBlock(input_shape, eps, 4, split="checkerboard",
                                     n_components=n_components, n_blocks=n_blocks, filters=filters,
                                     dropout_p=dropout_p, heads=heads, context=True,
                                     name=name + "flow_block")
