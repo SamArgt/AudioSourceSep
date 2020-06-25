@@ -68,8 +68,8 @@ class FlowppBlock(tfp.bijectors.Bijector):
         return x
 
     def _inverse(self, y, context=None):
-        for coupling_layer in reversed(coupling_layer):
-            y = coupling_layer.inverse(coupling_layer, context=context)
+        for coupling_layer in reversed(self.coupling_layers):
+            y = coupling_layer.inverse(y, context=context)
         return y
 
     def _forward_log_det_jacobian(self, x, context=None):
