@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 import scipy
+from .flow_tfk_layers import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -318,8 +319,8 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
     Mixture Logistic CDF Layer as described in Flow ++
     """
 
-    def __init__(self, input_shape, NN, split='channel', split_state=0, n_components=32, n_blocks=10, filters=96,
-                 dropout_p=0., heads=4, name="MixLogCDFAttnCoupling"):
+    def __init__(self, input_shape, split='channel', split_state=0, n_components=32, n_blocks=10, filters=96,
+                 dropout_p=0., heads=4, context=False, name="MixLogCDFAttnCoupling"):
 
         super(MixLogisticCDFAttnCoupling, self).__init__(
             forward_min_event_ndims=3)
@@ -336,11 +337,11 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             raise ValueError('split should be channel or checkerboard')
 
         self.n_components = n_components
-        self.nn = NN(input_shape=nn_input_shape, n_components=n_components,
-                     n_blocks=n_blocks, filters=filters, dropout_p=dropout_p,
-                     heads=heads, name=name + "/ConvAttnNet")
+        self.nn = ConvAttnNet(input_shape=nn_input_shape, n_components=n_components,
+                              n_blocks=n_blocks, filters=filters, dropout_p=dropout_p,
+                              heads=heads, context=context, name=name + "/ConvAttnNet")
 
-    def _forward(self, x):
+    def _forward(self, x, context=None):
         if self.split == 'channel':
             x1, x2 = tf.split(x, 2, axis=-1)
         else:
@@ -350,7 +351,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         if self.split_state:
             x2, x1 = x1, x2
 
-        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1, context=context)
 
         y1 = x1
         y2 = tf.exp(self.MixLog_logCDF(x2, ml_logits, ml_means, ml_logscales, self.n_components))
@@ -366,7 +367,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             y = tf.stack([y1, y2], axis=3)
             return tf.reshape(y, (-1, self.H, self.W, self.C))
 
-    def _inverse(self, y):
+    def _inverse(self, y, context=None):
         if self.split == "channel":
             y1, y2 = tf.split(y, 2, axis=-1)
         else:
@@ -376,7 +377,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         if self.split_state:
             y2, y1 = y1, y2
 
-        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(y1)
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(y1, context=context)
 
         x1 = y1
         x2 = (y2 - t) / tf.exp(log_s)
@@ -389,7 +390,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
             x = tf.stack([x1, x2], axis=3)
             return tf.reshape(x, (-1, self.H, self.W, self.C))
 
-    def _forward_log_det_jacobian(self, x):
+    def _forward_log_det_jacobian(self, x, context=None):
         if self.split == 'channel':
             x1, x2 = tf.split(x, 2, axis=-1)
         else:
@@ -399,7 +400,7 @@ class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
         if self.split_state:
             x2, x1 = x1, x2
 
-        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1)
+        log_s, t, ml_logits, ml_means, ml_logscales = self.nn(x1, context=context)
 
         log_det = self.MixLog_logPDF(x1, ml_logits, ml_means, ml_logscales, self.n_components)
         y2 = tf.exp(self.MixLog_logCDF(x1, ml_logits, ml_means, ml_logscales, self.n_components))

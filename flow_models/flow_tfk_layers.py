@@ -93,16 +93,19 @@ class GLU(tfk.layers.Layer):
     Gated Linear Unit
     """
 
-    def __init__(self, input_shape, filters, name="GLU"):
+    def __init__(self, input_shape, filters, use_nin=True, name="GLU"):
         super(GLU, self).__init__(name=name)
 
         assert filters % 2 == 0
 
-        self.conv = tfk.layers.Conv2D(filters, kernel_size=1, input_shape=input_shape, padding='same')
+        if use_nin:
+            self.layer = tfk.layers.Dense(filters, input_shape=input_shape)
+        else:
+            self.layer = tfk.layers.Conv2D(filters, 3, input_shape=input_shape, padding='SAME')
         # self.conv = tfa.layers.WeightNormalization(tfk.layers.Conv2D(filters, kernel_size=1, input_shape=input_shape, padding='same'))
 
     def call(self, x):
-        h = self.conv(x)
+        h = self.layer(x)
         a, b = tf.split(h, 2, axis=-1)
         return a * tf.math.sigmoid(b)
 
@@ -112,7 +115,7 @@ class GatedConv(tfk.layers.Layer):
     Convolutional Layer as described in Flow ++ (origin: Pixel CNN++)
     """
 
-    def __init__(self, input_shape, filters, a=None, dropout_p=0., name="GatedConv"):
+    def __init__(self, input_shape, filters, a=False, dropout_p=0., use_nin=True, name="GatedConv"):
         super(GatedConv, self).__init__(name=name)
 
         self. H, self.W, self.C = input_shape
@@ -122,22 +125,20 @@ class GatedConv(tfk.layers.Layer):
         # self.conv1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(filters=filters,
         #                                            input_shape=[self.H, self.W, 2 * self.C],
         #                                            kernel_size=3, padding='same'))
-
         self.GLU = GLU(input_shape=[self.H, self.W, 2 * filters],
-                       filters=2 * filters)
+                       filters=2 * filters, use_nin=use_nin)
 
-        self.a = a
-        if a is not None:  # add short-cut connection if auxiliary input 'a' is given
+        if a:  # add short-cut connection if auxiliary input 'a' is given
             self.dense = tfk.layers.Dense(units=filters)
         self.dropout_p = dropout_p
         if dropout_p > 0.:
             self.dropout = tfk.layers.Dropout(dropout_p)
 
-    def call(self, x):
+    def call(self, x, a=None):
         c = non_linearity(x)
         c = self.conv1(c)
-        if self.a is not None:
-            c += self.dense(self.a)
+        if a is not None:
+            c += self.dense(a)
         c = non_linearity(c)
         if self.dropout_p > 0.:
             c = self.dropout(c)
@@ -162,7 +163,7 @@ class GatedAttn(tfk.layers.Layer):
         assert self.C % self.heads == 0
         self.dim = self.C // self.heads
 
-        self.layer1 = tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape)
+        self.layer1 = tfk.layers.Dense(3 * self.C, input_shape=input_shape)
         # self.layer1 = tfa.layers.WeightNormalization(tfk.layers.Conv2D(3 * self.C, kernel_size=1, input_shape=input_shape))
         self.GLU = GLU(input_shape=input_shape, filters=2 * self.C)
 
@@ -198,7 +199,7 @@ class ConvAttnBlock(tfk.layers.Layer):
     Convolution-Attention block as described in Flow ++
     """
 
-    def __init__(self, input_shape, filters, pos_emb, a=None,
+    def __init__(self, input_shape, filters, pos_emb, a=False,
                  dropout_p=0., heads=4, name="ConvAttnBlock"):
         super(ConvAttnBlock, self).__init__(name=name)
 
@@ -209,8 +210,8 @@ class ConvAttnBlock(tfk.layers.Layer):
                               dropout_p, name=name + "/GatedAttn")
         self.layer_norm2 = tfk.layers.LayerNormalization()
 
-    def call(self, x):
-        x = self.conv(x)
+    def call(self, x, a=None):
+        x = self.conv(x, a)
         x = self.layer_norm1(x)
         x = self.attn(x)
         return self.layer_norm2(x)
@@ -225,7 +226,7 @@ class ConvAttnNet(tfk.layers.Layer):
     """
 
     def __init__(self, input_shape, n_components=32, n_blocks=10, filters=96,
-                 context=None, dropout_p=0., heads=4, name="ConvAttnNet"):
+                 context=False, dropout_p=0., heads=4, name="ConvAttnNet"):
 
         super(ConvAttnNet, self).__init__(name=name)
         self.H, self.W, self.C = input_shape
@@ -249,10 +250,10 @@ class ConvAttnNet(tfk.layers.Layer):
         # self.last_conv = tfa.layers.WeightNormalization(tfk.layers.Conv2D(
         #    filters=self.C * (2 + 3 * n_components), kernel_size=3, padding='same', name=name + 'LastConv'))
 
-    def call(self, x):
+    def call(self, x, context=None):
         x = self.conv1(x)
         for block in self.blocks:
-            x = block(x)
+            x = block(x, context)
         x = self.last_conv(x)
         x = tf.reshape(x, [-1, self.H, self.W, self.C, 2 + 3 * self.n_components])
         log_s, t = tf.math.tanh(x[:, :, :, :, 0]), x[:, :, :, :, 1]
@@ -260,6 +261,22 @@ class ConvAttnNet(tfk.layers.Layer):
             x[:, :, :, :, 2:], 3, axis=4)
         # ml_logscales = tf.math.tanh(ml_logscales)
         return log_s, t, ml_logits, ml_means, ml_logscales
+
+
+class ShallowProcessor(tfk.layers.Layer):
+
+    def __init__(self, input_shape, filters=32, dropout_p=0.):
+        super(ShallowProcessor, self).__init__()
+        self.conv = tfk.layers.Conv2D(filters, 3, padding='SAME')
+        self.gated_conv1 = GatedConv(input_shape, filters, dropout_p=dropout_p, use_nin=False)
+        self.gated_conv2 = GatedConv(input_shape, filters, dropout_p=dropout_p, use_nin=False)
+        self.gated_conv3 = GatedConv(input_shape, filters, dropout_p=dropout_p, use_nin=False)
+
+    def call(self, x):
+        x = self.conv(x)
+        x = self.gated_conv1(x)
+        x = self.gated_conv2(x)
+        return self.gated_conv3(x)
 
 
 class AffineCouplingLayerMasked_tfk(tfk.layers.Layer):
