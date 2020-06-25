@@ -180,10 +180,10 @@ class GatedAttn(tfk.layers.Layer):
         c = tf.transpose(c, [2, 0, 3, 1, 4])
         q, k, v = tf.unstack(c, axis=0)
         # multi-head attention
-        w = tf.linalg.matmul(q, k, transpose_b=True) / \
+        w = tf.matmul(q, k, transpose_b=True) / \
             tf.math.sqrt(float(self.dim))
         w = tf.nn.softmax(w)
-        a = tf.linalg.matmul(w, v)  # (batch, heads, timesteps, dim)
+        a = tf.matmul(w, v)  # (batch, heads, timesteps, dim)
         # merge heads
         a = tf.transpose(a, [0, 2, 1, 3])  # (batch, timesteps, heads, dim)
         a = tf.reshape(a, [-1, self.timesteps, self.C])
