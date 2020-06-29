@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from .preprocessing import load_tf_record
+from preprocessing import load_tf_record
 import os
 import re
 
