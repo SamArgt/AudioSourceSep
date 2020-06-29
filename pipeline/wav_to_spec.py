@@ -12,14 +12,19 @@ def main(args):
             Save spectrograms as .npy files into output directory
 
     """
-    print("\nMel Spectrograms parameters: \n length_sec={} \n n_fft={} \n hop length={} \n n mels={}"
-          .format(args.length_sec, args.n_fft, args.hop_length, args.n_mels))
-    print('\n')
-
     t0 = time.time()
 
     input_dirpath = os.path.abspath(args.INPUT)
     output_dirpath = os.path.abspath(args.OUTPUT)
+
+    logfile = open("out.log", 'w')
+    params_dict = vars(args)
+    template = ''
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
+    logfile.write(template)
+    logfile.close()
 
     wav_files = []
     for root, dirs, files in os.walk(input_dirpath):
