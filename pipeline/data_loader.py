@@ -98,12 +98,13 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
 
 def load_melspec_ds(dirpath, preprocessing=True):
 
-    files = []
+    melspec_files = []
+    dirpath = os.path.abspath(dirpath)
     for root, dirs, files in os.walk(dirpath):
         current_path = os.path.join(dirpath, root)
         if len(files) > 0:
-            files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
+            melspec_files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
 
-    dataset = load_tf_records(files)
+    dataset = load_tf_records(melspec_files)
 
     return dataset
