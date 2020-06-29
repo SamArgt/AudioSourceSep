@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from preprocessing import load_tf_record
+from .preprocessing import load_tf_records
 import os
 import re
 
@@ -96,7 +96,7 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     return mixed, x1, x2, gt1, gt2, minibatch
 
 
-def load_melspec(dirpath, preprocessing=True):
+def load_melspec_ds(dirpath, preprocessing=True):
 
     files = []
     for root, dirs, files in os.walk(dirpath):
@@ -104,6 +104,6 @@ def load_melspec(dirpath, preprocessing=True):
         if len(files) > 0:
             files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
 
-    dataset = load_tf_record(files)
+    dataset = load_tf_records(files)
 
     return dataset
