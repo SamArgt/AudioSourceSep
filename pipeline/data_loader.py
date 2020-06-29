@@ -108,10 +108,11 @@ def load_melspec_ds(dirpath, preprocessing=True, batch_size=256, reshuffle=True,
 
     buffer_size = 2048
     ds = load_tf_records(melspec_files)
+    ds = ds.map(lambda x: tf.expand_dims(x, axis=-1))
     ds_size = len(list(ds.as_numpy_iterator()))
     # split into training and testing_set
     ds_test = ds.take(ds_size * 20 // 100)
-    ds_train = ds.split(ds_size * 20 // 100)
+    ds_train = ds.skip(ds_size * 20 // 100)
     n_train = ds_size - (ds_size * 20 // 100)
 
     if preprocessing:

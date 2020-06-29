@@ -13,6 +13,8 @@ import shutil
 import datetime
 import matplotlib.pyplot as plt
 import io
+import librosa
+from librosa.display import specshow
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -79,15 +81,21 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(sample, dataset):
+def image_grid(sample, data_shape, img_type="image", **kwargs):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
-    if dataset == 'mnist':
+    if data_shape[-1] == 1:
         sample = sample[:, :, :, 0]
     for i, ax in enumerate(axes):
-        ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
-        ax.set_axis_off()
+        if img_type == "image":
+            ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
+            ax.set_axis_off()
+        elif img_type == "melSpec":
+            sample[i] = np.exp(sample[i]) - 0.05
+            spec_db_sample = librosa.power_to_db(sample[i])
+            specshow(spec_db_sample, sr=44100, ax=ax, x_axis='off', y_axis='off')
+
     return f
 
 
@@ -133,9 +141,14 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     with mirrored_strategy.scope():
         samples = flow.sample(32)
     samples = samples.numpy().reshape([32] + args.data_shape)
-    figure = image_grid(samples, args.dataset)
-    with train_summary_writer.as_default():
-        tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
+    try:
+        figure = image_grid(samples, args.data_shape, args.img_type)
+        with train_summary_writer.as_default():
+            tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
+    except IndexError:
+        with train_summary_writer.as_default():
+            tf.summary.text(name="display error",
+                            data="Impossible to display spectrograms because of NaN values", step=0)
 
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
@@ -212,10 +225,17 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
             samples = samples.numpy().reshape([32] + args.data_shape)
-            figure = image_grid(samples, args.dataset)
-            with train_summary_writer.as_default():
-                tf.summary.image("32 generated samples", plot_to_image(figure),
-                                 max_outputs=50, step=epoch)
+            try:
+                figure = image_grid(samples, args.data_shape, args.img_type)
+                with train_summary_writer.as_default():
+                    tf.summary.image("32 generated samples", plot_to_image(figure),
+                                     max_outputs=50, step=epoch)
+            except IndexError:
+                with train_summary_writer.as_default():
+                    tf.summary.text(name="display error",
+                                    data="Impossible to display spectrograms because of NaN values",
+                                    step=epoch)
+
             # If minimum validation loss is reached, save model
             curr_val_loss = test_loss.result()
             if curr_val_loss < min_val_loss:
@@ -233,10 +253,14 @@ def main(args):
 
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
+        args.img_type = "image"
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
+        args.img_type = "image"
     else:
         args.data_shape = [args.height, args.width, 1]
+        args.dataset = os.path.abspath(args.dataset)
+        args.img_type = "melSpec"
 
     if args.restore is not None:
         abs_restore_path = os.path.abspath(args.restore)
@@ -294,20 +318,20 @@ def main(args):
                                                                                      mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
                                                                                      noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
     else:
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_mel_spec_ds(args.dataset, preprocessing=True,
-                                                                                            batch_size=256, reshuffle=True,
-                                                                                            mirrored_strategy=None)
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, preprocessing=True,
+                                                                                           batch_size=args.batch_size, reshuffle=True,
+                                                                                           mirrored_strategy=mirrored_strategy)
     args.n_train = n_train
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
-        figure = image_grid(sample, args.dataset)
+        figure = image_grid(sample, args.data_shape, args.img_type)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
     if args.model == 'glow':
-        flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+        flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
                                        )
     elif args.model == 'flowpp':
