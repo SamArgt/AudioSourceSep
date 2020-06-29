@@ -1,9 +1,12 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from .preprocessing import load_tf_record
+import os
+import re
 
 
-def load_data(dataset='mnist', batch_size=256, use_logit=False, noise=None,
-              alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True):
+def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
+                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True):
 
     if dataset == 'mnist':
         data_shape = (32, 32, 1)
@@ -74,7 +77,7 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     else:
         raise ValueError("args.dataset should be mnist or cifar10")
 
-    ds, _, minibatch = load_data(dataset, n_mixed, use_logit, alpha, noise, mirrored_strategy, preprocessing=False)
+    ds, _, minibatch = load_toydata(dataset, n_mixed, use_logit, alpha, noise, mirrored_strategy, preprocessing=False)
 
     ds1 = ds.take(1)
     ds2 = ds.take(1)
@@ -91,3 +94,16 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     x2 = tf.random.normal(data_shape)
 
     return mixed, x1, x2, gt1, gt2, minibatch
+
+
+def load_melspec(dirpath, preprocessing=True):
+
+    files = []
+    for root, dirs, files in os.walk(dirpath):
+        current_path = os.path.join(dirpath, root)
+        if len(files) > 0:
+            files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
+
+    dataset = load_tf_record(files)
+
+    return dataset
