@@ -9,16 +9,9 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=True, l2_reg=None,
+def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l2_reg=None,
                mirrored_strategy=None):
     tfk.backend.clear_session()
-    # Set flow parameters
-    if dataset == 'mnist':
-        data_shape = (32, 32, 1)
-    elif dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("dataset should be mnist or cifar10")
 
     if L == 2:
         base_distr_shape = [data_shape[0] // 4,
@@ -83,16 +76,9 @@ def build_glow(minibatch, L=3, K=32, n_filters=512, dataset='mnist', learntop=Tr
     return flow
 
 
-def build_flowpp(minibatch, dataset="mnist", n_components=32, n_blocks_flow=10,
+def build_flowpp(minibatch, data_shape, n_components=32, n_blocks_flow=10,
                  n_blocks_dequant=2, filters=96, dropout_p=0., heads=4,
                  mirrored_strategy=None):
-
-    if dataset == 'mnist':
-        data_shape = (32, 32, 1)
-    elif dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("dataset should be mnist or cifar10")
 
     base_distr_shape = [data_shape[0] // 2,
                         data_shape[1] // 2,

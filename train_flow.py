@@ -96,13 +96,6 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
 
-    if args.dataset == 'mnist':
-        data_shape = [32, 32, 1]
-    elif args.dataset == 'cifar10':
-        data_shape = [32, 32, 3]
-    else:
-        raise ValueError("args.dataset should be mnist or cifar10")
-
     with mirrored_strategy.scope():
         def compute_train_loss(X):
             per_example_loss = -flow.log_prob(X)
@@ -139,7 +132,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
     with mirrored_strategy.scope():
         samples = flow.sample(32)
-    samples = samples.numpy().reshape([32] + data_shape)
+    samples = samples.numpy().reshape([32] + args.data_shape)
     figure = image_grid(samples, args.dataset)
     with train_summary_writer.as_default():
         tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
@@ -156,10 +149,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     test_loss = tfk.metrics.Mean(name='test_loss')
     history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
     epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
-    if args.dataset == 'mnist':
-        n_train = 60000
-    elif args.dataset == 'cifar10':
-        n_train = 50000
+    n_train = args.n_train
     print("Start Training on {} epochs".format(N_EPOCHS))
     # Custom Training Loop
     for epoch in range(1, N_EPOCHS + 1):
@@ -221,7 +211,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             # Generate some samples and visualize them on tensorboard
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
-            samples = samples.numpy().reshape([32] + data_shape)
+            samples = samples.numpy().reshape([32] + args.data_shape)
             figure = image_grid(samples, args.dataset)
             with train_summary_writer.as_default():
                 tf.summary.image("32 generated samples", plot_to_image(figure),
@@ -241,16 +231,26 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 def main(args):
 
+    if args.dataset == 'mnist':
+        args.data_shape = [32, 32, 1]
+    elif args.dataset == 'cifar10':
+        args.data_shape = [32, 32, 3]
+    else:
+        args.data_shape = [args.height, args.width, 1]
+
     if args.restore is not None:
         abs_restore_path = os.path.abspath(args.restore)
 
     if args.output == 'trained_flow':
-
+        if args.dataset != 'mnist' and args.dataset != 'cifar10':
+            dataset = args.instrument
+        else:
+            dataset = args.dataset
         if args.model == 'glow':
-            output_dirname = args.model + '_' + args.dataset + '_' + str(args.L) + '_' + \
+            output_dirname = args.model + '_' + dataset + '_' + str(args.L) + '_' + \
                 str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
         elif args.model == 'flowpp':
-            output_dirname = args.model + '_' + args.dataset + '_' + str(args.n_components) + '_' + \
+            output_dirname = args.model + '_' + dataset + '_' + str(args.n_components) + '_' + \
                 str(args.n_blocks_flow) + '_' + str(args.filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
@@ -288,9 +288,16 @@ def main(args):
         preprocessing = False
     else:
         preprocessing = True
-    ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                        mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
-                                                                        noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
+
+    if (args.dataset == "mnist") or (args.dataset == "cifar10"):
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
+                                                                                     mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
+                                                                                     noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
+    else:
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_mel_spec_ds(args.dataset, preprocessing=True,
+                                                                                            batch_size=256, reshuffle=True,
+                                                                                            mirrored_strategy=None)
+    args.n_train = n_train
 
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
@@ -300,11 +307,11 @@ def main(args):
 
     # Build Flow
     if args.model == 'glow':
-        flow = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
+        flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
                                        )
     elif args.model == 'flowpp':
-        flow = flow_builder.build_flowpp(minibatch, dataset=args.dataset, n_components=args.n_components,
+        flow = flow_builder.build_flowpp(minibatch, args.data_shape, n_components=args.n_components,
                                          n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
                                          filters=args.filters, dropout_p=args.dropout_p, heads=args.heads,
                                          mirrored_strategy=mirrored_strategy)
@@ -361,7 +368,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Flow model')
     parser.add_argument('--dataset', type=str, default="mnist",
-                        help="mnist or cifar10")
+                        help="mnist or cifar10 or directory to tfrecords")
+
+    parser.add_argument("--height", type=int, default=64)
+    parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--instrument", type=str, default="piano")
+
     parser.add_argument('--output', type=str, default='trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
