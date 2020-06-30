@@ -111,7 +111,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
         def compute_test_loss(X):
             per_example_loss = -flow.log_prob(X)
-            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=5000)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.test_batch_size)
 
     def train_step(inputs):
         with tf.GradientTape() as tape:
@@ -317,10 +317,12 @@ def main(args):
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
                                                                                      mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
                                                                                      noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
+        args.test_batch_size = 5000
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, preprocessing=True,
                                                                                            batch_size=args.batch_size, reshuffle=True,
                                                                                            mirrored_strategy=mirrored_strategy)
+        args.test_batch_size = args.batch_size
     args.n_train = n_train
 
     with train_summary_writer.as_default():
