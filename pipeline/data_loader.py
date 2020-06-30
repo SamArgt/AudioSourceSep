@@ -116,8 +116,8 @@ def load_melspec_ds(dirpath, preprocessing=True, batch_size=256, reshuffle=True,
     n_train = ds_size - (ds_size * 20 // 100)
 
     if preprocessing:
-        ds_train = ds_train.map(lambda x: tf.math.log(0.05 + x))
-        ds_test = ds_test.map(lambda x: tf.math.log(0.05 + x))
+        ds_train = ds_train.map(lambda x: tf.math.log(x + 1e-20))
+        ds_test = ds_test.map(lambda x: tf.math.log(x + 1e-20))
 
     ds_train = ds_train.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds_train = ds_train.batch(batch_size, drop_remainder=True)
