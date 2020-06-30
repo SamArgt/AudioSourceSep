@@ -10,7 +10,7 @@ tfk = tf.keras
 
 
 def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l2_reg=None,
-               mirrored_strategy=None, preprocessing='melspec'):
+               mirrored_strategy=None, preprocessing=None):
     tfk.backend.clear_session()
 
     if L == 2:
