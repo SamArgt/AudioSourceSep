@@ -91,7 +91,7 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
         if img_type == "image":
             ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
             ax.set_axis_off()
-        elif img_type == "melSpec":
+        elif img_type == "melspec":
             sample[i] = np.exp(sample[i])
             spec_db_sample = librosa.power_to_db(sample[i])
             specshow(spec_db_sample, sr=44100, ax=ax, x_axis='off', y_axis='off')
@@ -250,18 +250,22 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 
 def main(args):
-
+    # miscellaneous paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
         args.img_type = "image"
+        args.preprocessing_glow = None
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
         args.img_type = "image"
+        args.preprocessing_glow = None
     else:
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
-        args.img_type = "melSpec"
+        args.img_type = "melspec"
+        args.preprocessing_glow = "melspec"
 
+    # output directory
     if args.restore is not None:
         abs_restore_path = os.path.abspath(args.restore)
 
@@ -309,18 +313,18 @@ def main(args):
 
     # Load Dataset
     if args.model == 'flowpp':
-        preprocessing = False
+        preprocessing_dataloader = False
     else:
-        preprocessing = True
+        preprocessing_dataloader = True
 
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
                                                                                      mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
-                                                                                     noise=args.noise, alpha=args.alpha, preprocessing=preprocessing)
+                                                                                     noise=args.noise, alpha=args.alpha, preprocessing=preprocessing_dataloader)
         args.test_batch_size = 5000
     else:
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, preprocessing=True,
-                                                                                           batch_size=args.batch_size, reshuffle=True,
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
+                                                                                           reshuffle=True,
                                                                                            mirrored_strategy=mirrored_strategy)
         args.test_batch_size = args.batch_size
     args.n_train = n_train
@@ -335,7 +339,7 @@ def main(args):
     if args.model == 'glow':
         flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                       )
+                                       preprocessing=args.preprocessing_glow)
     elif args.model == 'flowpp':
         flow = flow_builder.build_flowpp(minibatch, args.data_shape, n_components=args.n_components,
                                          n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,

@@ -97,7 +97,7 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     return mixed, x1, x2, gt1, gt2, minibatch
 
 
-def load_melspec_ds(dirpath, preprocessing=True, batch_size=256, reshuffle=True, mirrored_strategy=None):
+def load_melspec_ds(dirpath, batch_size=256, reshuffle=True, mirrored_strategy=None):
 
     melspec_files = []
     dirpath = os.path.abspath(dirpath)
@@ -114,10 +114,6 @@ def load_melspec_ds(dirpath, preprocessing=True, batch_size=256, reshuffle=True,
     ds_test = ds.take(ds_size * 20 // 100)
     ds_train = ds.skip(ds_size * 20 // 100)
     n_train = ds_size - (ds_size * 20 // 100)
-
-    if preprocessing:
-        ds_train = ds_train.map(lambda x: tf.math.log(x + 1e-20))
-        ds_test = ds_test.map(lambda x: tf.math.log(x + 1e-20))
 
     ds_train = ds_train.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds_train = ds_train.batch(batch_size, drop_remainder=True)

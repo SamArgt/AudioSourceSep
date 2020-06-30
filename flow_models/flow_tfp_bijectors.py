@@ -322,6 +322,24 @@ class Preprocessing(tfp.bijectors.Bijector):
 
         return log_det
 
+
+class SpecPreprocessing(tfp.bijectors.Bijector):
+    def __init__(self, event_shape):
+        super(Preprocessing, self).__init__(forward_min_event_ndims=3)
+
+    def _forward(self, x):
+        x = tf.math.log(x + 1.)
+        return x
+
+    def _inverse(self, y):
+        y = tf.exp(y) - 1.
+        return y
+
+    def _forward_log_det_jacobian(self, x):
+        log_det = 1. / (x + 1.)
+        return log_det
+
+
 class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
 
     """

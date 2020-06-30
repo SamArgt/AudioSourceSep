@@ -10,7 +10,7 @@ tfk = tf.keras
 
 
 def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l2_reg=None,
-               mirrored_strategy=None):
+               mirrored_strategy=None, preprocessing='melspec'):
     tfk.backend.clear_session()
 
     if L == 2:
@@ -33,6 +33,8 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
             flow_bijector = bijector_cls(K, data_shape,
                                          shift_and_log_scale_layer,
                                          n_filters, minibatch, **{'l2_reg': l2_reg})
+            if preprocessing == "melspec":
+                flow_bijector = tfb.Chain([flow_bijector, SpecPreprocessiing])
 
             inv_bijector = tfb.Invert(flow_bijector)
 
@@ -55,6 +57,8 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
         flow_bijector = bijector_cls(K, data_shape,
                                      shift_and_log_scale_layer,
                                      n_filters, minibatch, **{'l2_reg': l2_reg})
+        if preprocessing == "melspec":
+            flow_bijector = tfb.Chain([flow_bijector, SpecPreprocessiing])
 
         inv_bijector = tfb.Invert(flow_bijector)
 
