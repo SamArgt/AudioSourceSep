@@ -30,12 +30,19 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            flow_bijector = bijector_cls(K, data_shape,
-                                         shift_and_log_scale_layer,
-                                         n_filters, minibatch, **{'l2_reg': l2_reg})
             if preprocessing == "melspec":
                 prepocessing_bijector = SpecPreprocessing()
+                minibatch = prepocessing_bijector.forward(minibatch)
+
+                flow_bijector = bijector_cls(K, data_shape,
+                                             shift_and_log_scale_layer,
+                                             n_filters, minibatch, **{'l2_reg': l2_reg})
+
                 flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+            else:
+                flow_bijector = bijector_cls(K, data_shape,
+                                             shift_and_log_scale_layer,
+                                             n_filters, minibatch, **{'l2_reg': l2_reg})
 
             inv_bijector = tfb.Invert(flow_bijector)
 
@@ -60,7 +67,17 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
                                      n_filters, minibatch, **{'l2_reg': l2_reg})
         if preprocessing == "melspec":
             prepocessing_bijector = SpecPreprocessing()
+            minibatch = prepocessing_bijector.forward(minibatch)
+
+            flow_bijector = bijector_cls(K, data_shape,
+                                         shift_and_log_scale_layer,
+                                         n_filters, minibatch, **{'l2_reg': l2_reg})
+
             flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+        else:
+            flow_bijector = bijector_cls(K, data_shape,
+                                         shift_and_log_scale_layer,
+                                         n_filters, minibatch, **{'l2_reg': l2_reg})
 
         inv_bijector = tfb.Invert(flow_bijector)
 

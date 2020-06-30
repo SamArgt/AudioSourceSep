@@ -396,13 +396,14 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Flow model')
+    # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
-
     parser.add_argument("--height", type=int, default=64)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--instrument", type=str, default="piano")
 
+    # miscellaneous
     parser.add_argument('--output', type=str, default='trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
