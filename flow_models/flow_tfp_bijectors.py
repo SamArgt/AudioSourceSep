@@ -336,7 +336,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         return y
 
     def _forward_log_det_jacobian(self, x):
-        log_det = 1. / (x + 1.)
+        log_det = tf.math.log(1. / (x + 1.))
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
