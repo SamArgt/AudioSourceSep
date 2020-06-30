@@ -325,7 +325,7 @@ class Preprocessing(tfp.bijectors.Bijector):
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
     def __init__(self):
-        super(Preprocessing, self).__init__(forward_min_event_ndims=3)
+        super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3)
 
     def _forward(self, x):
         x = tf.math.log(x + 1.)

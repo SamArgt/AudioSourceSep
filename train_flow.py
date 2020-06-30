@@ -92,7 +92,6 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
             ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
             ax.set_axis_off()
         elif img_type == "melspec":
-            sample[i] = np.exp(sample[i])
             spec_db_sample = librosa.power_to_db(sample[i])
             specshow(spec_db_sample, sr=44100, ax=ax, x_axis='off', y_axis='off')
 
