@@ -34,7 +34,8 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
                                          shift_and_log_scale_layer,
                                          n_filters, minibatch, **{'l2_reg': l2_reg})
             if preprocessing == "melspec":
-                flow_bijector = tfb.Chain([flow_bijector, SpecPreprocessiing])
+                prepocessing_bijector = SpecPreprocessing()
+                flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
 
             inv_bijector = tfb.Invert(flow_bijector)
 
@@ -58,7 +59,8 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
                                      shift_and_log_scale_layer,
                                      n_filters, minibatch, **{'l2_reg': l2_reg})
         if preprocessing == "melspec":
-            flow_bijector = tfb.Chain([flow_bijector, SpecPreprocessiing])
+            prepocessing_bijector = SpecPreprocessing()
+            flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
 
         inv_bijector = tfb.Invert(flow_bijector)
 

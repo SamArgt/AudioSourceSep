@@ -324,7 +324,7 @@ class Preprocessing(tfp.bijectors.Bijector):
 
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
-    def __init__(self, event_shape):
+    def __init__(self):
         super(Preprocessing, self).__init__(forward_min_event_ndims=3)
 
     def _forward(self, x):
@@ -337,7 +337,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         log_det = 1. / (x + 1.)
-        return log_det
+        return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
 class MixLogisticCDFAttnCoupling(tfp.bijectors.Bijector):
