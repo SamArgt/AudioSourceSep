@@ -340,6 +340,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         return y
 
     def _forward_log_det_jacobian(self, x):
+        x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
         log_det = -2 * tf.math.log(tf.math.cosh(x))
         x = tf.math.tanh(x)
         log_det += -tf.math.log(x) - tf.math.log(1. - x)
