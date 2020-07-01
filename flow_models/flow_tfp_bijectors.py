@@ -330,20 +330,19 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward(self, x):
         x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
-        x = tf.math.tanh(x)
+        x = x / self.max_val
         x = tf.math.log(x) - tf.math.log(1. - x)
         return x
 
     def _inverse(self, y):
         y = tf.math.sigmoid(y)
-        y = tf.math.atanh(y)
+        y = y * self.max_val
         return y
 
     def _forward_log_det_jacobian(self, x):
         x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
-        log_det = -2 * tf.math.log(tf.math.cosh(x))
-        x = tf.math.tanh(x)
-        log_det += -tf.math.log(x) - tf.math.log(1. - x)
+        x = x / self.max_val
+        log_det = -tf.math.log(x) - tf.math.log(1. - x) - tf.math.log(self.maxval)
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
