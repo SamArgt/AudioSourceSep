@@ -6,7 +6,7 @@ import numpy as np
 import re
 
 
-def load_wav(path, length_sec):
+def load_wav(path, length_sec, sr=None):
     """
     Load wav file from path
     Cut the audio in windows
@@ -18,7 +18,7 @@ def load_wav(path, length_sec):
     Outputs:
     tensorflow dataset
     """
-    song, rate = librosa.core.load(path, sr=None, mono=True)
+    song, rate = librosa.core.load(path, sr=sr, mono=True)
     song = np.array(song)
     LENGTH = int(rate * length_sec)
     song_ds = tf.data.Dataset.from_tensor_slices(song)

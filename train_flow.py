@@ -267,7 +267,6 @@ def main(args):
     # output directory
     if args.restore is not None:
         abs_restore_path = os.path.abspath(args.restore)
-
     if args.output == 'trained_flow':
         if args.dataset != 'mnist' and args.dataset != 'cifar10':
             dataset = args.instrument
@@ -288,13 +287,11 @@ def main(args):
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
         output_dirpath = args.output
-
     try:
         os.mkdir(output_dirpath)
         os.chdir(output_dirpath)
     except FileExistsError:
         os.chdir(output_dirpath)
-
     log_file = open('out.log', 'w')
     if args.debug is False:
         sys.stdout = log_file
