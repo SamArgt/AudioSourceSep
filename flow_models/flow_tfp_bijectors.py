@@ -329,6 +329,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         self.val_max = val_max
 
     def _forward(self, x):
+        x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
         x = tf.math.tanh(x)
         x = tf.math.log(x) - tf.math.log(1. - x)
         return x
