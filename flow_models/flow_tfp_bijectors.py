@@ -334,7 +334,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         return x
 
     def _inverse(self, y):
-        y = tf.math.softplus(x)
+        y = tf.math.softplus(y)
         return y
 
     def _forward_log_det_jacobian(self, x):
