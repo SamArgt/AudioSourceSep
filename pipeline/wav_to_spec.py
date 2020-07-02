@@ -77,13 +77,15 @@ if __name__ == '__main__':
     parser.add_argument('OUTPUT', type=str,
                         help='output dirpath for saving the spectrograms')
 
-    parser.add_argument('--length_sec', type=float, default=5.,
+    parser.add_argument('--length_sec', type=float, default=2.04,
                         help='Window length in seconds for each spectrograms')
+    parser.add_argument('sr', type=int, default=16000,
+                        help="Sampling Rate. If None, keeps the sampling rate of the wav files")
     parser.add_argument("--n_fft", type=int, default=2048,
                         help="Window size of the STFT")
     parser.add_argument("--hop_length", type=int, default=512,
                         help="Hop Length of the STFT")
-    parser.add_argument("--n_mels", type=int, default=128,
+    parser.add_argument("--n_mels", type=int, default=96,
                         help="Number of mel frequencies")
 
     parser.add_argument('--use_signal', action="store_true",
