@@ -24,7 +24,6 @@ def main(args):
         template += '{} = {} \n\t '.format(k, v)
     print(template)
     logfile.write(template)
-    logfile.close()
 
     wav_files = []
     for root, dirs, files in os.walk(input_dirpath):
@@ -67,6 +66,9 @@ def main(args):
     deltaT = np.round(time.time() - t0, 2)
     print("{} wav files saved as spectrograms in {} seconds.".format(
         len(wav_files), deltaT))
+    log_file.write("{} wav files saved as spectrograms in {} seconds.".format(
+        len(wav_files), deltaT))
+    log_file.close()
 
 
 if __name__ == '__main__':
