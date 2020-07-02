@@ -58,8 +58,11 @@ def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
             variables=flow.variables, optimizer=optimizer)
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
         # Debugging: if huge jump in the loss, save weights here
-        manager_issues = tf.train.CheckpointManager(
-            ckpt, './tf_ckpts_issues', max_to_keep=3)
+        if args.debug:
+            manager_issues = tf.train.CheckpointManager(
+                ckpt, './tf_ckpts_issues', max_to_keep=3)
+        else:
+            manager_issues = None
 
     return ckpt, manager, manager_issues
 
@@ -137,6 +140,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
+    # Display first generated samples
     with mirrored_strategy.scope():
         samples = flow.sample(32)
     samples = samples.numpy().reshape([32] + args.data_shape)
@@ -324,7 +328,7 @@ def main(args):
                                                                                            mirrored_strategy=mirrored_strategy)
         args.test_batch_size = args.batch_size
     args.n_train = n_train
-
+    # Display original images
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
@@ -364,6 +368,7 @@ def main(args):
             assert optimizer.iterations > 0
             print("Model Restored from {}".format(abs_restore_path))
 
+    # Display parameters
     params_dict = vars(args)
     template = ''
     for k, v in params_dict.items():

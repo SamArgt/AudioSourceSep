@@ -108,6 +108,7 @@ def load_melspec_ds(dirpath, batch_size=256, reshuffle=True, mirrored_strategy=N
 
     buffer_size = 2048
     ds = load_tf_records(melspec_files)
+    ds = ds.shuffle(buffer_size, reshuffle_each_iteration=False)
     ds = ds.map(lambda x: tf.expand_dims(x, axis=-1))
     ds_size = len(list(ds.as_numpy_iterator()))
     # split into training and testing_set
