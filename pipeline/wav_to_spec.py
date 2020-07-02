@@ -35,7 +35,7 @@ def main(args):
 
     for wav_file in wav_files:
         # load the wav file
-        song_ds, rate = load_wav(wav_file, args.length_sec)
+        song_ds, rate = load_wav(wav_file, args.length_sec, sr=args.sr)
         print('{} Loaded...'.format(wav_file))
         # compute the spectrograms
         if args.use_signal:
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--length_sec', type=float, default=2.04,
                         help='Window length in seconds for each spectrograms')
-    parser.add_argument('sr', type=int, default=16000,
+    parser.add_argument('--sr', type=int, default=16000,
                         help="Sampling Rate. If None, keeps the sampling rate of the wav files")
     parser.add_argument("--n_fft", type=int, default=2048,
                         help="Window size of the STFT")
