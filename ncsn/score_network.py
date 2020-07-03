@@ -272,10 +272,10 @@ class CondRefineNetDilated(tfk.layers.Layer):
         layer3 = self._compute_cond_module(self.res3, layer2, y)
         layer4 = self._compute_cond_module(self.res4, layer3, y)
 
-        ref1 = self.refine1([layer4], y, layer4.shape[2:])
-        ref2 = self.refine2([layer3, ref1], y, layer3.shape[2:])
-        ref3 = self.refine3([layer2, ref2], y, layer2.shape[2:])
-        output = self.refine4([layer1, ref3], y, layer1.shape[2:])
+        ref1 = self.refine1([layer4], y, layer4.shape[1:3])
+        ref2 = self.refine2([layer3, ref1], y, layer3.shape[1:3])
+        ref3 = self.refine3([layer2, ref2], y, layer2.shape[1:3])
+        output = self.refine4([layer1, ref3], y, layer1.shape[1:3])
 
         output = self.normalizer(output, y)
         output = self.act(output)
