@@ -330,6 +330,8 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward(self, x):
         x = x / self.val_max
+        tf.debugging.assert_less(x, 1.)
+        tf.debugging.assert_greater(x, 0.)
         x = tf.math.log(x / 1. - x)
         return x
 
@@ -340,6 +342,8 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         x = x / self.val_max
+        tf.debugging.assert_less(x, 1.)
+        tf.debugging.assert_greater(x, 0.)
         log_det = -tf.math.log(x) - tf.math.log(1. - x) - tf.math.log(self.val_max)
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
