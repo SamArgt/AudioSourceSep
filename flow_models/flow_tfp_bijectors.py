@@ -324,22 +324,23 @@ class Preprocessing(tfp.bijectors.Bijector):
 
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
-    def __init__(self, val_max=20.):
+    def __init__(self, val_max=101.):
         super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3)
         self.val_max = val_max
 
     def _forward(self, x):
-        x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
-        x = tfp.math.softplus_inverse(x)
+        x = x / self.val_max
+        x = tf.math.log(x / 1. - x)
         return x
 
     def _inverse(self, y):
-        y = tf.math.softplus(y)
+        y = tf.math.sigmoid(y)
+        y = y * self.val_max
         return y
 
     def _forward_log_det_jacobian(self, x):
-        x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
-        log_det = x - tfp.math.softplus_inverse(x)
+        x = x / self.val_max
+        log_det = -tf.math.log(x) - tf.math.log(1. - x) - tf.math.log(self.val_max)
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
