@@ -69,9 +69,9 @@ def main(args):
     deltaT = np.round(time.time() - t0, 2)
     print("{} wav files saved as spectrograms in {} seconds.".format(
         len(wav_files), deltaT))
-    log_file.write("{} wav files saved as spectrograms in {} seconds.".format(
+    logfile.write("{} wav files saved as spectrograms in {} seconds.".format(
         len(wav_files), deltaT))
-    log_file.close()
+    logfile.close()
 
 
 if __name__ == '__main__':
