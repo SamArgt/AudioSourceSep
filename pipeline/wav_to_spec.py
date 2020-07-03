@@ -17,6 +17,11 @@ def main(args):
     input_dirpath = os.path.abspath(args.INPUT)
     output_dirpath = os.path.abspath(args.OUTPUT)
 
+    try:
+        os.mkdir(output_dirpath)
+    except FileExistsError:
+        pass
+
     logfile = open(os.path.join(output_dirpath, "out.log"), 'w')
     params_dict = vars(args)
     template = ''
@@ -50,10 +55,6 @@ def main(args):
             print("\t Mel Spectrograms computed using librosa")
 
         # save the spectrograms
-        try:
-            os.mkdir(output_dirpath)
-        except FileExistsError:
-            pass
         filename_dirpath = os.path.join(output_dirpath, os.path.split(wav_file)[1])
         filename_dirpath = filename_dirpath[:-4]
         print
