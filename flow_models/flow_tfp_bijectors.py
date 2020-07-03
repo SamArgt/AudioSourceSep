@@ -339,7 +339,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         x += tf.random.uniform(x.shape, minval=1e-21, maxval=1e-20)
-        log_det = -tf.math.log(1. - tf.math.exp(-x))
+        log_det = x - tfp.math.softplus_inverse(x)
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 
