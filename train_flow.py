@@ -183,8 +183,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             # every loss_per_epoch train step
             if count_step % (n_train // (batch_size * loss_per_epoch)) == 0:
                 # check nan loss
-                if tf.math.is_nan(loss):
-                    print('Nan Loss')
+                if (tf.math.is_nan(loss)) or (tf.math.is_inf(loss)):
+                    print('Nan or Inf Loss: {}'.format(loss))
                     is_nan_loss = True
                     break
 
