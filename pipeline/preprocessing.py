@@ -58,7 +58,7 @@ def load_multiple_wav(path, length_sec):
 
 
 def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
-                             n_mels=128):
+                             n_mels=128, fmin=125, fmax=7600, dbmin=-100, dbmax=20):
     """
     Take as input a dataset of raw audio:
 
@@ -76,12 +76,12 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
     """
 
     def get_mel_spectrograms_fn(sr, n_fft=n_fft, hop_length=hop_length,
-                                n_mels=n_mels):
+                                n_mels=n_mels, fmin=fmin, fmax=fmax):
 
         def get_mel_spectrograms(x):
             mel_spect = melspectrogram(y=np.asfortranarray(x), sr=sr, S=None, n_fft=n_fft,
                                        hop_length=hop_length, win_length=None, window='hann', center=True,
-                                       pad_mode='reflect', power=2.0, n_mels=n_mels)
+                                       pad_mode='reflect', power=2.0, n_mels=n_mels, fmin=fmin, fmax=fmax)
             return mel_spect
 
         return get_mel_spectrograms
@@ -91,6 +91,10 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
 
     spect_dataset = song_ds.map(
         lambda x: tf.py_function(map_fn, inp=[x], Tout=tf.float32))
+
+    powermin = np.exp(dbmin * np.log(10) / 10)
+    powermax = np.exp(dbmax * np.log(10) / 10)
+    spect_dataset = spect_dataset.map(lambda x: tf.clip_by_value(x, powermin, powermax))
 
     return spect_dataset
 

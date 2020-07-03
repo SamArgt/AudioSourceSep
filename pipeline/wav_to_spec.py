@@ -17,7 +17,7 @@ def main(args):
     input_dirpath = os.path.abspath(args.INPUT)
     output_dirpath = os.path.abspath(args.OUTPUT)
 
-    logfile = open("out.log", 'w')
+    logfile = open(os.path.join(output_dirpath, "out.log"), 'w')
     params_dict = vars(args)
     template = ''
     for k, v in params_dict.items():
@@ -40,7 +40,9 @@ def main(args):
         if args.use_signal:
             melspectrograms_ds = mel_spectrograms_from_ds_tfSignal(song_ds, rate,
                                                                    int(rate * args.length_sec),
-                                                                   args.n_fft, args.hop_length, args.n_mels)
+                                                                   args.n_fft, args.hop_length, args.n_mels,
+                                                                   fmin=args.fmin, fmax=args.fmax, dbmin=args.dbmin,
+                                                                   dbmax=args.dbmax)
             print("\t Mel Spectrograms computed using tf.signal")
         else:
             melspectrograms_ds = mel_spectrograms_from_ds(
@@ -89,6 +91,10 @@ if __name__ == '__main__':
                         help="Hop Length of the STFT")
     parser.add_argument("--n_mels", type=int, default=96,
                         help="Number of mel frequencies")
+    parser.add_argument('--fmin', type=int, default=125, help="Minimum frequency of the mel filter")
+    parser.add_argument('--fmax', type=int, default=7600, help="Maximum frequency of the mel filter")
+    parser.add_argument("--dbmin", type=int, default=-100, help="Minimum DB of the spectrogram")
+    parser.add_argument("--dbmax", type=int, default=20, help="Maximum DB of the spectrogram")
 
     parser.add_argument('--use_signal', action="store_true",
                         help='Either to use tf.signal or not (otherwise use librosa)')
