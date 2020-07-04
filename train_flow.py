@@ -8,7 +8,7 @@ import argparse
 import time
 import os
 import sys
-from .train_utils import *
+from train_utils import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
