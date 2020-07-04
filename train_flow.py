@@ -408,7 +408,7 @@ if __name__ == '__main__':
     parser.add_argument("--instrument", type=str, default="piano")
 
     # Spectrograms Parameters
-    parser.add_argument("--height", type=int, default=64)
+    parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--sampling_rate", type=int, default=16000)
     parser.add_argument("--fmin", type=int, default=125)
@@ -431,7 +431,7 @@ if __name__ == '__main__':
                         help='Depth level')
     parser.add_argument('--K', type=int, default=32,
                         help="Number of Step of Flow in each Block")
-    parser.add_argument('--n_filters', type=int, default=256,
+    parser.add_argument('--n_filters', type=int, default=512,
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
