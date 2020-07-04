@@ -75,8 +75,7 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
     tensorflow datasets
     """
 
-    def get_mel_spectrograms_fn(sr, n_fft=n_fft, hop_length=hop_length,
-                                n_mels=n_mels, fmin=fmin, fmax=fmax):
+    def get_mel_spectrograms_fn(sr, n_fft, hop_length, n_mels, fmin, fmax):
 
         def get_mel_spectrograms(x):
             mel_spect = melspectrogram(y=np.asfortranarray(x), sr=sr, S=None, n_fft=n_fft,
@@ -86,8 +85,7 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
 
         return get_mel_spectrograms
 
-    map_fn = get_mel_spectrograms_fn(sr, n_fft=n_fft, hop_length=hop_length,
-                                     n_mels=n_mels)
+    map_fn = get_mel_spectrograms_fn(sr, n_fft, hop_length, n_mels, fmin, fmax)
 
     spect_dataset = song_ds.map(
         lambda x: tf.py_function(map_fn, inp=[x], Tout=tf.float32))

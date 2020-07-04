@@ -96,7 +96,8 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
             ax.set_axis_off()
         elif img_type == "melspec":
             spec_db_sample = librosa.power_to_db(sample[i])
-            specshow(spec_db_sample, sr=kwargs["sampling_rate"], ax=ax, x_axis='off', y_axis='off')
+            specshow(spec_db_sample, sr=kwargs["sampling_rate"],
+                     ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
 
     return f
 
@@ -145,7 +146,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         samples = flow.sample(32)
     samples = samples.numpy().reshape([32] + args.data_shape)
     try:
-        figure = image_grid(samples, args.data_shape, args.img_type, sampling_rate=args.sampling_rate)
+        figure = image_grid(samples, args.data_shape, args.img_type,
+                            sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         with train_summary_writer.as_default():
             tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
     except IndexError:
@@ -229,7 +231,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 samples = flow.sample(32)
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
-                figure = image_grid(samples, args.data_shape, args.img_type, sampling_rate=args.sampling_rate)
+                figure = image_grid(samples, args.data_shape, args.img_type,
+                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
                 with train_summary_writer.as_default():
                     tf.summary.image("32 generated samples", plot_to_image(figure),
                                      max_outputs=50, step=epoch)
@@ -332,7 +335,8 @@ def main(args):
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
-        figure = image_grid(sample, args.data_shape, args.img_type, sampling_rate=args.sampling_rate)
+        figure = image_grid(sample, args.data_shape, args.img_type,
+                            sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
@@ -401,12 +405,16 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
+    parser.add_argument("--instrument", type=str, default="piano")
+
+    # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=64)
     parser.add_argument("--width", type=int, default=64)
-    parser.add_argument("--instrument", type=str, default="piano")
     parser.add_argument("--sampling_rate", type=int, default=16000)
+    parser.add_argument("--fmin", type=int, default=125)
+    parser.add_argument("--fmax", type=int, default=7600)
 
-    # miscellaneous
+    # Output and Restore Directory
     parser.add_argument('--output', type=str, default='trained_flow',
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,

@@ -45,13 +45,12 @@ def main(args):
         if args.use_signal:
             melspectrograms_ds = mel_spectrograms_from_ds_tfSignal(song_ds, rate,
                                                                    int(rate * args.length_sec),
-                                                                   args.n_fft, args.hop_length, args.n_mels,
-                                                                   fmin=args.fmin, fmax=args.fmax, dbmin=args.dbmin,
-                                                                   dbmax=args.dbmax)
+                                                                   args.n_fft, args.hop_length, args.n_mels)
             print("\t Mel Spectrograms computed using tf.signal")
         else:
             melspectrograms_ds = mel_spectrograms_from_ds(
-                song_ds, rate, args.n_fft, args.hop_length, args.n_mels)
+                song_ds, rate, args.n_fft, args.hop_length, args.n_mels,
+                fmin=args.fmin, fmax=args.fmax, dbmin=args.dbmin, dbmax=args.dbmax)
             print("\t Mel Spectrograms computed using librosa")
 
         # save the spectrograms
