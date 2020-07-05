@@ -116,11 +116,9 @@ def load_melspec_ds(dirpath, batch_size=256, reshuffle=True, mirrored_strategy=N
     ds_train = ds.skip(ds_size * 20 // 100)
     n_train = ds_size - (ds_size * 20 // 100)
 
-    ds_train = ds_train.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds_train = ds_train.batch(batch_size, drop_remainder=True)
     minibatch = list(ds_train.take(1))[0]
 
-    ds_test = ds_test.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds_test = ds_test.batch(batch_size, drop_remainder=True)
 
     if mirrored_strategy is not None:
