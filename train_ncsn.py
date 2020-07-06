@@ -133,8 +133,8 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
                 min_val_loss = curr_val_loss
 
         # Generate some samples and visualize them on tensorboard
-        # 20 time during training
-        if (N_EPOCHS < 20) or (epoch % (N_EPOCHS // 20) == 0):
+        # 10 time during training
+        if (N_EPOCHS < 10) or (epoch % (N_EPOCHS // 10) == 0):
             with mirrored_strategy.scope():
                 samples = scorenet.sample(32, sigmas_np)
             samples = samples.numpy().reshape([32] + args.data_shape)
