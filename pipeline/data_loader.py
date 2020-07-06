@@ -68,7 +68,7 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
 
     if model == 'ncsn':
         ds_val = ds_val.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds_val = ds_val.map(lambda x: (x, tf.random.uniform((1,), 0, num_classes, dtype=tf.int32)))
+        ds_val = ds_val.map(lambda x: (x, tf.random.uniform((), 0, num_classes, dtype=tf.int32)))
 
     ds_val = ds_val.batch(5000)
 
