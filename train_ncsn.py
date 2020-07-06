@@ -20,7 +20,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
     # Adding the tf.function makes it about 10 times faster!!!
 
     def compute_loss(X, labels, batch_size, anneal_power=2.):
-        used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
+        used_sigmas = tf.gather(params=sigmas_tf, indices=labels, axis=0)
         pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
         target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
         scores = scorenet(pertubed_X, labels)
@@ -136,7 +136,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
         # 20 time during training
         if (N_EPOCHS < 20) or (epoch % (N_EPOCHS // 20) == 0):
             with mirrored_strategy.scope():
-                samples = scorenet.sample(32, sigmas)
+                samples = scorenet.sample(32, sigmas_np)
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
                 figure = image_grid(samples, args.data_shape, args.img_type,
@@ -156,9 +156,11 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
 
 
 def main(args):
-    sigmas = tf.constant(np.logspace(np.log(args.sigma1) / np.log(10),
-                                     np.log(args.sigmaL) / np.log(10),
-                                     num=args.num_classes), dtype=tf.float32)
+    sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10),
+                            np.log(args.sigmaL) / np.log(10),
+                            num=args.num_classes)
+
+    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
