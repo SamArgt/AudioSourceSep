@@ -224,6 +224,7 @@ def main(args):
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
                                                                                         mirrored_strategy=mirrored_strategy, model='ncsn',
                                                                                         num_classes=args.num_classes, use_logit=args.use_logit)
+        args.test_batch_size = 5000
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
                                                                                            reshuffle=True, model='ncsn',
