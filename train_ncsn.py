@@ -20,7 +20,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
     # Adding the tf.function makes it about 10 times faster!!!
 
     def compute_loss(X, labels, batch_size, anneal_power=2.):
-        used_sigmas = tf.gather(params=sigmas_tf, indices=labels, axis=0)
+        used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
         pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
         target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
         scores = scorenet(pertubed_X, labels)
@@ -284,7 +284,7 @@ def main(args):
                         data=tf.constant(str(total_trainable_variables)), step=0)
 
     # Train
-    training_time, _ = train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_dist,
+    training_time, _ = train(mirrored_strategy, args, scorenet, optimizer, sigmas_tf, ds_dist, ds_val_dist,
                              manager, manager_issues, train_summary_writer, test_summary_writer)
     print("Training time: ", np.round(training_time, 2), ' seconds')
 
