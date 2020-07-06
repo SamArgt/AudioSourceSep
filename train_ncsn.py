@@ -22,9 +22,9 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
     def compute_loss(X, labels, batch_size, anneal_power=2.):
         used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
         pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
-        target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
+        target = - (pertubed_X - X) / (used_sigmas ** 2)
         scores = scorenet(pertubed_X, labels)
-        per_example_loss = tf.reduce_sum(1 / 2. * ((scores - target) ** 2), axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
+        per_example_loss = tf.reduce_sum(((scores - target) ** 2) / 2., axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
         return tf.nn.compute_average_loss(per_example_loss, global_batch_size=batch_size)
 
     def train_step(inputs):
@@ -136,7 +136,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
         # 10 time during training
         if (N_EPOCHS < 10) or (epoch % (N_EPOCHS // 10) == 0):
             with mirrored_strategy.scope():
-                samples = scorenet.sample(32, sigmas_np)
+                samples = scorenet.sample(32, sigmas.numpy())
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
                 figure = image_grid(samples, args.data_shape, args.img_type,
