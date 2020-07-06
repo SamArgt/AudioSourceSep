@@ -21,7 +21,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
 
     def compute_loss(X, labels, batch_size, anneal_power=2.):
         used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
-        pertubed_X = tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
+        pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
         target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
         scores = scorenet(pertubed_X, labels)
         per_example_loss = tf.reduce_sum(1 / 2. * ((scores - target) ** 2), axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
