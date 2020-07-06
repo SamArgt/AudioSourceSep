@@ -134,7 +134,6 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
 
         # Generate some samples and visualize them on tensorboard
         # 20 time during training
-        """
         if (N_EPOCHS < 20) or (epoch % (N_EPOCHS // 20) == 0):
             with mirrored_strategy.scope():
                 samples = scorenet.sample(32, sigmas)
@@ -150,8 +149,6 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
                     tf.summary.text(name="display error",
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
-        """
-
     save_path = manager.save()
     print("Model Saved at {}".format(save_path))
     training_time = time.time() - t0
