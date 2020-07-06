@@ -41,7 +41,7 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
 
     if model == 'ncsn':
         ds = ds.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds = ds.map(lambda x: (x, tf.random.uniform((1,), 0, num_classes, dtype=tf.int32)))
+        ds = ds.map(lambda x: (x, tf.random.uniform((), 0, num_classes, dtype=tf.int32)))
 
     ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds = ds.batch(global_batch_size, drop_remainder=True)

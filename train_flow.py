@@ -56,6 +56,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     # Display first generated samples
     with mirrored_strategy.scope():
         samples = flow.sample(32)
+    if args.img_type == "image":
+        samples += 0.5
     samples = samples.numpy().reshape([32] + args.data_shape)
     try:
         figure = image_grid(samples, args.data_shape, args.img_type,
@@ -141,6 +143,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             # Generate some samples and visualize them on tensorboard
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
+            if args.img_type == "image":
+                samples += 0.5
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
                 figure = image_grid(samples, args.data_shape, args.img_type,

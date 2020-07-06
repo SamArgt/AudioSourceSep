@@ -82,10 +82,10 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
     if data_shape[-1] == 1:
-        sample = sample[:, :, :, 0]
+        sample = np.squeeze(sample, axis=-1)
     for i, ax in enumerate(axes):
         if img_type == "image":
-            ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
+            ax.imshow(np.clip(sample[i], 0., 1.))
             ax.set_axis_off()
         elif img_type == "melspec":
             spec_db_sample = librosa.power_to_db(sample[i])

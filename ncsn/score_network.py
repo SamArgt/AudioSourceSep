@@ -219,6 +219,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
         self.ngf = ngf
         self.num_classes = num_classes
         self.act = act = tf.nn.elu
+        self.data_shape = input_shape
 
         self.begin_conv = tfk.layers.Conv2D(ngf, 3, strides=1, padding='same',
                                             input_shape=input_shape)
@@ -280,3 +281,25 @@ class CondRefineNetDilated(tfk.layers.Layer):
         output = self.act(output)
         output = self.end_conv(output)
         return output
+
+    def sample(self, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
+        """
+        Anneal Langevin dynamics
+        """
+        x_mod = tf.random.uniform([n_samples] + list(self.data_shape))
+        if return_arr:
+            x_arr = [x_mod]
+        for i, sigma in enumerate(sigmas):
+            labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
+            step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
+            for s in range(n_steps_each):
+                noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
+                grad = self.call(x_mod, labels)
+                x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
+                if return_arr:
+                    x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
+
+        if return_arr:
+            return x_arr
+        else:
+            return tf.clip_by_value(x_mod, 0., 1.)

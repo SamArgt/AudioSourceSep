@@ -1,13 +1,14 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from score_network import *
+from ncsn import score_network
+from flow_models import utils
 from pipeline import data_loader
 import argparse
 import time
 import os
 import sys
-from .train_utils import *
+from train_utils import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -20,10 +21,10 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
 
     with mirrored_strategy.scope():
         def compute_loss(X, labels, batch_size, anneal_power=2.):
-            used_sigmas = tf.constant(sigmas[tf.squeeze(labels).numpy()], dtype=tf.float32)
+            used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
             pertubed_X = tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
             target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
-            scores = score_net(pertubed_X, labels)
+            scores = scorenet(pertubed_X, labels)
             per_example_loss = tf.reduce_sum(1 / 2. * ((scores - target) ** 2), axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=batch_size)
 
@@ -53,20 +54,6 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
         per_replica_losses = mirrored_strategy.run(
             test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-
-    # Display first generated samples
-    with mirrored_strategy.scope():
-        samples = scorenet.sample(32, sigmas)
-    samples = samples.numpy().reshape([32] + args.data_shape)
-    try:
-        figure = image_grid(samples, args.data_shape, args.img_type,
-                            sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-        with train_summary_writer.as_default():
-            tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
-    except IndexError:
-        with train_summary_writer.as_default():
-            tf.summary.text(name="display error",
-                            data="Impossible to display spectrograms because of NaN values", step=0)
 
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
@@ -147,8 +134,9 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
                 min_val_loss = curr_val_loss
 
         # Generate some samples and visualize them on tensorboard
-        # 50 time during trainig
-        if (N_EPOCHS < 50) or (epoch % (N_EPOCHS // 50) == 0):
+        # 20 time during training
+        """
+        if (N_EPOCHS < 20) or (epoch % (N_EPOCHS // 20) == 0):
             with mirrored_strategy.scope():
                 samples = scorenet.sample(32, sigmas)
             samples = samples.numpy().reshape([32] + args.data_shape)
@@ -157,14 +145,13 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
                 with train_summary_writer.as_default():
                     tf.summary.image("32 generated samples", plot_to_image(figure),
-                                     max_outputs=50, step=epoch)
+                                     max_outputs=20, step=epoch)
             except IndexError:
                 with train_summary_writer.as_default():
                     tf.summary.text(name="display error",
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
-
-
+        """
 
     save_path = manager.save()
     print("Model Saved at {}".format(save_path))
@@ -173,7 +160,9 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
 
 
 def main(args):
-    sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
+    sigmas = tf.constant(np.logspace(np.log(args.sigma1) / np.log(10),
+                                     np.log(args.sigmaL) / np.log(10),
+                                     num=args.num_classes), dtype=tf.float32)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
@@ -200,8 +189,7 @@ def main(args):
         else:
             dataset = args.dataset
 
-        output_dirname = 'ncsn' + '_' + dataset + '_' + str(args.L) + '_' + \
-            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+        output_dirname = 'ncsn' + '_' + dataset + str(args.n_filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
             output_dirname += '_logit'
@@ -233,26 +221,32 @@ def main(args):
 
     # Load Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                                     mirrored_strategy=mirrored_strategy, model='ncsn',
-                                                                                     num_classes=args.num_classes)
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
+                                                                                        mirrored_strategy=mirrored_strategy, model='ncsn',
+                                                                                        num_classes=args.num_classes, use_logit=args.use_logit)
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
                                                                                            reshuffle=True, model='ncsn',
                                                                                            num_classes=args.num_classes,
-                                                                                           mirrored_strategy=mirrored_strategy)
+                                                                                           mirrored_strategy=mirrored_strategy,
+                                                                                           use_logt=args.use_logit)
         args.test_batch_size = args.batch_size
     args.n_train = n_train
     # Display original images
     with train_summary_writer.as_default():
-        sample = list(ds.take(1).as_numpy_iterator())[0]
+        sample, _ = list(ds.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
-    # Build ScorNet
-    scorenet = CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, logit_transform=args.use_logit)
+    # Build ScoreNet
+    scorenet = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                  args.num_classes, logit_transform=args.use_logit)
+    with mirrored_strategy.scope():
+        for elt in ds.take(1):
+            X, y = elt
+            _ = scorenet(X, y)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
@@ -332,12 +326,15 @@ if __name__ == '__main__':
                         help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adamax", help="adam or adamax")
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--clipvalue', type=float, default=None,
                         help="Clip value for Adam optimizer")
     parser.add_argument('--clipnorm', type=float, default=None,
                         help='Clip norm for Adam optimize')
+
+    # Preprocessing parameters
+    parser.add_argument("--use_logit", action="store_true")
 
     args = parser.parse_args()
 
