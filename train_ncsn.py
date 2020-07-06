@@ -187,7 +187,7 @@ def main(args):
         else:
             dataset = args.dataset
 
-        output_dirname = 'ncsn' + '_' + dataset + str(args.n_filters) + '_' + str(args.batch_size)
+        output_dirname = 'ncsn' + '_' + dataset + '_' + str(args.n_filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
             output_dirname += '_logit'
