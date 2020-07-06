@@ -182,6 +182,7 @@ def main(args):
         args.dataset = os.path.abspath(args.dataset)
         args.img_type = "melspec"
         args.preprocessing_glow = "melspec"
+        args.instrument = os.path.split(args.dataset)[-1]
 
     # output directory
     if args.restore is not None:
@@ -317,7 +318,6 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
-    parser.add_argument("--instrument", type=str, default="piano")
 
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)

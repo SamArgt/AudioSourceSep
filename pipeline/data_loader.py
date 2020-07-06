@@ -6,7 +6,10 @@ import re
 
 
 def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
-                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True):
+                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True,
+                 model='flow', num_classes=10):
+
+    assert model == 'flow' or model == 'ncsn'
 
     if dataset == 'mnist':
         data_shape = (32, 32, 1)
@@ -25,15 +28,20 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
     if dataset == 'mnist':
         ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
 
-    if preprocessing:
+    if preprocessing and model == 'flow':
         ds = ds.map(lambda x: x / 256. - 0.5)
-        if noise is not None:
-            ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
-        ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                    minval=0., maxval=1. / 256.))
-        if use_logit:
-            ds = ds.map(lambda x: alpha + (1 - alpha) * x)
-            ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+
+    if noise is not None:
+        ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
+    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
+                                                minval=0., maxval=1. / 256.))
+    if use_logit:
+        ds = ds.map(lambda x: alpha + (1 - alpha) * x)
+        ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
+
+    if model == 'ncsn':
+        ds = ds.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
+        ds = ds.map(lambda x: (x, tf.random.uniform((1,), 0, num_classes, dtype=tf.int32)))
 
     ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds = ds.batch(global_batch_size, drop_remainder=True)
@@ -47,16 +55,20 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
         ds_val = ds_val.map(lambda x: tf.pad(
             x, tf.constant([[2, 2], [2, 2], [0, 0]])))
 
-    if preprocessing:
+    if preprocessing and model == 'flow':
         ds_val = ds_val.map(lambda x: x / 256. - 0.5)
         ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
 
-        if noise is not None:
-            ds_val = ds_val.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
+    if noise is not None:
+        ds_val = ds_val.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
 
-        if use_logit:
-            ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x)
-            ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+    if use_logit:
+        ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x)
+        ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
+
+    if model == 'ncsn':
+        ds_val = ds_val.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
+        ds_val = ds_val.map(lambda x: (x, tf.random.uniform((1,), 0, num_classes, dtype=tf.int32)))
 
     ds_val = ds_val.batch(5000)
 

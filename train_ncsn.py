@@ -1,8 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from flow_models import utils
-from flow_models import flow_builder
+from score_network import *
 from pipeline import data_loader
 import argparse
 import time
@@ -14,31 +13,33 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
-def train(mirrored_strategy, args, scorenet, optimizer, ds_dist, ds_val_dist,
+def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_dist,
           manager, manager_issues, train_summary_writer, test_summary_writer):
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
 
     with mirrored_strategy.scope():
-        def compute_train_loss(X):
-            per_example_loss = -scorenet.log_prob(X)
-            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
-
-        def compute_test_loss(X):
-            per_example_loss = -scorenet.log_prob(X)
-            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.test_batch_size)
+        def compute_loss(X, labels, batch_size, anneal_power=2.):
+            used_sigmas = tf.constant(sigmas[tf.squeeze(labels).numpy()], dtype=tf.float32)
+            pertubed_X = tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
+            target = - 1 / (used_sigmas ** 2) * (pertubed_X - X)
+            scores = score_net(pertubed_X, labels)
+            per_example_loss = tf.reduce_sum(1 / 2. * ((scores - target) ** 2), axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=batch_size)
 
     def train_step(inputs):
+        X, labels = inputs
         with tf.GradientTape() as tape:
             tape.watch(scorenet.trainable_variables)
-            loss = compute_train_loss(inputs)
+            loss = compute_loss(X, labels, args.batch_size)
         gradients = tape.gradient(loss, scorenet.trainable_variables)
         optimizer.apply_gradients(
             list(zip(gradients, scorenet.trainable_variables)))
         return loss
 
     def test_step(inputs):
-        loss = compute_test_loss(inputs)
+        X, labels = inputs
+        loss = compute_loss(X, labels, args.test_batch_size)
         return loss
 
     @tf.function
@@ -55,7 +56,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, ds_dist, ds_val_dist,
 
     # Display first generated samples
     with mirrored_strategy.scope():
-        samples = scorenet.sample(32)
+        samples = scorenet.sample(32, sigmas)
     samples = samples.numpy().reshape([32] + args.data_shape)
     try:
         figure = image_grid(samples, args.data_shape, args.img_type,
@@ -127,7 +128,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, ds_dist, ds_val_dist,
                     prev_history_loss_avg = curr_loss_history
                 history_loss_avg.reset_states()
 
-        # every 10 epochs
+        # 100 times during training
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
@@ -138,9 +139,18 @@ def train(mirrored_strategy, args, scorenet, optimizer, ds_dist, ds_val_dist,
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), test_loss.result()))
-            # Generate some samples and visualize them on tensorboard
+            # If minimum validation loss is reached, save model
+            curr_val_loss = test_loss.result()
+            if curr_val_loss < min_val_loss:
+                save_path = manager.save()
+                print("Model Saved at {}".format(save_path))
+                min_val_loss = curr_val_loss
+
+        # Generate some samples and visualize them on tensorboard
+        # 50 time during trainig
+        if (N_EPOCHS < 50) or (epoch % (N_EPOCHS // 50) == 0):
             with mirrored_strategy.scope():
-                samples = flow.sample(32)
+                samples = scorenet.sample(32, sigmas)
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
                 figure = image_grid(samples, args.data_shape, args.img_type,
@@ -154,14 +164,181 @@ def train(mirrored_strategy, args, scorenet, optimizer, ds_dist, ds_val_dist,
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
 
-            # If minimum validation loss is reached, save model
-            curr_val_loss = test_loss.result()
-            if curr_val_loss < min_val_loss:
-                save_path = manager.save()
-                print("Model Saved at {}".format(save_path))
-                min_val_loss = curr_val_loss
+
 
     save_path = manager.save()
     print("Model Saved at {}".format(save_path))
     training_time = time.time() - t0
     return training_time, save_path
+
+
+def main(args):
+    sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
+
+    # miscellaneous paramaters
+    if args.dataset == 'mnist':
+        args.data_shape = [32, 32, 1]
+        args.img_type = "image"
+        args.preprocessing_glow = None
+    elif args.dataset == 'cifar10':
+        args.data_shape = [32, 32, 3]
+        args.img_type = "image"
+        args.preprocessing_glow = None
+    else:
+        args.data_shape = [args.height, args.width, 1]
+        args.dataset = os.path.abspath(args.dataset)
+        args.img_type = "melspec"
+        args.preprocessing_glow = "melspec"
+        args.instrument = os.path.split(args.dataset)[-1]
+
+    # output directory
+    if args.restore is not None:
+        abs_restore_path = os.path.abspath(args.restore)
+    if args.output == 'trained_ncsn':
+        if args.dataset != 'mnist' and args.dataset != 'cifar10':
+            dataset = args.instrument
+        else:
+            dataset = args.dataset
+
+        output_dirname = 'ncsn' + '_' + dataset + '_' + str(args.L) + '_' + \
+            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
+
+        if args.use_logit:
+            output_dirname += '_logit'
+        if args.restore is not None:
+            output_dirname += '_ctd'
+
+        output_dirpath = os.path.join(args.output, output_dirname)
+    else:
+        output_dirpath = args.output
+    try:
+        os.mkdir(output_dirpath)
+        os.chdir(output_dirpath)
+    except FileExistsError:
+        os.chdir(output_dirpath)
+    log_file = open('out.log', 'w')
+    if args.debug is False:
+        sys.stdout = log_file
+
+    print("TensorFlow version: {}".format(tf.__version__))
+    print("Eager execution: {}".format(tf.executing_eagerly()))
+
+    # Set up tensorboard
+    train_summary_writer, test_summary_writer = setUp_tensorboard()
+
+    # Distributed Strategy
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+    print("Number of devices: {}".format(
+        mirrored_strategy.num_replicas_in_sync))
+
+    # Load Dataset
+    if (args.dataset == "mnist") or (args.dataset == "cifar10"):
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
+                                                                                     mirrored_strategy=mirrored_strategy, model='ncsn',
+                                                                                     num_classes=args.num_classes)
+    else:
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
+                                                                                           reshuffle=True, model='ncsn',
+                                                                                           num_classes=args.num_classes,
+                                                                                           mirrored_strategy=mirrored_strategy)
+        args.test_batch_size = args.batch_size
+    args.n_train = n_train
+    # Display original images
+    with train_summary_writer.as_default():
+        sample = list(ds.take(1).as_numpy_iterator())[0]
+        sample = sample[:32]
+        figure = image_grid(sample, args.data_shape, args.img_type,
+                            sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+        tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
+
+    # Build ScorNet
+    scorenet = CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, logit_transform=args.use_logit)
+
+    # Set up optimizer
+    optimizer = setUp_optimizer(mirrored_strategy, args)
+
+    # Set up checkpoint
+    ckpt, manager, manager_issues = setUp_checkpoint(
+        mirrored_strategy, args, scorenet, optimizer)
+
+    # restore
+    if args.restore is not None:
+        with mirrored_strategy.scope():
+            if args.latest:
+                checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
+                assert checkpoint_restore_path is not None, abs_restore_path
+            else:
+                checkpoint_restore_path = abs_restore_path
+            status = ckpt.restore(checkpoint_restore_path)
+            status.assert_existing_objects_matched()
+            assert optimizer.iterations > 0
+            print("Model Restored from {}".format(abs_restore_path))
+
+    # Display parameters
+    params_dict = vars(args)
+    template = ''
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
+
+    total_trainable_variables = utils.total_trainable_variables(scorenet)
+    print("Total Trainable Variables: ", total_trainable_variables)
+
+    with train_summary_writer.as_default():
+        tf.summary.text(name='Parameters',
+                        data=tf.constant(template), step=0)
+        tf.summary.text(name="Total Trainable Variables",
+                        data=tf.constant(str(total_trainable_variables)), step=0)
+
+    # Train
+    training_time, _ = train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_dist,
+                             manager, manager_issues, train_summary_writer, test_summary_writer)
+    print("Training time: ", np.round(training_time, 2), ' seconds')
+
+    log_file.close()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Train Flow model')
+    # dataset parameters
+    parser.add_argument('--dataset', type=str, default="mnist",
+                        help="mnist or cifar10 or directory to tfrecords")
+
+    # Spectrograms Parameters
+    parser.add_argument("--height", type=int, default=96)
+    parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--sampling_rate", type=int, default=16000)
+    parser.add_argument("--fmin", type=int, default=125)
+    parser.add_argument("--fmax", type=int, default=7600)
+
+    # Output and Restore Directory
+    parser.add_argument('--output', type=str, default='trained_ncsn',
+                        help='output dirpath for savings')
+    parser.add_argument('--restore', type=str, default=None,
+                        help='directory of saved weights (optional)')
+    parser.add_argument('--latest', action="store_true", help="Restore latest checkpoint from restore directory")
+    parser.add_argument('--debug', action="store_true")
+
+    # Model hyperparameters
+    parser.add_argument("--n_filters", type=int, default=64,
+                        help='number of filters in the Score Network')
+    parser.add_argument("--sigma1", type=float, default=1.)
+    parser.add_argument("--sigmaL", type=float, default=0.01)
+    parser.add_argument("--num_classes", type=int, default=10)
+
+    # Optimization parameters
+    parser.add_argument('--n_epochs', type=int, default=400,
+                        help='number of epochs to train')
+    parser.add_argument("--optimizer", type=str,
+                        default="adamax", help="adam or adamax")
+    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--clipvalue', type=float, default=None,
+                        help="Clip value for Adam optimizer")
+    parser.add_argument('--clipnorm', type=float, default=None,
+                        help='Clip norm for Adam optimize')
+
+    args = parser.parse_args()
+
+    main(args)

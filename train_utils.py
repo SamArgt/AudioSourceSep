@@ -43,12 +43,12 @@ def setUp_tensorboard():
     return train_summary_writer, test_summary_writer
 
 
-def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
+def setUp_checkpoint(mirrored_strategy, args, model, optimizer):
 
     # Checkpoint object
     with mirrored_strategy.scope():
         ckpt = tf.train.Checkpoint(
-            variables=flow.variables, optimizer=optimizer)
+            variables=model.variables, optimizer=optimizer)
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
         # Debugging: if huge jump in the loss, save weights here
         if args.debug:

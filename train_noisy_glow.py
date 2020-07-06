@@ -89,7 +89,7 @@ def image_grid(sample, dataset):
 
 
 def main(args):
-
+    # Fine tune model serially from sigmaL to sigma1
     sigmas = np.logspace(np.log(args.sigmaL) / np.log(10), np.log(args.sigma1) / np.log(10), num=args.n_sigmas)
     abs_restore_path = os.path.abspath(args.RESTORE)
 
