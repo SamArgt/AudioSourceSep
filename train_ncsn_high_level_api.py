@@ -56,7 +56,7 @@ class CustomModel(tfk.Model):
             step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
             for s in range(n_steps_each):
                 noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
-                grad = self(x_mod, labels)
+                grad = self((x_mod, labels))
                 x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
                 if return_arr:
                     x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
@@ -202,7 +202,7 @@ def main(args):
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir)
 
     def display_generated_samples(epoch, logs):
-        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
+        if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
                     gen_samples = model.sample(32, sigmas_np)
@@ -214,6 +214,9 @@ def main(args):
             sample_image = plot_to_image(figure)
             with file_writer.as_default():
                 tf.summary.image("Generated Samples", sample_image, step=epoch)
+
+        else:
+            pass
 
     gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=display_generated_samples)
 
