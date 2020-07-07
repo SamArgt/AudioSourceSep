@@ -27,7 +27,7 @@ class CustomModel(tfk.Model):
     def train_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal([self.batch_size] + list(self.data_shape)) * \
+            tf.random.normal(X.shape) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
@@ -42,7 +42,7 @@ class CustomModel(tfk.Model):
     def test_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal([self.batch_size] + list(self.data_shape)) * \
+            tf.random.normal(X.shape) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         scores = self((pertubed_X, labels))
