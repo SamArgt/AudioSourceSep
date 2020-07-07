@@ -159,7 +159,7 @@ def main(args):
             used_sigma = tf.gather(params=sigmas_tf, indices=label)
             X = tf.cast(image, tf.float32)
             X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
-            X / 256. + tf.random.uniform(X.shape) / 256.
+            X = X / 256. + tf.random.uniform(X.shape) / 256.
             perturbed_X = X + tf.random.normal(X.shape) * used_sigma
             return X, perturbed_X, label, used_sigma
 
