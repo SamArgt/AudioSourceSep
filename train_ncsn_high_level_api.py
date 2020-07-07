@@ -37,10 +37,7 @@ class CustomModel(tfk.Model):
         return {'loss': loss}
 
     def test_step(self, data):
-        X, labels, used_sigmas = data
-        pertubed_X = X + \
-            tf.random.normal([self.local_batch_size] + list(args.data_shape)) * \
-            tf.reshape(used_sigmas, (-1, 1, 1, 1))
+        X, pertubed_X, labels, used_sigmas = data
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         scores = self((pertubed_X, labels))
         loss = self.compiled_loss(target - scores, used_sigmas)
