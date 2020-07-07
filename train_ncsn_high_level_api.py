@@ -28,7 +28,7 @@ class CustomModel(tfk.Model):
         X, pertubed_X, labels, used_sigmas = data
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
-            tape.watch(self.trainable_variables)
+            # tape.watch(self.trainable_variables)
             scores = self((pertubed_X, labels), training=True)
             loss = self.compiled_loss(target - scores, used_sigmas)
             loss = tf.reduce_mean(loss)
