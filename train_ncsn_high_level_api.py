@@ -15,7 +15,7 @@ tfk = tf.keras
 
 class CustomModel(tfk.Model):
     def __init__(self, args, name="ScoreNetworkModel"):
-        super().__init__(name=name)
+        super(CustomModel, self).__init__(name=name)
         self.scorenet = score_network.CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, args.use_logit)
         self.data_shape = args.data_shape
         self.local_batch_size = args.local_batch_size
@@ -27,14 +27,15 @@ class CustomModel(tfk.Model):
     def train_step(self, data):
         X, pertubed_X, labels, used_sigmas = data
         target = - (pertubed_X - X) / (used_sigmas ** 2)
+        trainable_vars = self.trainable_variables
         with tf.GradientTape() as tape:
-            tape.watch(scorenet.trainable_variables)
+            tape.watch(trainable_vars)
             scores = self((pertubed_X, labels), training=True)
             loss = self.compiled_loss(target - scores, used_sigmas)
             loss = tf.reduce_mean(loss)
-        gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = tape.gradient(loss, trainable_vars)
         self.optimizer.apply_gradients(
-            zip(gradients, self.trainable_variables))
+            zip(gradients, trainable_vars))
         return {'loss': loss}
 
     def test_step(self, data):
