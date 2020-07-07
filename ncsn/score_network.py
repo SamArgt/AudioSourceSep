@@ -17,11 +17,11 @@ class CondCRPBlock(tfk.layers.Layer):
         self.act = tf.keras.layers.Activation(act)
         self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same', name=name + "/AveragePooling2D")
 
-    def call(self, x, y):
+    def call(self, x, y, training=False):
         x = self.act(x)
         path = tf.identity(x)
         for i in range(self.n_stages):
-            path = self.norms[i](path, y)
+            path = self.norms[i](path, y, training=training)
             path = self.meanpool(path)
             path = self.convs[i](path)
             x += path
@@ -44,11 +44,11 @@ class CondRCUBlock(tfk.layers.Layer):
         self.n_stages = n_stages
         self.act = act
 
-    def call(self, x, y):
+    def call(self, x, y, training=False):
         for i in range(self.n_blocks):
             residual = tf.identity(x)
             for j in range(self.n_stages):
-                x = self.norms[i * self.n_stages + j](x, y)
+                x = self.norms[i * self.n_stages + j](x, y, training=training)
                 x = self.convs[i * self.n_stages + j](x)
             x += residual
         return x
@@ -67,9 +67,9 @@ class CondMSFBlock(tfk.layers.Layer):
                                                 name=name + '/conv_{}'.format(i + 1)))
             self.norms.append(normalizer(in_planes[i], num_classes, bias=True, name=name + '/norm_{}'.format(i + 1)))
 
-    def call(self, xs, y, shape):
+    def call(self, xs, y, shape, training=False):
         for i in range(len(self.convs)):
-            h = self.norms[i](xs[i], y)
+            h = self.norms[i](xs[i], y, training=training)
             h = self.convs[i](h)
             h = tf.image.resize(h, size=shape)
             if i == 0:
@@ -100,20 +100,20 @@ class CondRefineBlock(tfk.layers.Layer):
 
         self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act, name=name + "/CondCRPBlock")
 
-    def call(self, xs, y, output_shape):
+    def call(self, xs, y, output_shape, training=False):
         assert isinstance(xs, tuple) or isinstance(xs, list)
         hs = []
         for i in range(len(xs)):
-            h = self.adapt_convs[i](xs[i], y)
+            h = self.adapt_convs[i](xs[i], y, training=training)
             hs.append(h)
 
         if self.n_blocks > 1:
-            h = self.msf(hs, y, output_shape)
+            h = self.msf(hs, y, output_shape, training=training)
         else:
             h = hs[0]
 
-        h = self.crp(h, y)
-        h = self.output_convs(h, y)
+        h = self.crp(h, y, training=training)
+        h = self.output_convs(h, y, training=training)
 
         return h
 
@@ -162,11 +162,11 @@ class ConditionalResidualBlock(tfk.layers.Layer):
 
         self.normalize1 = normalization(input_dim, num_classes, name=name + "/norm1")
 
-    def call(self, x, y):
-        output = self.normalize1(x, y)
+    def call(self, x, y, training=False):
+        output = self.normalize1(x, y, training=training)
         output = self.act(output)
         output = self.conv1(output)
-        output = self.normalize2(output, y)
+        output = self.normalize2(output, y, training=training)
         output = self.act(output)
         output = self.conv2(output)
 
@@ -197,11 +197,11 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
                                                    embeddings_initializer="zeros",
                                                    name=name + '/beta_embed')
 
-    def call(self, x, y):
+    def call(self, x, y, training=False):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
         m, v = tf.nn.moments(means, axes=-1, keepdims=True)
         means = (means - m) / tf.math.sqrt(v + 1e-5)
-        h = self.instance_norm(x)
+        h = self.instance_norm(x, training=training)
         gamma = self.gamma_embed(y)
         gamma = tf.reshape(gamma, (-1, 1, 1, self.num_features))
         alpha = self.alpha_embed(y)
@@ -261,54 +261,28 @@ class CondRefineNetDilated(tfk.layers.Layer):
         self.refine3 = CondRefineBlock([2 * self.ngf, 2 * self.ngf], self.ngf, self.num_classes, self.norm, act=act, name="refine3")
         self.refine4 = CondRefineBlock([self.ngf, self.ngf], self.ngf, self.num_classes, self.norm, act=act, end=True, name="refine4")
 
-    def _compute_cond_module(self, module, x, y):
+    def _compute_cond_module(self, module, x, y, training=False):
         for m in module:
-            x = m(x, y)
+            x = m(x, y, training=training)
         return x
 
-    def call(self, x, y):
+    def call(self, x, y, training=False):
         if not self.logit_transform:
             x = 2 * x - 1.
 
         output = self.begin_conv(x)
 
-        layer1 = self._compute_cond_module(self.res1, output, y)
-        layer2 = self._compute_cond_module(self.res2, layer1, y)
-        layer3 = self._compute_cond_module(self.res3, layer2, y)
-        layer4 = self._compute_cond_module(self.res4, layer3, y)
+        layer1 = self._compute_cond_module(self.res1, output, y, training=training)
+        layer2 = self._compute_cond_module(self.res2, layer1, y, training=training)
+        layer3 = self._compute_cond_module(self.res3, layer2, y, training=training)
+        layer4 = self._compute_cond_module(self.res4, layer3, y, training=training)
 
-        ref1 = self.refine1([layer4], y, layer4.shape[1:3])
-        ref2 = self.refine2([layer3, ref1], y, layer3.shape[1:3])
-        ref3 = self.refine3([layer2, ref2], y, layer2.shape[1:3])
-        output = self.refine4([layer1, ref3], y, layer1.shape[1:3])
+        ref1 = self.refine1([layer4], y, layer4.shape[1:3], training=training)
+        ref2 = self.refine2([layer3, ref1], y, layer3.shape[1:3], training=training)
+        ref3 = self.refine3([layer2, ref2], y, layer2.shape[1:3], training=training)
+        output = self.refine4([layer1, ref3], y, layer1.shape[1:3], training=training)
 
-        output = self.normalizer(output, y)
+        output = self.normalizer(output, y, training=training)
         output = self.act(output)
         output = self.end_conv(output)
         return output
-
-    def sample(self, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
-        """
-        Anneal Langevin dynamics
-        """
-        x_mod = tf.random.uniform([n_samples] + list(self.data_shape))
-        if return_arr:
-            x_arr = [x_mod]
-        for i, sigma in enumerate(sigmas):
-            labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
-            step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
-            for s in range(n_steps_each):
-                noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
-                grad = self(x_mod, labels)
-                x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
-                if return_arr:
-                    x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
-
-        if return_arr:
-            return x_arr
-        else:
-            return tf.clip_by_value(x_mod, 0., 1.)
-
-
-
-
