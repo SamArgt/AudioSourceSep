@@ -73,9 +73,13 @@ class CustomModel(tfk.Model):
             return tf.clip_by_value(x_mod, 0., 1.)
 
 
-def custom_loss(target_scores_diff, used_sigmas):
-    loss = tf.reduce_sum(tf.square(target_scores_diff) / 2., axis=[1, 2, 3]) * (used_sigmas ** 2.)
-    return tf.reduce_mean(loss, axis=0)
+class CustomLoss(tfk.losses.Loss):
+    def __init__(self):
+        super().__init__()
+
+    def call(self, target_scores_diff, used_sigmas):
+        return tf.reduce_sum(tf.square(target_scores_diff) / 2., axis=[1, 2, 3]) * (used_sigmas ** 2.)
+
 
 def main(args):
 
@@ -194,7 +198,7 @@ def main(args):
     else:
         model = CustomModel(args)
 
-    model.compile(optimizer=optimizer, loss=custom_loss)
+    model.compile(optimizer=optimizer, loss=CustomLoss())
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
