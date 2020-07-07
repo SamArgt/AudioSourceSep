@@ -197,7 +197,7 @@ def main(args):
         model = CustomModel(args)
 
     model.compile(optimizer=optimizer, loss=CustomLoss())
-    model.build([None] + list(args.data_shape))
+    model.build(([None] + list(args.data_shape), [None]))
 
     print(model.summary())
 
