@@ -200,7 +200,7 @@ def main(args):
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch",
-                                                     profile_batch="500,520", embeddings_freq=0, histogram_freq=1)
+                                                     profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
 
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
