@@ -25,10 +25,7 @@ class CustomModel(tfk.Model):
         return self.scorenet(X, labels)
 
     def train_step(self, data):
-        X, labels, used_sigmas = data
-        pertubed_X = X + \
-            tf.random.normal([self.local_batch_size] + list(args.data_shape)) * \
-            tf.reshape(used_sigmas, (-1, 1, 1, 1))
+        X, pertubed_X, labels, used_sigmas = data
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
             scores = self((pertubed_X, labels))
@@ -158,12 +155,13 @@ def main(args):
         BATCH_SIZE = args.batch_size
 
         def preprocess(image):
-            image = tf.cast(image, tf.float32)
-            image = tf.pad(image, tf.constant([[2, 2], [2, 2], [0, 0]]))
-            image = image / 256. + tf.random.uniform(image.shape) / 256.
             label = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
             used_sigma = tf.gather(params=sigmas_tf, indices=label)
-            return image, label, used_sigma
+            X = tf.cast(image, tf.float32)
+            X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
+            X / 256. + tf.random.uniform(X.shape) / 256.
+            perturbed_X = X + tf.random.normal(X.shape) * used_sigma
+            return X, perturbed_X, label, used_sigma
 
         train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
         eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE)
@@ -183,7 +181,7 @@ def main(args):
     logdir = os.path.join("logs", "samples") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     file_writer = tf.summary.create_file_writer(logdir)
     with file_writer.as_default():
-        sample, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
+        sample, _, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
