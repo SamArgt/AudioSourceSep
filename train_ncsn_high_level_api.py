@@ -20,7 +20,8 @@ class CustomModel(tfk.Model):
         self.data_shape = args.data_shape
         self.local_batch_size = args.local_batch_size
 
-    def call(self, X, labels, training=False):
+    def call(self, inputs, training=False):
+        X, labels = inputs
         return self.scorenet(X, labels, training=training)
 
     def train_step(self, data):
@@ -28,7 +29,7 @@ class CustomModel(tfk.Model):
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
             tape.watch(scorenet.trainable_variables)
-            scores = self(pertubed_X, labels, training=True)
+            scores = self((pertubed_X, labels), training=True)
             loss = self.compiled_loss(target - scores, used_sigmas)
             loss = tf.reduce_mean(loss)
         gradients = tape.gradient(loss, self.trainable_variables)
@@ -39,7 +40,7 @@ class CustomModel(tfk.Model):
     def test_step(self, data):
         X, pertubed_X, labels, used_sigmas = data
         target = - (pertubed_X - X) / (used_sigmas ** 2)
-        scores = self(pertubed_X, labels, training=False)
+        scores = self((pertubed_X, labels), training=False)
         loss = self.compiled_loss(target - scores, used_sigmas)
         loss = tf.reduce_mean(loss)
         return {'loss': loss}
