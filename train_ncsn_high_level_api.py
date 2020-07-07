@@ -27,7 +27,7 @@ class CustomModel(tfk.Model):
     def train_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal(X.shape) * \
+            tf.random.normal([args.local_batch_size] + list(args.data_shape)) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
@@ -42,7 +42,7 @@ class CustomModel(tfk.Model):
     def test_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal(X.shape) * \
+            tf.random.normal([args.local_batch_size] + list(args.data_shape)) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         scores = self((pertubed_X, labels))
@@ -142,8 +142,10 @@ def main(args):
         mirrored_strategy = tf.distribute.MirroredStrategy()
         print("Number of devices: {}".format(
             mirrored_strategy.num_replicas_in_sync))
+        args.local_batch_size = args.batch_size // mirrored_strategy.num_replicas_in_sync
     else:
         mirrored_strategy = None
+        args.local_batch_size = args.batch_size
 
     # Load Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
