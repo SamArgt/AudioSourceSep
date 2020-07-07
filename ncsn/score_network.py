@@ -15,11 +15,11 @@ class CondCRPBlock(tfk.layers.Layer):
             self.norms.append(normalizer(features, num_classes, bias=True, name=name + '/norm_{}'.format(i + 1)))
         self.n_stages = n_stages
         self.act = tf.keras.layers.Activation(act)
-        self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same')
+        self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same', name=name + "/AveragePooling2D")
 
     def call(self, x, y):
         x = self.act(x)
-        path = x
+        path = tf.identity(x)
         for i in range(self.n_stages):
             path = self.norms[i](path, y)
             path = self.meanpool(path)
@@ -46,7 +46,7 @@ class CondRCUBlock(tfk.layers.Layer):
 
     def call(self, x, y):
         for i in range(self.n_blocks):
-            residual = x
+            residual = tf.identity(x)
             for j in range(self.n_stages):
                 x = self.norms[i * self.n_stages + j](x, y)
                 x = self.convs[i * self.n_stages + j](x)
@@ -68,12 +68,14 @@ class CondMSFBlock(tfk.layers.Layer):
             self.norms.append(normalizer(in_planes[i], num_classes, bias=True, name=name + '/norm_{}'.format(i + 1)))
 
     def call(self, xs, y, shape):
-        sums = tf.zeros(shape=(xs[0].shape[0], shape[0], shape[1], self.features))
         for i in range(len(self.convs)):
             h = self.norms[i](xs[i], y)
             h = self.convs[i](h)
             h = tf.image.resize(h, size=shape)
-            sums += h
+            if i == 0:
+                sums = tf.identity(h)
+            else:
+                sums += h
         return sums
 
 
@@ -91,12 +93,12 @@ class CondRefineBlock(tfk.layers.Layer):
                              name=name + '/CondRCUBlock_{}'.format(i + 1))
             )
 
-        self.output_convs = CondRCUBlock(features, 3 if end else 1, 2, num_classes, normalizer, act)
+        self.output_convs = CondRCUBlock(features, 3 if end else 1, 2, num_classes, normalizer, act, name=name + "/CondRCUBlock_output")
 
         if not start:
-            self.msf = CondMSFBlock(in_planes, features, num_classes, normalizer)
+            self.msf = CondMSFBlock(in_planes, features, num_classes, normalizer, name=name + '/CondMSFBlock')
 
-        self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act)
+        self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act, name=name + "/CondCRPBlock")
 
     def call(self, xs, y, output_shape):
         assert isinstance(xs, tuple) or isinstance(xs, list)
@@ -127,38 +129,38 @@ class ConditionalResidualBlock(tfk.layers.Layer):
         if resample == 'down':
             if dilation is not None:
                 self.conv1 = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
-                self.normalize2 = normalization(input_dim, num_classes)
+                                               padding='same', name=name + '/conv1')
+                self.normalize2 = normalization(input_dim, num_classes, name=name + '/norm2')
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
+                                               padding='same', name=name + "/conv2")
                 self.conv_shortcut = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same')
+                                                       padding='same', name=name + '/shortcut')
             else:
-                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False)
-                self.normalize2 = normalization(input_dim, num_classes)
+                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False, name=name + '/conv1')
+                self.normalize2 = normalization(input_dim, num_classes, name=name + '/norm2')
                 self.conv2 = tfk.Sequential([tfk.layers.Conv2D(output_dim, 3, padding='same'),
-                                             tfk.layers.AveragePooling2D(pool_size=2)])
+                                             tfk.layers.AveragePooling2D(pool_size=2)], name=name + "/conv2")
                 self.conv_shortcut = tfk.Sequential([tfk.layers.Conv2D(output_dim, 1, padding='same'),
-                                                     tfk.layers.AveragePooling2D(pool_size=2)])
+                                                     tfk.layers.AveragePooling2D(pool_size=2)], name=name + "/shortcut")
 
         elif resample is None:
             if dilation is not None:
                 self.conv_shortcut = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same')
+                                                       padding='same', name=name + "shortcut")
                 self.conv1 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
-                self.normalize2 = normalization(output_dim, num_classes)
+                                               padding='same', name=name + '/conv1')
+                self.normalize2 = normalization(output_dim, num_classes, name=name + '/norm2')
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
+                                               padding='same', name=name + "/conv2")
             else:
-                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
-                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
-                self.normalize2 = normalization(output_dim, num_classes)
-                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
+                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/shortcut")
+                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/conv1")
+                self.normalize2 = normalization(output_dim, num_classes, name=name + "/norm2")
+                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/conv2")
         else:
             raise Exception('invalid resample value')
 
-        self.normalize1 = normalization(input_dim, num_classes)
+        self.normalize1 = normalization(input_dim, num_classes, name=name + "/norm1")
 
     def call(self, x, y):
         output = self.normalize1(x, y)
@@ -169,7 +171,7 @@ class ConditionalResidualBlock(tfk.layers.Layer):
         output = self.conv2(output)
 
         if self.output_dim == self.input_dim and self.resample is None:
-            shortcut = x
+            shortcut = tf.identity(x)
         else:
             shortcut = self.conv_shortcut(x)
 
@@ -181,16 +183,19 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         super(ConditionalInstanceNorm2dPlus, self).__init__(name=name)
         self.num_features = num_features
         self.bias = bias
-        self.instance_norm = tfa.layers.InstanceNormalization()
+        self.instance_norm = tfa.layers.InstanceNormalization(name=name + '/instance_norm')
         self.gamma_embed = tfk.layers.Embedding(num_classes, num_features,
                                                 embeddings_initializer=tf.random_normal_initializer(mean=0.0,
-                                                                                                    stddev=0.02))
+                                                                                                    stddev=0.02),
+                                                name=name + '/gamma_embed')
         self.alpha_embed = tfk.layers.Embedding(num_classes, num_features,
                                                 embeddings_initializer=tf.random_normal_initializer(mean=0.0,
-                                                                                                    stddev=0.02))
+                                                                                                    stddev=0.02),
+                                                name=name + '/alpha_embed')
         if bias:
             self.beta_embed = tfk.layers.Embedding(num_classes, num_features,
-                                                   embeddings_initializer="zeros")
+                                                   embeddings_initializer="zeros",
+                                                   name=name + '/beta_embed')
 
     def call(self, x, y):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
@@ -222,10 +227,10 @@ class CondRefineNetDilated(tfk.layers.Layer):
         self.data_shape = input_shape
 
         self.begin_conv = tfk.layers.Conv2D(ngf, 3, strides=1, padding='same',
-                                            input_shape=input_shape)
-        self.normalizer = self.norm(ngf, self.num_classes)
+                                            input_shape=input_shape, name="begin_conv")
+        self.normalizer = self.norm(ngf, self.num_classes, name='normalizer')
 
-        self.end_conv = tfk.layers.Conv2D(input_shape[-1], 3, strides=1, padding='same')
+        self.end_conv = tfk.layers.Conv2D(input_shape[-1], 3, strides=1, padding='same', name='end_conv')
 
         self.res1 = [
             ConditionalResidualBlock(self.ngf, self.ngf, self.num_classes, resample=None, act=act,
@@ -294,7 +299,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
             step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
             for s in range(n_steps_each):
                 noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
-                grad = self.call(x_mod, labels)
+                grad = self(x_mod, labels)
                 x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
                 if return_arr:
                     x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
@@ -303,3 +308,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
             return x_arr
         else:
             return tf.clip_by_value(x_mod, 0., 1.)
+
+
+
+

@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from ncsn import score_network
 from flow_models import utils
 from pipeline import data_loader
@@ -9,8 +8,6 @@ import time
 import os
 import sys
 from train_utils import *
-tfd = tfp.distributions
-tfb = tfp.bijectors
 tfk = tf.keras
 
 
@@ -19,40 +16,68 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
     # Custom Training Step
     # Adding the tf.function makes it about 10 times faster!!!
 
-    def compute_loss(X, labels, batch_size, anneal_power=2.):
-        used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
-        pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
-        target = - (pertubed_X - X) / (used_sigmas ** 2)
-        scores = scorenet(pertubed_X, labels)
-        per_example_loss = tf.reduce_sum(((scores - target) ** 2) / 2., axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
-        return tf.nn.compute_average_loss(per_example_loss, global_batch_size=batch_size)
+    if mirrored_strategy is not None:
 
-    def train_step(inputs):
-        X, labels = inputs
-        with tf.GradientTape() as tape:
-            tape.watch(scorenet.trainable_variables)
-            loss = compute_loss(X, labels, args.batch_size)
-        gradients = tape.gradient(loss, scorenet.trainable_variables)
-        optimizer.apply_gradients(
-            list(zip(gradients, scorenet.trainable_variables)))
-        return loss
+        def compute_loss(X, labels, batch_size, anneal_power=2.):
+            used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
+            pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
+            target = - (pertubed_X - X) / (used_sigmas ** 2)
+            scores = scorenet(pertubed_X, labels)
+            per_example_loss = tf.reduce_sum(((scores - target) ** 2) / 2., axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=batch_size)
 
-    def test_step(inputs):
-        X, labels = inputs
-        loss = compute_loss(X, labels, args.test_batch_size)
-        return loss
+        def train_step(inputs):
+            X, labels = inputs
+            with tf.GradientTape() as tape:
+                tape.watch(scorenet.trainable_variables)
+                loss = compute_loss(X, labels, args.batch_size)
+            gradients = tape.gradient(loss, scorenet.trainable_variables)
+            optimizer.apply_gradients(
+                list(zip(gradients, scorenet.trainable_variables)))
+            return loss
 
-    @tf.function
-    def distributed_train_step(dataset_inputs):
-        per_replica_losses = mirrored_strategy.run(
-            train_step, args=(dataset_inputs,))
-        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+        def test_step(inputs):
+            X, labels = inputs
+            loss = compute_loss(X, labels, args.test_batch_size)
+            return loss
 
-    @tf.function
-    def distributed_test_step(dataset_inputs):
-        per_replica_losses = mirrored_strategy.run(
-            test_step, args=(dataset_inputs,))
-        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+        @tf.function
+        def apply_train_step(dataset_inputs):
+            per_replica_losses = mirrored_strategy.run(
+                train_step, args=(dataset_inputs,))
+            return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+        @tf.function
+        def apply_test_step(dataset_inputs):
+            per_replica_losses = mirrored_strategy.run(
+                test_step, args=(dataset_inputs,))
+            return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    else:
+        def compute_loss(X, labels, batch_size, anneal_power=2.):
+            used_sigmas = tf.gather(params=sigmas, indices=labels, axis=0)
+            pertubed_X = X + tf.random.normal(X.shape) * tf.reshape(used_sigmas, (X.shape[0], 1, 1, 1))
+            target = - (pertubed_X - X) / (used_sigmas ** 2)
+            scores = scorenet(pertubed_X, labels)
+            per_example_loss = tf.reduce_sum(((scores - target) ** 2) / 2., axis=[1, 2, 3]) * (used_sigmas ** anneal_power)
+            return tf.reduce_mean(per_example_loss, axis=0)
+
+        @tf.function
+        def apply_train_step(inputs):
+            X, labels = inputs
+            with tf.GradientTape() as tape:
+                tape.watch(scorenet.trainable_variables)
+                loss = compute_loss(X, labels, args.batch_size)
+            gradients = tape.gradient(loss, scorenet.trainable_variables)
+            optimizer.apply_gradients(
+                list(zip(gradients, scorenet.trainable_variables)))
+            return loss
+
+        @tf.function
+        def apply_test_step(inputs):
+            X, labels = inputs
+            loss = compute_loss(X, labels, args.test_batch_size)
+            return loss
 
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
@@ -61,7 +86,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
     count_step = optimizer.iterations.numpy()
     min_val_loss = 0.
     prev_history_loss_avg = None
-    loss_per_epoch = 10  # number of losses per epoch to save
+    loss_per_epoch = 5  # number of losses per epoch to display
     is_nan_loss = False
     test_loss = tfk.metrics.Mean(name='test_loss')
     history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
@@ -76,13 +101,14 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
             break
 
         for batch in ds_dist:
-            loss = distributed_train_step(batch)
+            loss = apply_train_step(batch)
             history_loss_avg.update_state(loss)
             epoch_loss_avg.update_state(loss)
             count_step += 1
 
             # every loss_per_epoch train step
             if count_step % (n_train // (batch_size * loss_per_epoch)) == 0:
+
                 # check nan loss
                 if (tf.math.is_nan(loss)) or (tf.math.is_inf(loss)):
                     print('Nan or Inf Loss: {}'.format(loss))
@@ -119,7 +145,7 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
             for elt in ds_val_dist:
-                test_loss.update_state(distributed_test_step(elt))
+                test_loss.update_state(apply_test_step(elt))
             step_int = int(loss_per_epoch * count_step * batch_size / n_train)
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
@@ -135,7 +161,10 @@ def train(mirrored_strategy, args, scorenet, optimizer, sigmas, ds_dist, ds_val_
         # Generate some samples and visualize them on tensorboard
         # 10 time during training
         if (N_EPOCHS < 10) or (epoch % (N_EPOCHS // 10) == 0):
-            with mirrored_strategy.scope():
+            if mirrored_strategy is not None:
+                with mirrored_strategy.scope():
+                    samples = scorenet.sample(32, sigmas.numpy())
+            else:
                 samples = scorenet.sample(32, sigmas.numpy())
             samples = samples.numpy().reshape([32] + args.data_shape)
             try:
@@ -213,9 +242,12 @@ def main(args):
     train_summary_writer, test_summary_writer = setUp_tensorboard()
 
     # Distributed Strategy
-    mirrored_strategy = tf.distribute.MirroredStrategy()
-    print("Number of devices: {}".format(
-        mirrored_strategy.num_replicas_in_sync))
+    if args.mirrored_strategy:
+        mirrored_strategy = tf.distribute.MirroredStrategy()
+        print("Number of devices: {}".format(
+            mirrored_strategy.num_replicas_in_sync))
+    else:
+        mirrored_strategy = None
 
     # Load Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
@@ -242,7 +274,12 @@ def main(args):
     # Build ScoreNet
     scorenet = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                   args.num_classes, logit_transform=args.use_logit)
-    with mirrored_strategy.scope():
+    if args.mirrored_strategy:
+        with mirrored_strategy.scope():
+            for elt in ds.take(1):
+                X, y = elt
+                _ = scorenet(X, y)
+    else:
         for elt in ds.take(1):
             X, y = elt
             _ = scorenet(X, y)
@@ -251,12 +288,23 @@ def main(args):
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Set up checkpoint
-    ckpt, manager, manager_issues = setUp_checkpoint(
+    ckpt, manager, _ = setUp_checkpoint(
         mirrored_strategy, args, scorenet, optimizer)
 
     # restore
     if args.restore is not None:
-        with mirrored_strategy.scope():
+        if mirrored_strategy is not None:
+            with mirrored_strategy.scope():
+                if args.latest:
+                    checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
+                    assert checkpoint_restore_path is not None, abs_restore_path
+                else:
+                    checkpoint_restore_path = abs_restore_path
+                status = ckpt.restore(checkpoint_restore_path)
+                status.assert_existing_objects_matched()
+                assert optimizer.iterations > 0
+                print("Model Restored from {}".format(abs_restore_path))
+        else:
             if args.latest:
                 checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
                 assert checkpoint_restore_path is not None, abs_restore_path
@@ -265,7 +313,6 @@ def main(args):
             status = ckpt.restore(checkpoint_restore_path)
             status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
-            print("Model Restored from {}".format(abs_restore_path))
 
     # Display parameters
     params_dict = vars(args)
@@ -324,7 +371,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=400,
                         help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
-                        default="adamax", help="adam or adamax")
+                        default="adam", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--clipvalue', type=float, default=None,

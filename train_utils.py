@@ -15,13 +15,22 @@ tfk = tf.keras
 
 def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
-    with mirrored_strategy.scope():
+    if mirrored_strategy is not None:
+        with mirrored_strategy.scope():
+            if args.optimizer == 'adam':
+                optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+            elif args.optimizer == 'adamax':
+                optimizer = tfk.optimizers.Adamax(lr=lr)
+            else:
+                raise ValueError("optimizer argument should be adam or adamax")
+    else:
         if args.optimizer == 'adam':
             optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
         elif args.optimizer == 'adamax':
             optimizer = tfk.optimizers.Adamax(lr=lr)
         else:
             raise ValueError("optimizer argument should be adam or adamax")
+
     return optimizer
 
 
@@ -46,7 +55,18 @@ def setUp_tensorboard():
 def setUp_checkpoint(mirrored_strategy, args, model, optimizer):
 
     # Checkpoint object
-    with mirrored_strategy.scope():
+    if mirrored_strategy is not None:
+        with mirrored_strategy.scope():
+            ckpt = tf.train.Checkpoint(
+                variables=model.variables, optimizer=optimizer)
+            manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
+            # Debugging: if huge jump in the loss, save weights here
+            if args.debug:
+                manager_issues = tf.train.CheckpointManager(
+                    ckpt, './tf_ckpts_issues', max_to_keep=3)
+            else:
+                manager_issues = None
+    else:
         ckpt = tf.train.Checkpoint(
             variables=model.variables, optimizer=optimizer)
         manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=5)
