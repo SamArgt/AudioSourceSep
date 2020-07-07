@@ -160,8 +160,8 @@ def main(args):
             perturbed_X = X + tf.random.normal(X.shape) * used_sigma
             return X, perturbed_X, label, used_sigma
 
-        train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-        eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE)
+        train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+        eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
 
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
@@ -200,7 +200,7 @@ def main(args):
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch",
-                                                     profile_batch=0, embeddings_freq=0)
+                                                     profile_batch="500,520", embeddings_freq=0, histogram_freq=1)
 
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
@@ -252,7 +252,7 @@ def main(args):
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
 
-    print("Training time: ", np.round(timt.time() - t0, 2), ' seconds')
+    print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
 
     log_file.close()
 
