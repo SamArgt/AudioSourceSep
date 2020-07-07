@@ -18,7 +18,7 @@ class CustomModel(tfk.Model):
         super().__init__()
         self.scorenet = score_network.CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, args.use_logit)
         self.data_shape = args.data_shape
-        self.batch_size = args.batch_size
+        self.local_batch_size = args.local_batch_size
 
     def call(self, data):
         X, labels = data
@@ -27,7 +27,7 @@ class CustomModel(tfk.Model):
     def train_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal([args.local_batch_size] + list(args.data_shape)) * \
+            tf.random.normal([self.local_batch_size] + list(args.data_shape)) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         with tf.GradientTape() as tape:
@@ -42,7 +42,7 @@ class CustomModel(tfk.Model):
     def test_step(self, data):
         X, labels, used_sigmas = data
         pertubed_X = X + \
-            tf.random.normal([args.local_batch_size] + list(args.data_shape)) * \
+            tf.random.normal([self.local_batch_size] + list(args.data_shape)) * \
             tf.reshape(used_sigmas, (-1, 1, 1, 1))
         target = - (pertubed_X - X) / (used_sigmas ** 2)
         scores = self((pertubed_X, labels))
