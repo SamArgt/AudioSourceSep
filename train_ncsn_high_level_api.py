@@ -13,11 +13,11 @@ from train_utils import *
 tfk = tf.keras
 
 
-def anneal_langevin_dynamics(self, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
+def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
     """
     Anneal Langevin dynamics
     """
-    x_mod = tf.random.uniform([n_samples] + list(self.data_shape))
+    x_mod = tf.random.uniform([n_samples] + list(args.data_shape))
     if return_arr:
         x_arr = [x_mod]
     for i, sigma in enumerate(sigmas):
@@ -34,6 +34,15 @@ def anneal_langevin_dynamics(self, model, n_samples, sigmas, n_steps_each=100, s
         return x_arr
     else:
         return tf.clip_by_value(x_mod, 0., 1.)
+
+
+class CustomLoss(tfk.losses.Loss):
+    def __init__():
+        super(CustomLoss, self).__init__()
+
+    def call(self, scores, target, sample_weights):
+        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3]) * sample_weights
+        return tf.reduce_mean(loss)
 
 
 def main(args):
@@ -177,10 +186,10 @@ def main(args):
                                                      profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
 
     def display_generated_samples(epoch, logs):
-        if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
+        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(model, 32, sigmas_np)
+                    gen_samples = anneal_langevin_dynamics(args, model, 32, sigmas_np)
                 gen_samples = anneal_langevin_dynamics(model, 32, sigmas_np)
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
@@ -193,7 +202,7 @@ def main(args):
             pass
 
     gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=display_generated_samples)
-    earlstopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
+    earlystopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
 
     callbacks = [
         tensorboard_callback,

@@ -129,38 +129,38 @@ class ConditionalResidualBlock(tfk.layers.Layer):
         if resample == 'down':
             if dilation is not None:
                 self.conv1 = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
-                self.normalize2 = normalization(input_dim, num_classes)
+                                               padding='same', name="conv1")
+                self.normalize2 = normalization(input_dim, num_classes, name="norm2")
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
+                                               padding='same', name="conv2")
                 self.conv_shortcut = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same')
+                                                       padding='same', name="shortcut")
             else:
-                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False)
-                self.normalize2 = normalization(input_dim, num_classes)
+                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False, name="conv1")
+                self.normalize2 = normalization(input_dim, num_classes, name="norm2")
                 self.conv2 = tfk.Sequential([tfk.layers.Conv2D(output_dim, 3, padding='same'),
-                                             tfk.layers.AveragePooling2D(pool_size=2)])
+                                             tfk.layers.AveragePooling2D(pool_size=2)], name="conv2")
                 self.conv_shortcut = tfk.Sequential([tfk.layers.Conv2D(output_dim, 1, padding='same'),
-                                                     tfk.layers.AveragePooling2D(pool_size=2)])
+                                                     tfk.layers.AveragePooling2D(pool_size=2)], name="shortcut")
 
         elif resample is None:
             if dilation is not None:
                 self.conv_shortcut = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same')
+                                                       padding='same', name="shortcut")
                 self.conv1 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
-                self.normalize2 = normalization(output_dim, num_classes)
+                                               padding='same', name="conv1")
+                self.normalize2 = normalization(output_dim, num_classes, name="norm2")
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same')
+                                               padding='same', name="conv2")
             else:
-                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
-                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
-                self.normalize2 = normalization(output_dim, num_classes)
-                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
+                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name="shortcut")
+                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name="conv1")
+                self.normalize2 = normalization(output_dim, num_classes, name="norm2")
+                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name="conv2")
         else:
             raise Exception('invalid resample value')
 
-        self.normalize1 = normalization(input_dim, num_classes)
+        self.normalize1 = normalization(input_dim, num_classes, name="norm1")
 
     def call(self, x, y, training=False):
         output = self.normalize1(x, y, training=training)
@@ -273,8 +273,9 @@ class CondRefineNetDilated(tfk.layers.Layer):
 
     def call(self, inputs, training=False):
         x, y = inputs[0], inputs[1]
-        if not self.logit_transform:
-            x = 2 * x - 1.
+
+        #if not self.logit_transform:
+        #    x = 2 * x - 1.
 
         output = self.begin_conv(x)
 
