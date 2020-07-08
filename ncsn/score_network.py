@@ -209,9 +209,9 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         embed = self.embed(y)
         if self.bias:
             gamma, alpha, beta = tf.split(embed, 3, axis=-1)
+            beta = tf.reshape(beta, (-1, 1, 1, self.num_features))
         else:
             gamma, alpha = tf.split(embed, 2, axis=-1)
-            beta = tf.reshape(beta, (-1, 1, 1, self.num_features))
             beta = 0.
 
         gamma = tf.reshape(gamma, (-1, 1, 1, self.num_features))
