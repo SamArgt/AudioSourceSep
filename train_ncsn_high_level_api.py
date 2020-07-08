@@ -164,8 +164,8 @@ def main(args):
             sample_weight = used_sigma ** 2
             return inputs, target, sample_weight
 
-        train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
-        eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+        train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+        eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE)
 
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,

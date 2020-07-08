@@ -292,3 +292,9 @@ class CondRefineNetDilated(tfk.layers.Layer):
         output = self.act(output)
         output = self.end_conv(output)
         return output
+
+    def get_config(self):
+        return {"data_shape": self.data_shape,
+                "ngf": self.ngf,
+                "num_classes": self.num_classes,
+                "logit_transform": self.logit_transform}
