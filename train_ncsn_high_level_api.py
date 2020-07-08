@@ -278,7 +278,7 @@ def main(args):
     #model.fit(train_dataset, epochs=args.n_epochs, batch_size=args.batch_size,
     #          validation_data=eval_dataset, callbacks=callbacks)
     model.fit(x=[pertubed_X_train, sigma_idx_train], y=target_train,
-              epochs=args.n_epochs, batch_size=args.batch_size, sample_weight=sample_weights_train,
+              epochs=args.n_epochs, batch_size=args.batch_size, sample_weight=None,
               validation_data=None, callbacks=callbacks)
 
     total_trainable_variables = utils.total_trainable_variables(model)
