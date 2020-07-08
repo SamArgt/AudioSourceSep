@@ -11,11 +11,11 @@ class CondCRPBlock(tfk.layers.Layer):
         self.norms = []
         for i in range(n_stages):
             self.convs.append(tfk.layers.Conv2D(features, kernel_size=3, strides=1, use_bias=False, padding='same',
-                                                name=name + '/conv_{}'.format(i + 1)))
-            self.norms.append(normalizer(features, num_classes, bias=True, name=name + '/norm_{}'.format(i + 1)))
+                                                name='conv_{}'.format(i + 1)))
+            self.norms.append(normalizer(features, num_classes, bias=True, name='norm_{}'.format(i + 1)))
         self.n_stages = n_stages
         self.act = tf.keras.layers.Activation(act)
-        self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same', name=name + "/AveragePooling2D")
+        self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same', name="AveragePooling2D")
 
     def call(self, x, y, training=False):
         x = self.act(x)
@@ -36,9 +36,9 @@ class CondRCUBlock(tfk.layers.Layer):
         for i in range(n_blocks):
             for j in range(n_stages):
                 self.convs.append(tfk.layers.Conv2D(features, kernel_size=3, strides=1, use_bias=False, padding='same',
-                                                    name=name + '/conv_{}_{}'.format(i + 1, j + 1)))
+                                                    name='conv_{}_{}'.format(i + 1, j + 1)))
                 self.norms.append(normalizer(features, num_classes, bias=True,
-                                             name=name + '/norm_{}_{}'.format(i + 1, j + 1)))
+                                             name='norm_{}_{}'.format(i + 1, j + 1)))
         self.stride = 1
         self.n_blocks = n_blocks
         self.n_stages = n_stages
@@ -64,8 +64,8 @@ class CondMSFBlock(tfk.layers.Layer):
         self.norms = []
         for i in range(len(in_planes)):
             self.convs.append(tfk.layers.Conv2D(features, kernel_size=3, strides=1, use_bias=True, padding='same',
-                                                name=name + '/conv_{}'.format(i + 1)))
-            self.norms.append(normalizer(in_planes[i], num_classes, bias=True, name=name + '/norm_{}'.format(i + 1)))
+                                                name='conv_{}'.format(i + 1)))
+            self.norms.append(normalizer(in_planes[i], num_classes, bias=True, name='norm_{}'.format(i + 1)))
 
     def call(self, xs, y, shape, training=False):
         for i in range(len(self.convs)):
@@ -90,15 +90,15 @@ class CondRefineBlock(tfk.layers.Layer):
         for i in range(n_blocks):
             self.adapt_convs.append(
                 CondRCUBlock(in_planes[i], 2, 2, num_classes, normalizer, act,
-                             name=name + '/CondRCUBlock_{}'.format(i + 1))
+                             name='CondRCUBlock_{}'.format(i + 1))
             )
 
-        self.output_convs = CondRCUBlock(features, 3 if end else 1, 2, num_classes, normalizer, act, name=name + "/CondRCUBlock_output")
+        self.output_convs = CondRCUBlock(features, 3 if end else 1, 2, num_classes, normalizer, act, name="CondRCUBlock_output")
 
         if not start:
-            self.msf = CondMSFBlock(in_planes, features, num_classes, normalizer, name=name + '/CondMSFBlock')
+            self.msf = CondMSFBlock(in_planes, features, num_classes, normalizer, name='CondMSFBlock')
 
-        self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act, name=name + "/CondCRPBlock")
+        self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act, name="CondCRPBlock")
 
     def call(self, xs, y, output_shape, training=False):
         assert isinstance(xs, tuple) or isinstance(xs, list)
@@ -129,38 +129,38 @@ class ConditionalResidualBlock(tfk.layers.Layer):
         if resample == 'down':
             if dilation is not None:
                 self.conv1 = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same', name=name + '/conv1')
-                self.normalize2 = normalization(input_dim, num_classes, name=name + '/norm2')
+                                               padding='same')
+                self.normalize2 = normalization(input_dim, num_classes)
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same', name=name + "/conv2")
+                                               padding='same')
                 self.conv_shortcut = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same', name=name + '/shortcut')
+                                                       padding='same')
             else:
-                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False, name=name + '/conv1')
-                self.normalize2 = normalization(input_dim, num_classes, name=name + '/norm2')
+                self.conv1 = tfk.layers.Conv2D(input_dim, 3, strides=1, padding='same', use_bias=False)
+                self.normalize2 = normalization(input_dim, num_classes)
                 self.conv2 = tfk.Sequential([tfk.layers.Conv2D(output_dim, 3, padding='same'),
-                                             tfk.layers.AveragePooling2D(pool_size=2)], name=name + "/conv2")
+                                             tfk.layers.AveragePooling2D(pool_size=2)])
                 self.conv_shortcut = tfk.Sequential([tfk.layers.Conv2D(output_dim, 1, padding='same'),
-                                                     tfk.layers.AveragePooling2D(pool_size=2)], name=name + "/shortcut")
+                                                     tfk.layers.AveragePooling2D(pool_size=2)])
 
         elif resample is None:
             if dilation is not None:
                 self.conv_shortcut = tfk.layers.Conv2D(input_dim, kernel_size=3, dilation_rate=dilation,
-                                                       padding='same', name=name + "shortcut")
+                                                       padding='same')
                 self.conv1 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same', name=name + '/conv1')
-                self.normalize2 = normalization(output_dim, num_classes, name=name + '/norm2')
+                                               padding='same')
+                self.normalize2 = normalization(output_dim, num_classes)
                 self.conv2 = tfk.layers.Conv2D(output_dim, kernel_size=3, dilation_rate=dilation,
-                                               padding='same', name=name + "/conv2")
+                                               padding='same')
             else:
-                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/shortcut")
-                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/conv1")
-                self.normalize2 = normalization(output_dim, num_classes, name=name + "/norm2")
-                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False, name=name + "/conv2")
+                self.conv_shortcut = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
+                self.conv1 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
+                self.normalize2 = normalization(output_dim, num_classes)
+                self.conv2 = tfk.layers.Conv2D(output_dim, 3, strides=1, padding='same', use_bias=False)
         else:
             raise Exception('invalid resample value')
 
-        self.normalize1 = normalization(input_dim, num_classes, name=name + "/norm1")
+        self.normalize1 = normalization(input_dim, num_classes)
 
     def call(self, x, y, training=False):
         output = self.normalize1(x, y, training=training)
@@ -183,11 +183,11 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         super(ConditionalInstanceNorm2dPlus, self).__init__(name=name)
         self.num_features = num_features
         self.bias = bias
-        self.instance_norm = tfa.layers.InstanceNormalization(name=name + '/instance_norm')
+        self.instance_norm = tfa.layers.InstanceNormalization()
         weights_gamma = np.random.normal(size=(num_classes, num_features), loc=0., scale=0.02)
         weights_alpha = np.random.normal(size=(num_classes, num_features), loc=0., scale=0.02)
         if bias:
-            self.embed = tfk.layers.Embedding(num_classes, 3 * num_features, name=name + "/embedding")
+            self.embed = tfk.layers.Embedding(num_classes, 3 * num_features)
             self.embed.build([None])
             weights_beta = np.zeros((num_classes, num_features))
             weights = np.concatenate((weights_gamma, weights_alpha, weights_beta), axis=-1)
