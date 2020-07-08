@@ -184,33 +184,32 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         self.num_features = num_features
         self.bias = bias
         self.instance_norm = tfa.layers.InstanceNormalization(name=name + '/instance_norm')
-        self.gamma_embed = tfk.layers.Embedding(num_classes, num_features,
-                                                embeddings_initializer=tf.random_normal_initializer(mean=0.0,
-                                                                                                    stddev=0.02),
-                                                name=name + '/gamma_embed')
-        self.alpha_embed = tfk.layers.Embedding(num_classes, num_features,
-                                                embeddings_initializer=tf.random_normal_initializer(mean=0.0,
-                                                                                                    stddev=0.02),
-                                                name=name + '/alpha_embed')
+        weights_gamma = np.random.normal(size=(num_classes, num_features), loc=0., scale=0.02)
+        weights_alpha = np.random.normal(size=(num_classes, num_features), loc=0., scale=0.02)
         if bias:
-            self.beta_embed = tfk.layers.Embedding(num_classes, num_features,
-                                                   embeddings_initializer="zeros",
-                                                   name=name + '/beta_embed')
+            self.embed = tfk.layers.Embedding(num_classes, 3 * num_features, name=name + "/embedding")
+            weights_beta = np.zeros((num_classes, num_features))
+            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha, weights_beta))), axis=-1)
+        else:
+            self.embed = tfk.layers.Embedding(num_classes, 2 * num_features)
+            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha))), axis=-1)
 
     def call(self, x, y, training=False):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
         m, v = tf.nn.moments(means, axes=-1, keepdims=True)
         means = (means - m) / tf.math.sqrt(v + 1e-5)
         h = self.instance_norm(x, training=training)
-        gamma = self.gamma_embed(y)
-        gamma = tf.reshape(gamma, (-1, 1, 1, self.num_features))
-        alpha = self.alpha_embed(y)
-        alpha = tf.reshape(alpha, (-1, 1, 1, self.num_features))
+
+        embed = self.embed(y)
         if self.bias:
-            beta = self.beta_embed(y)
-            beta = tf.reshape(beta, (-1, 1, 1, self.num_features))
+            gamma, alpha, beta = tf.split(embed, 3, axis=-1)
         else:
+            gamma, alpha = tf.split(embed, 2, axis=-1)
+            beta = tf.reshape(beta, (-1, 1, 1, self.num_features))
             beta = 0.
+
+        gamma = tf.reshape(gamma, (-1, 1, 1, self.num_features))
+        alpha = tf.reshape(alpha, (-1, 1, 1, self.num_features))
 
         out = gamma * h + means * alpha + beta
         return out
