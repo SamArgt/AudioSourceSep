@@ -189,10 +189,10 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         if bias:
             self.embed = tfk.layers.Embedding(num_classes, 3 * num_features, name=name + "/embedding")
             weights_beta = np.zeros((num_classes, num_features))
-            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha, weights_beta))), axis=-1)
+            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha, weights_beta), axis=-1)))
         else:
             self.embed = tfk.layers.Embedding(num_classes, 2 * num_features)
-            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha))), axis=-1)
+            self.embed.set_weights(list(np.concatenate((weights_gamma, weights_alpha), axis=-1)))
 
     def call(self, x, y, training=False):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
