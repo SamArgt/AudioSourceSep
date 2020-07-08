@@ -159,23 +159,26 @@ def main(args):
             X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = X / 256. + tf.random.uniform(X.shape) / 256.
             pertubed_X = X + tf.random.normal(X.shape) * used_sigma
-            inputs = {'pertubed_X': pertubed_X, 'sigma_idx': sigma_idx}
+            #inputs = {'pertubed_X': pertubed_X, 'sigma_idx': sigma_idx}
             target = -(pertubed_X - X) / (used_sigma ** 2)
             sample_weight = used_sigma ** 2
-            return inputs, target, sample_weight
+            #return inputs, target, sample_weight
+            return pertubed_X, sigma_idx, target, sample_weight
 
         train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
         eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE)
 
         train_dataset_numpy = np.array(list(train_dataset.as_numpy_iterator()))
-        inputs_train = train_dataset_numpy[:, 0]
-        target_train = train_dataset_numpy[:, 1]
-        sample_weights_train = train_dataset_numpy[:, 2]
+        pertubed_X_train = train_dataset_numpy[:, 0]
+        sigma_idx_train = train_dataset_numpy[:, 1]
+        target_train = train_dataset_numpy[:, 2]
+        sample_weights_train = train_dataset_numpy[:, 3]
 
         eval_dataset_numpy = np.array(list(eval_dataset.as_numpy_iterator()))
-        inputs_eval = eval_dataset_numpy[:, 0]
-        target_eval = eval_dataset_numpy[:, 1]
-        sample_weights_eval = eval_dataset_numpy[:, 2]
+        pertubed_X_eval = eval_dataset_numpy[:, 0]
+        sigma_idx_val = eval_dataset_numpy[:, 1]
+        target_eval = eval_dataset_numpy[:, 2]
+        sample_weights_eval = eval_dataset_numpy[:, 3]
 
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
@@ -269,8 +272,11 @@ def main(args):
 
     # Train
     t0 = time.time()
-    model.fit(inputs_train, target_train, sample_weight=sample_weights_train, epochs=args.n_epochs, batch_size=args.batch_size,
-              validation_data=(inputs_eval, target_eval, sample_weights_eval), callbacks=callbacks)
+    #model.fit(train_dataset, epochs=args.n_epochs, batch_size=args.batch_size,
+    #          validation_data=eval_dataset, callbacks=callbacks)
+    model.fit(x={"pertubed_X": pertubed_X_train, "sigma_idx": sigma_idx_train}, y=target_train,
+              epochs=args.n_epochs, batch_size=args.batch_size, sample_weight=sample_weights_train,
+              validation_data=None, callbacks=callbacks)
 
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
