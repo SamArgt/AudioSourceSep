@@ -186,6 +186,7 @@ def main(args):
                                                                                            num_classes=args.num_classes,
                                                                                            mirrored_strategy=mirrored_strategy,
                                                                                            use_logt=args.use_logit)
+    """
     # Display original images
     # Clear any logs from previous runs
     try:
@@ -203,6 +204,7 @@ def main(args):
         tf.summary.image("pertubed images", plot_to_image(
             figure), max_outputs=1, step=0)
 
+    """
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
