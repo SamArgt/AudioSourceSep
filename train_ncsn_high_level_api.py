@@ -241,7 +241,7 @@ def main(args):
                                       monitor="val_loss",
                                       save_best_only=True),
         tfk.callbacks.TerminateOnNaN(),
-        tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=10, patience=10),
+        tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10),
         gen_samples_callback
     ]
     # restore
