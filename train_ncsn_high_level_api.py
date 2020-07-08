@@ -13,67 +13,27 @@ from train_utils import *
 tfk = tf.keras
 
 
-class CustomModel(tfk.Model):
-    def __init__(self, args, name="ScoreNetworkModel"):
-        super(CustomModel, self).__init__(name=name)
-        self.scorenet = score_network.CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, args.use_logit)
-        self.data_shape = args.data_shape
-        self.local_batch_size = args.local_batch_size
+def anneal_langevin_dynamics(self, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
+    """
+    Anneal Langevin dynamics
+    """
+    x_mod = tf.random.uniform([n_samples] + list(self.data_shape))
+    if return_arr:
+        x_arr = [x_mod]
+    for i, sigma in enumerate(sigmas):
+        labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
+        step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
+        for s in range(n_steps_each):
+            noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
+            grad = model([x_mod, labels], training=False)
+            x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
+            if return_arr:
+                x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
 
-    def call(self, inputs, training=False):
-        X, labels = inputs
-        return self.scorenet(X, labels, training=training)
-
-    def train_step(self, data):
-        X, pertubed_X, labels, used_sigmas = data
-        target = - (pertubed_X - X) / (used_sigmas ** 2)
-        with tf.GradientTape() as tape:
-            # tape.watch(self.trainable_variables)
-            scores = self((pertubed_X, labels), training=True)
-            loss = self.compiled_loss(target - scores, used_sigmas)
-            loss = tf.reduce_mean(loss)
-        gradients = tape.gradient(loss, self.trainable_variables)
-        self.optimizer.apply_gradients(
-            zip(gradients, self.trainable_variables))
-        return {'loss': loss}
-
-    def test_step(self, data):
-        X, pertubed_X, labels, used_sigmas = data
-        target = - (pertubed_X - X) / (used_sigmas ** 2)
-        scores = self((pertubed_X, labels), training=False)
-        loss = self.compiled_loss(target - scores, used_sigmas)
-        loss = tf.reduce_mean(loss)
-        return {'loss': loss}
-
-    def sample(self, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
-        """
-        Anneal Langevin dynamics
-        """
-        x_mod = tf.random.uniform([n_samples] + list(self.data_shape))
-        if return_arr:
-            x_arr = [x_mod]
-        for i, sigma in enumerate(sigmas):
-            labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
-            step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
-            for s in range(n_steps_each):
-                noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
-                grad = self((x_mod, labels))
-                x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
-                if return_arr:
-                    x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
-
-        if return_arr:
-            return x_arr
-        else:
-            return tf.clip_by_value(x_mod, 0., 1.)
-
-
-class CustomLoss(tfk.losses.Loss):
-    def __init__(self):
-        super().__init__()
-
-    def call(self, target_scores_diff, used_sigmas):
-        return tf.reduce_sum(tf.square(target_scores_diff) / 2., axis=[1, 2, 3]) * (used_sigmas ** 2.)
+    if return_arr:
+        return x_arr
+    else:
+        return tf.clip_by_value(x_mod, 0., 1.)
 
 
 def main(args):
@@ -220,9 +180,8 @@ def main(args):
         if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = model.sample(32, sigmas_np)
-            else:
-                gen_samples = model.sample(32, sigmas_np)
+                    gen_samples = anneal_langevin_dynamics(model, 32, sigmas_np)
+                gen_samples = anneal_langevin_dynamics(model, 32, sigmas_np)
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -234,6 +193,7 @@ def main(args):
             pass
 
     gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=display_generated_samples)
+    earlstopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
 
     callbacks = [
         tensorboard_callback,
@@ -242,7 +202,6 @@ def main(args):
                                       monitor="val_loss",
                                       save_best_only=True),
         tfk.callbacks.TerminateOnNaN(),
-        #tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10),
         gen_samples_callback
     ]
     # restore
