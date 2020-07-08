@@ -182,7 +182,7 @@ def main(args):
     logdir = os.path.join("logs", "samples") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     file_writer = tf.summary.create_file_writer(logdir)
     with file_writer.as_default():
-        sample, _, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
+        sample, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
