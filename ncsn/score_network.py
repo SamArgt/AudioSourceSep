@@ -217,20 +217,20 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
 
 
 class CondRefineNetDilated(tfk.layers.Layer):
-    def __init__(self, input_shape, ngf, num_classes, logit_transform=False):
+    def __init__(self, data_shape, ngf, num_classes, logit_transform=False):
         super(CondRefineNetDilated, self).__init__()
         self.logit_transform = logit_transform
         self.norm = ConditionalInstanceNorm2dPlus
         self.ngf = ngf
         self.num_classes = num_classes
         self.act = act = tf.nn.elu
-        self.data_shape = input_shape
+        self.data_shape = data_shape
 
         self.begin_conv = tfk.layers.Conv2D(ngf, 3, strides=1, padding='same',
-                                            input_shape=input_shape, name="begin_conv")
+                                            input_shape=data_shape, name="begin_conv")
         self.normalizer = self.norm(ngf, self.num_classes, name='normalizer')
 
-        self.end_conv = tfk.layers.Conv2D(input_shape[-1], 3, strides=1, padding='same', name='end_conv')
+        self.end_conv = tfk.layers.Conv2D(data_shape[-1], 3, strides=1, padding='same', name='end_conv')
 
         self.res1 = [
             ConditionalResidualBlock(self.ngf, self.ngf, self.num_classes, resample=None, act=act,
@@ -266,7 +266,8 @@ class CondRefineNetDilated(tfk.layers.Layer):
             x = m(x, y, training=training)
         return x
 
-    def call(self, x, y, training=False):
+    def call(self, inputs, training=False):
+        x, y = inputs[0], inputs[1]
         if not self.logit_transform:
             x = 2 * x - 1.
 

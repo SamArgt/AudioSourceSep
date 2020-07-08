@@ -153,13 +153,16 @@ def main(args):
         BATCH_SIZE = args.batch_size
 
         def preprocess(image):
-            label = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
-            used_sigma = tf.gather(params=sigmas_tf, indices=label)
+            sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
+            used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
             X = tf.cast(image, tf.float32)
             X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = X / 256. + tf.random.uniform(X.shape) / 256.
-            perturbed_X = X + tf.random.normal(X.shape) * used_sigma
-            return X, perturbed_X, label, used_sigma
+            pertubed_X = X + tf.random.normal(X.shape) * used_sigma
+            inputs = {'pertubed_X': pertubed_X, 'sigma_idx': sigma_idx}
+            target = -(pertubed_X - X) / (used_sigmas ** 2)
+            sample_weight = used_sigma ** 2
+            return inputs, target, sample_weight
 
         train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
         eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
@@ -190,13 +193,18 @@ def main(args):
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Build ScoreNet
+    """
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
             model = CustomModel(args)
     else:
         model = CustomModel(args)
-
-    model.compile(optimizer=optimizer, loss=CustomLoss())
+    """
+    pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
+    sigma_idx = tfk.Input(shape=(), dtype=tf.int32, name="sigma_idx")
+    outputs = CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, args.use_logit)(pertubed_X, labels)
+    model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+    model.compile(optimizer=optimizer, loss=MeanSquaredError())
     # model.build(([None] + list(args.data_shape), [None]))
     # print(model.summary())
 
