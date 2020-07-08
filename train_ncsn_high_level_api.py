@@ -160,7 +160,7 @@ def main(args):
             X = X / 256. + tf.random.uniform(X.shape) / 256.
             pertubed_X = X + tf.random.normal(X.shape) * used_sigma
             inputs = {'pertubed_X': pertubed_X, 'sigma_idx': sigma_idx}
-            target = -(pertubed_X - X) / (used_sigmas ** 2)
+            target = -(pertubed_X - X) / (used_sigma ** 2)
             sample_weight = used_sigma ** 2
             return inputs, target, sample_weight
 
