@@ -194,26 +194,26 @@ def main(args):
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Build ScoreNet
-    """
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
-            model = CustomModel(args)
+            pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
+            sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
+            outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                         args.num_classes, args.use_logit)([pertubed_X, sigma_idx])
+            model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
     else:
-        model = CustomModel(args)
-    """
-    pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
-    sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([pertubed_X, sigma_idx])
-    model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+        pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
+        sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
+        outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                     args.num_classes, args.use_logit)([pertubed_X, sigma_idx])
+        model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+
     model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    # model.build(([None] + list(args.data_shape), [None]))
-    # print(model.summary())
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
-                                                     profile_batch=2, embeddings_freq=0, histogram_freq=0)
+                                                     profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
 
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or ((epoch + 1) % (args.n_epochs // 10) == 0):
