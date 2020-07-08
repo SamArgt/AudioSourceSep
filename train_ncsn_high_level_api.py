@@ -190,7 +190,8 @@ def main(args):
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
                     gen_samples = anneal_langevin_dynamics(args, model, 32, sigmas_np)
-                gen_samples = anneal_langevin_dynamics(model, 32, sigmas_np)
+            else:
+                gen_samples = anneal_langevin_dynamics(args, model, 32, sigmas_np)
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
