@@ -183,11 +183,11 @@ def main(args):
     file_writer = tf.summary.create_file_writer(logdir)
     with file_writer.as_default():
         inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
-        sample = inputs[0]
+        sample = inputs["pertubed_X"]
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-        tf.summary.image("original images", plot_to_image(
+        tf.summary.image("pertubed images", plot_to_image(
             figure), max_outputs=1, step=0)
 
     # Set up optimizer
