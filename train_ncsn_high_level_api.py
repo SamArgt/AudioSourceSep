@@ -186,7 +186,7 @@ def main(args):
                                                                                            num_classes=args.num_classes,
                                                                                            mirrored_strategy=mirrored_strategy,
                                                                                            use_logt=args.use_logit)
-    """
+
     # Display original images
     # Clear any logs from previous runs
     try:
@@ -195,6 +195,7 @@ def main(args):
         pass
     logdir = os.path.join("logs", "samples") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     file_writer = tf.summary.create_file_writer(logdir)
+    """
     with file_writer.as_default():
         inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
         sample = inputs["pertubed_X"]
