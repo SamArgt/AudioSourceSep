@@ -203,7 +203,8 @@ def main(args):
     """
     pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
     sigma_idx = tfk.Input(shape=(), dtype=tf.int32, name="sigma_idx")
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters, args.num_classes, args.use_logit)(pertubed_X, labels)
+    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                 args.num_classes, args.use_logit)(pertubed_X, sigma_idx)
     model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
     model.compile(optimizer=optimizer, loss=MeanSquaredError())
     # model.build(([None] + list(args.data_shape), [None]))
