@@ -190,11 +190,12 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
             self.embed = tfk.layers.Embedding(num_classes, 3 * num_features, name=name + "/embedding")
             weights_beta = np.zeros((num_classes, num_features))
             weights = np.concatenate((weights_gamma, weights_alpha, weights_beta), axis=-1)
+            assert weights.shape == (num_classes, 3 * num_features)
             self.embed.set_weights([weights])
         else:
             self.embed = tfk.layers.Embedding(num_classes, 2 * num_features)
             weights = np.concatenate((weights_gamma, weights_alpha), axis=-1)
-
+            assert weights.shape == (num_classes, 2 * num_features)
             self.embed.set_weights([weights])
 
     def call(self, x, y, training=False):
