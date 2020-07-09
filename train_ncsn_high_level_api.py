@@ -170,13 +170,13 @@ def main(args):
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
             perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-            sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
+            sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
             outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                          args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
             model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
     else:
         perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-        sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
+        sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
         outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                      args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
         model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
