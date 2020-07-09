@@ -28,12 +28,12 @@ def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, s
             grad = model([x_mod, labels], training=False)
             x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
             if return_arr:
-                x_arr.append(tf.clip_by_value(x_mod, 0., 1.))
+                x_arr.append(x_mod)
 
     if return_arr:
         return x_arr
     else:
-        return tf.clip_by_value(x_mod, 0., 1.)
+        return x_mod
 
 
 class CustomLoss(tfk.losses.Loss):
@@ -41,8 +41,8 @@ class CustomLoss(tfk.losses.Loss):
         super(CustomLoss, self).__init__()
 
     def call(self, scores, target, sample_weights):
-        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3]) * sample_weights
-        return tf.reduce_mean(loss)
+        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+        return tf.reduce_mean(loss * sample_weights)
 
 
 def main(args):
@@ -127,15 +127,16 @@ def main(args):
             X = tf.cast(image, tf.float32)
             X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = X / 256. + tf.random.uniform(X.shape) / 256.
-            pertubed_X = X + tf.random.normal(X.shape) * used_sigma
-            inputs = {'pertubed_X': pertubed_X, 'sigma_idx': sigma_idx}
-            target = -(pertubed_X - X) / (used_sigma ** 2)
+            perturbed_X = X + tf.random.normal(X.shape) * used_sigma
+            inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
+            target = -(perturbed_X - X) / (used_sigma ** 2)
             sample_weight = used_sigma ** 2
             return inputs, target, sample_weight
 
-        train_dataset = ds_train.map(preprocess).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-        eval_dataset = ds_test.map(preprocess).batch(BATCH_SIZE)
-
+        train_dataset = ds_train.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch()
+        eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch()
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
                                                                                            reshuffle=True, model='ncsn',
@@ -153,11 +154,11 @@ def main(args):
     file_writer = tf.summary.create_file_writer(logdir)
     with file_writer.as_default():
         inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
-        sample = inputs["pertubed_X"]
+        sample = inputs["perturbed_X"]
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-        tf.summary.image("pertubed images", plot_to_image(
+        tf.summary.image("perturbed images", plot_to_image(
             figure), max_outputs=1, step=0)
 
     # Set up optimizer
@@ -166,19 +167,20 @@ def main(args):
     # Build ScoreNet
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
-            pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
+            perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
             sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
             outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                         args.num_classes, args.use_logit)([pertubed_X, sigma_idx])
-            model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+                                                         args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+            model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
     else:
-        pertubed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="pertubed_X")
+        perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
         sigma_idx = tfk.Input(shape=[None], dtype=tf.int32, name="sigma_idx")
         outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                     args.num_classes, args.use_logit)([pertubed_X, sigma_idx])
-        model = tfk.Model(inputs=[pertubed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+                                                     args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+        model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 
-    model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
+    #model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
+    model.compile(optimizer=optimizer, loss=tfk.losses.CustomLoss())
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -209,7 +211,7 @@ def main(args):
         tensorboard_callback,
         tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/",
                                       save_weights_only=True,
-                                      monitor="val_loss",
+                                      monitor="loss",
                                       save_best_only=True),
         tfk.callbacks.TerminateOnNaN(),
         gen_samples_callback
@@ -230,7 +232,10 @@ def main(args):
     # Train
     t0 = time.time()
     model.fit(train_dataset, epochs=args.n_epochs, batch_size=args.batch_size,
-              validation_data=eval_dataset, callbacks=callbacks)
+              validation_data=eval_dataset, callbacks=callbacks, verbose=2,
+              validation_freq=10)
+
+    model.save_weights("save_weights")
 
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)

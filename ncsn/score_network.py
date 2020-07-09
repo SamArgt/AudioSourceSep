@@ -271,7 +271,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
             x = m(x, y, training=training)
         return x
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, training=True):
         x, y = inputs[0], inputs[1]
 
         #if not self.logit_transform:
