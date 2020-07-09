@@ -33,7 +33,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
     def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units,
                  masking='channel', mask_state=0, name='AffineCouplingLayer', dtype=tf.float32, **kwargs):
         super(AffineCouplingLayerMasked, self).__init__(
-            forward_min_event_ndims=0)
+            forward_min_event_ndims=0, name=name)
 
         if "l2_reg" in kwargs.items():
             l2_reg = kwargs["l2_reg"]
@@ -41,7 +41,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
             l2_reg = None
 
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            event_shape, n_hidden_units, name=name + '/shiftAndLogScaleLayer', l2_reg=l2_reg)
+            event_shape, n_hidden_units, name='shiftAndLogScaleLayer', l2_reg=l2_reg)
         self.binary_mask = self.binary_mask_fn(
             event_shape, masking, mask_state, dtype)
         self.tensor_dtype = dtype
@@ -97,7 +97,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 class AffineCouplingLayerSplit(tfb.Bijector):
     def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer', **kwargs):
         super(AffineCouplingLayerSplit, self).__init__(
-            forward_min_event_ndims=3)
+            forward_min_event_ndims=3, name=name)
 
         self.H, self.W, self.C = event_shape
         assert(self.C % 2 == 0)
@@ -107,7 +107,7 @@ class AffineCouplingLayerSplit(tfb.Bijector):
         else:
             l2_reg = None
         self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            [self.H, self.W, self.C // 2], n_hidden_units, name=name + '/shiftAndLogScaleLayer', l2_reg=l2_reg)
+            [self.H, self.W, self.C // 2], n_hidden_units, name='shiftAndLogScaleLayer', l2_reg=l2_reg)
 
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
@@ -163,7 +163,7 @@ class ActNorm(tfb.Bijector):
     """
 
     def __init__(self, event_shape, minibatch, normalize='channel', name='ActNorm'):
-        super(ActNorm, self).__init__(forward_min_event_ndims=3)
+        super(ActNorm, self).__init__(forward_min_event_ndims=3, name=name)
 
         self.H, self.W, self.C = event_shape
         _, minibatch_H, minibatch_W, minibatch_C = minibatch.shape
@@ -186,10 +186,10 @@ class ActNorm(tfb.Bijector):
         shift_init = - mean_init / std_init
 
         self.log_scale = tf.Variable(
-            initial_value=log_scale_init, name=name + '/log_scale')
+            initial_value=log_scale_init, name='log_scale')
         # self.scale = tf.Variable(initial_value=scale_init, name=name + '/scale')
         self.shift = tf.Variable(
-            initial_value=shift_init, name=name + '/shift')
+            initial_value=shift_init, name='shift')
 
     def _forward(self, x):
         return x * tf.exp(self.log_scale) + self.shift
@@ -217,7 +217,7 @@ class Invertible1x1Conv(tfb.Bijector):
     """
 
     def __init__(self, event_shape, name='inv1x1conv'):
-        super(Invertible1x1Conv, self).__init__(forward_min_event_ndims=3)
+        super(Invertible1x1Conv, self).__init__(forward_min_event_ndims=3, name=name)
         self.height, self.width, self.C = event_shape
 
         np_w = np.linalg.qr(np.random.randn(self.C, self.C))[0]
@@ -230,20 +230,20 @@ class Invertible1x1Conv(tfb.Bijector):
         np_u = np.triu(np_u, k=1)
 
         # Non Trainable Variable
-        self.P = tf.Variable(initial_value=np_p, name=name + '/P', trainable=False, dtype=tf.float32)
+        self.P = tf.Variable(initial_value=np_p, name='P', trainable=False, dtype=tf.float32)
         p_inv = tf.linalg.inv(self.P)
         self.P_inv = tf.Variable(
-            initial_value=p_inv, name=name + '/P_inv', trainable=False, dtype=tf.float32)
+            initial_value=p_inv, name='P_inv', trainable=False, dtype=tf.float32)
         self.Sign_s = tf.Variable(
-            name=name + "/sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
+            name="sign_S", initial_value=np_sign_s, trainable=False, dtype=tf.float32)
 
         # Trainable Variables
         self.L = tf.Variable(
-            name=name + "/L", initial_value=np_l, dtype=tf.float32)
-        self.Log_s = tf.Variable(name=name + "/log_S",
+            name="L", initial_value=np_l, dtype=tf.float32)
+        self.Log_s = tf.Variable(name="log_S",
                                  initial_value=np_log_s, dtype=tf.float32)
         self.U = tf.Variable(
-            name=name + "/U", initial_value=np_u, dtype=tf.float32)
+            name="U", initial_value=np_u, dtype=tf.float32)
 
         # Triangular mask
         self.l_mask = np.tril(np.ones(self.w_shape, dtype=np.float32), -1)
@@ -275,8 +275,8 @@ class Invertible1x1Conv(tfb.Bijector):
 
 
 class Preprocessing(tfp.bijectors.Bijector):
-    def __init__(self, event_shape, use_logit=False, uniform_noise=True, alpha=0.05, noise=None):
-        super(Preprocessing, self).__init__(forward_min_event_ndims=3)
+    def __init__(self, event_shape, use_logit=False, uniform_noise=True, alpha=0.05, noise=None, name="Preprocessing"):
+        super(Preprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
         self.use_logit = use_logit
         self.event_shape = event_shape
@@ -324,8 +324,8 @@ class Preprocessing(tfp.bijectors.Bijector):
 
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
-    def __init__(self, val_max=100.1):
-        super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3)
+    def __init__(self, val_max=100.1, name="SpecPreprocessing"):
+        super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.val_max = val_max
 
     def _forward(self, x):

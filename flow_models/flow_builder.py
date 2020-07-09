@@ -21,8 +21,12 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
         base_distr_shape = [data_shape[0] // 8,
                             data_shape[1] // 8, data_shape[2] * 64]
         bijector_cls = GlowBijector_3blocks
+    elif L == 4:
+        base_distr_shape = [data_shape[0] // 16,
+                            data_shape[1] // 16, data_shape[2] * 256]
+        bijector_cls = GlowBijector_4blocks
     else:
-        raise ValueError("L should be 2 or 3")
+        raise ValueError("L should be 2, 3 or 4")
 
     shift_and_log_scale_layer = ShiftAndLogScaleResNet
 

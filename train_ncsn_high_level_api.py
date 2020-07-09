@@ -13,6 +13,19 @@ from train_utils import *
 tfk = tf.keras
 
 
+def get_uncompiled_model(args):
+    # inputs
+    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
+    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
+    # outputs
+    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+    # model
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+
+    return model
+
+
 def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
     """
     Anneal Langevin dynamics
@@ -169,17 +182,9 @@ def main(args):
     # Build ScoreNet
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
-            perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-            sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-            outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                         args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
-            model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+            model = get_uncompiled_model(args)
     else:
-        perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-        sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-        outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                     args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
-        model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+        model = get_uncompiled_model(args)
 
     model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
     #model.compile(optimizer=optimizer, loss=CustomLoss())
@@ -188,7 +193,6 @@ def main(args):
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
                                                      profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
-
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
             if mirrored_strategy is not None:
@@ -219,6 +223,9 @@ def main(args):
         gen_samples_callback
     ]
     # restore
+    if args.restore is not None:
+        model.load_weights(abs_restore_path)
+        print("Model Weights loaded from {}".format(abs_restore_path))
 
     # Display parameters
     params_dict = vars(args)
