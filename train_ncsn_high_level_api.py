@@ -182,7 +182,7 @@ def main(args):
         model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 
     #model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    model.compile(optimizer=optimizer, loss=tfk.losses.CustomLoss())
+    model.compile(optimizer=optimizer, loss=CustomLoss())
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
