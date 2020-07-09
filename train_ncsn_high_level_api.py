@@ -42,7 +42,7 @@ class CustomLoss(tfk.losses.Loss):
 
     def call(self, scores, target, sample_weights):
         loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
-        return tf.reduce_mean(loss * sample_weights)
+        return loss * sample_weights
 
 
 def main(args):
@@ -134,9 +134,11 @@ def main(args):
             return inputs, target, sample_weight
 
         train_dataset = ds_train.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch()
+        train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+        train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
         eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch()
+        eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+        eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
                                                                                            reshuffle=True, model='ncsn',
