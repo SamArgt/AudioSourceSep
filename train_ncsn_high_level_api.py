@@ -37,7 +37,7 @@ def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, s
 
 
 class CustomLoss(tfk.losses.Loss):
-    def __init__():
+    def __init__(self):
         super(CustomLoss, self).__init__()
 
     def call(self, scores, target, sample_weights):
