@@ -20,7 +20,8 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=True):
+def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100,
+                             step_lr=0.00002, return_arr=True, training=False):
     """
     Anneal Langevin dynamics
     """
@@ -35,7 +36,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
             if ((s + 1) % (n_steps_each // 10) == 0):
                 print("Step {} / {}".format(s + 1, n_steps_each))
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
-            grad = model([x_mod, labels], training=False)
+            grad = model([x_mod, labels], training=training)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
                 x_arr.append(x_mod)
