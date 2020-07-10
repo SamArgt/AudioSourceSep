@@ -340,7 +340,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model')
+        description='Train NCSN model')
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")

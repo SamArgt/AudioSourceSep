@@ -26,18 +26,18 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
+def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
     """
     Anneal Langevin dynamics
     """
-    x_mod = tf.random.uniform([n_samples] + list(args.data_shape))
+    x_mod = tf.random.uniform([n_samples] + list(data_shape))
     if return_arr:
         x_arr = [x_mod]
     for i, sigma in enumerate(sigmas):
         labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
-            noise = tf.random.normal([n_samples] + list(args.data_shape)) * tf.math.sqrt(step_size * 2)
+            noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=False)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
@@ -187,19 +187,20 @@ def main(args):
         model = get_uncompiled_model(args)
 
     model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    #model.compile(optimizer=optimizer, loss=CustomLoss())
+    # model.compile(optimizer=optimizer, loss=CustomLoss())
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
                                                      profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
+
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(args, model, 32, sigmas_np)
+                    gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
             else:
-                gen_samples = anneal_langevin_dynamics(args, model, 32, sigmas_np)
+                gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -211,7 +212,7 @@ def main(args):
             pass
 
     gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=display_generated_samples)
-    earlystopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
+    # earlystopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
 
     callbacks = [
         tensorboard_callback,
@@ -256,7 +257,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model')
+        description='Train NCSN model')
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
