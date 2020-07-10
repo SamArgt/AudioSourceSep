@@ -200,7 +200,7 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
             assert weights.shape == (num_classes, 2 * num_features)
             self.embed.set_weights([weights])
 
-    def call(self, x, y, training=False):
+    def call(self, x, y, training=True):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
         m, v = tf.nn.moments(means, axes=-1, keepdims=True)
         means = (means - m) / tf.math.sqrt(v + 1e-5)
