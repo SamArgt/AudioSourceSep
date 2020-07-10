@@ -3,6 +3,7 @@ import tensorflow as tf
 import score_network
 import argparse
 import time
+from train_utils import *
 import os
 tfk = tf.keras
 
@@ -35,11 +36,11 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
         for s in range(n_steps_each):
             if ((s + 1) % (n_steps_each // 10) == 0):
                 print("Step {} / {}".format(s + 1, n_steps_each))
+                if return_arr:
+                    x_arr.append(x_mod)
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=training)
             x_mod = x_mod + step_size * grad + noise
-            if return_arr:
-                x_arr.append(x_mod)
 
     if return_arr:
         return x_arr
@@ -78,10 +79,11 @@ def main(args):
         args.preprocessing_glow = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
+    # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
-
     model = get_uncompiled_model(args)
-
+    optimizer = setUp_optimizer(mirrored_strategy, args)
+    model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
     model.load_weights(abs_restore_path)
     print("Weights loaded")
 
@@ -92,6 +94,7 @@ def main(args):
                                      return_arr=args.return_last_point, training=args.training)
 
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
+    print("Shape: {}".format(x_arr.shape))
     try:
         np.save(args.filename, x_arr)
         print("Generated Samples saved at {}".format(args.filename + ".npy"))

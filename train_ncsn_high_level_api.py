@@ -241,9 +241,8 @@ def main(args):
 
     # Train
     t0 = time.time()
-    model.fit(train_dataset, epochs=args.n_epochs, batch_size=args.batch_size,
-              validation_data=eval_dataset, callbacks=callbacks, verbose=2,
-              validation_freq=10)
+    model.fit(train_dataset, epochs=args.n_epochs, validation_data=eval_dataset,
+              callbacks=callbacks, verbose=2, validation_freq=10)
 
     model.save_weights("save_weights")
 
