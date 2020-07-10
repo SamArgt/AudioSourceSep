@@ -3,7 +3,6 @@ import tensorflow as tf
 import score_network
 import argparse
 import time
-from train_utils import *
 import os
 tfk = tf.keras
 
@@ -46,6 +45,27 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
         return x_arr
     else:
         return x_mod
+
+
+def setUp_optimizer(mirrored_strategy, args):
+    lr = args.learning_rate
+    if mirrored_strategy is not None:
+        with mirrored_strategy.scope():
+            if args.optimizer == 'adam':
+                optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+            elif args.optimizer == 'adamax':
+                optimizer = tfk.optimizers.Adamax(lr=lr)
+            else:
+                raise ValueError("optimizer argument should be adam or adamax")
+    else:
+        if args.optimizer == 'adam':
+            optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+        elif args.optimizer == 'adamax':
+            optimizer = tfk.optimizers.Adamax(lr=lr)
+        else:
+            raise ValueError("optimizer argument should be adam or adamax")
+
+    return optimizer
 
 
 def main(args):
