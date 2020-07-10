@@ -38,7 +38,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
-            grad = model([x_mod, labels], training=False)
+            grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
                 x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
@@ -46,7 +46,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
     if return_arr:
         return x_arr
     else:
-        return x_mod
+        return x_mod.numpy( )
 
 
 class CustomLoss(tfk.losses.Loss):
@@ -189,6 +189,11 @@ def main(args):
     model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
     # model.compile(optimizer=optimizer, loss=CustomLoss())
 
+    # restore
+    if args.restore is not None:
+        model.load_weights(abs_restore_path)
+        print("Model Weights loaded from {}".format(abs_restore_path))
+
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
@@ -216,17 +221,13 @@ def main(args):
 
     callbacks = [
         tensorboard_callback,
-        tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/",
+        tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/ckpt",
                                       save_weights_only=True,
                                       monitor="loss",
                                       save_best_only=True),
         tfk.callbacks.TerminateOnNaN(),
         gen_samples_callback
     ]
-    # restore
-    if args.restore is not None:
-        model.load_weights(abs_restore_path)
-        print("Model Weights loaded from {}".format(abs_restore_path))
 
     # Display parameters
     params_dict = vars(args)

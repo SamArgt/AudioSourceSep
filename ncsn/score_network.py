@@ -204,7 +204,7 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         means = tf.reduce_mean(x, axis=[1, 2], keepdims=True)
         m, v = tf.nn.moments(means, axes=-1, keepdims=True)
         means = (means - m) / tf.math.sqrt(v + 1e-5)
-        h = self.instance_norm(x, training=training)
+        h = self.instance_norm(x, training=True)
 
         embed = self.embed(y)
         if self.bias:
