@@ -94,7 +94,7 @@ def main(args):
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
     model = get_uncompiled_model(args)
-    optimizer = setUp_optimizer(mirrored_strategy, args)
+    optimizer = setUp_optimizer(args)
     model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
     model.load_weights(abs_restore_path)
     print("Weights loaded")
