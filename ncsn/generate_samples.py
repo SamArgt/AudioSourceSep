@@ -156,6 +156,18 @@ if __name__ == '__main__':
     # Preprocessing parameters
     parser.add_argument("--use_logit", action="store_true")
 
+    # Optimization parameters
+    parser.add_argument('--n_epochs', type=int, default=400,
+                        help='number of epochs to train')
+    parser.add_argument("--optimizer", type=str,
+                        default="adam", help="adam or adamax")
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--clipvalue', type=float, default=None,
+                        help="Clip value for Adam optimizer")
+    parser.add_argument('--clipnorm', type=float, default=None,
+                        help='Clip norm for Adam optimize')
+
     args = parser.parse_args()
 
     main(args)
