@@ -26,22 +26,22 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=0.00002, return_arr=False):
+def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
     """
     Anneal Langevin dynamics
     """
     x_mod = tf.random.uniform([n_samples] + list(data_shape))
     if return_arr:
-        x_arr = [x_mod]
+        x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
-        labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
+        labels = tf.ones(n_samples) * i
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=False)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
-                x_arr.append(x_mod)
+                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
 
     if return_arr:
         return x_arr
