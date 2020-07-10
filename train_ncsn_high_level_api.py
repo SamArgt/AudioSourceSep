@@ -229,7 +229,7 @@ def main(args):
         tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/ckpt.{epoch:02d}",
                                       save_weights_only=True,
                                       monitor="loss",
-                                      save_freq=42000),
+                                      save_freq=42210),
         tfk.callbacks.TerminateOnNaN(),
         gen_samples_callback
     ]
