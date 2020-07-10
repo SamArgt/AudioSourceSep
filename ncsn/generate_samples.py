@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from ncsn import score_network
+from .score_network import *
 import argparse
 import time
 import os
@@ -12,8 +12,8 @@ def get_uncompiled_model(args):
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
     # outputs
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+    outputs = CondRefineNetDilated(args.data_shape, args.n_filters,
+                                   args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 
