@@ -27,7 +27,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
     """
     x_mod = tf.random.uniform([n_samples] + list(data_shape))
     if return_arr:
-        x_arr = [x_mod]
+        x_arr = x_mod.numpy()
     for i, sigma in enumerate(sigmas):
         print("Sigma = {} ({} / {})".format(sigma, i + 1, len(sigmas)))
         labels = tf.ones(n_samples) * i
@@ -36,13 +36,13 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
             if ((s + 1) % (n_steps_each // 10) == 0):
                 print("Step {} / {}".format(s + 1, n_steps_each))
                 if return_arr:
-                    x_arr.append(x_mod)
+                    x_arr = np.stack((x_arr, x_mod.numpy()), axis=0)
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=training)
             x_mod = x_mod + step_size * grad + noise
 
     if return_arr:
-        return np.array(x_arr)
+        return x_arr
     else:
         return x_mod
 
