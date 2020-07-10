@@ -48,6 +48,15 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
 
 def main(args):
 
+    # Print parameters
+    print("SAMPLING PARAMETERS")
+    params_dict = vars(args)
+    template = '\t '
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
+    print("_" * 100)
+
     sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10),
                             np.log(args.sigmaL) / np.log(10),
                             num=args.num_classes)
@@ -116,9 +125,6 @@ if __name__ == '__main__':
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
-    parser.add_argument("--sampling_rate", type=int, default=16000)
-    parser.add_argument("--fmin", type=int, default=125)
-    parser.add_argument("--fmax", type=int, default=7600)
 
     # Output and Restore Directory
     parser.add_argument('--filename', type=str, default='ncsn_generated_samples',
