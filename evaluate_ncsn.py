@@ -107,12 +107,12 @@ def main(args):
                                                                                            mirrored_strategy=mirrored_strategy,
                                                                                            use_logt=args.use_logit)
 
-    print("Start Evaluation on Training Set".format(args.n_samples))
+    print("Start Evaluation on Training Set")
     t0 = time.time()
     model.evaluate(train_dataset)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
 
-    print("Start Evaluation on Testing Set".format(args.n_samples))
+    print("Start Evaluation on Testing Set")
     t0 = time.time()
     model.evaluate(eval_datasets)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
