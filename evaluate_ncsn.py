@@ -114,7 +114,7 @@ def main(args):
 
     print("Start Evaluation on Testing Set")
     t0 = time.time()
-    model.evaluate(eval_datasets)
+    model.evaluate(eval_dataset)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
 
 
