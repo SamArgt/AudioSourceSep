@@ -191,8 +191,13 @@ def main(args):
 
     # restore
     if args.restore is not None:
-        model.load_weights(abs_restore_path)
-        print("Model Weights loaded from {}".format(abs_restore_path))
+        if mirrored_strategy is not None:
+            with mirrored_strategy.scope():
+                model.load_weights(abs_restore_path)
+                print("Model Weights loaded from {}".format(abs_restore_path))
+        else:
+            model.load_weights(abs_restore_path)
+            print("Model Weights loaded from {}".format(abs_restore_path))
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
