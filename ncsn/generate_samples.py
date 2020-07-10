@@ -75,12 +75,13 @@ def main(args):
     model.load_weights(abs_restore_path)
     print("Weights loaded")
 
-    print("Start Sampling....")
+    print("Start Generating {} samples....".format(args.n_samples))
+    t0 = time.time()
     x_arr = anneal_langevin_dynamics(args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point, training=args.training)
 
-    print("Done")
+    print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     try:
         np.save(args.filename, x_arr)
         print("Generated Samples saved at {}".format(args.filename + ".npy"))
