@@ -266,6 +266,7 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
+    parser.add_argument("--use_logit", action="store_true")
 
     parser.add_argument('--mirrored_strategy', action="store_false")
 
@@ -281,7 +282,6 @@ if __name__ == '__main__':
                         help='output dirpath for savings')
     parser.add_argument('--restore', type=str, default=None,
                         help='directory of saved weights (optional)')
-    parser.add_argument('--latest', action="store_true", help="Restore latest checkpoint from restore directory")
     parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
@@ -302,9 +302,6 @@ if __name__ == '__main__':
                         help="Clip value for Adam optimizer")
     parser.add_argument('--clipnorm', type=float, default=None,
                         help='Clip norm for Adam optimize')
-
-    # Preprocessing parameters
-    parser.add_argument("--use_logit", action="store_true")
 
     args = parser.parse_args()
 
