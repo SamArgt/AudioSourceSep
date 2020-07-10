@@ -42,7 +42,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
             x_mod = x_mod + step_size * grad + noise
 
     if return_arr:
-        return x_arr
+        return np.array(x_arr)
     else:
         return x_mod
 
