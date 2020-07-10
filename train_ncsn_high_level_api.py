@@ -37,9 +37,9 @@ def anneal_langevin_dynamics(args, model, n_samples, sigmas, n_steps_each=100, s
         labels = tf.expand_dims(tf.ones(n_samples) * i, -1)
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
-            noise = tf.random.normal((n_samples,)) * tf.math.sqrt(step_size * 2)
+            noise = tf.random.normal([n_samples] + list(args.data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=False)
-            x_mod = x_mod + step_size * grad + tf.reshape(noise, (n_samples, 1, 1, 1))
+            x_mod = x_mod + step_size * grad + noise
             if return_arr:
                 x_arr.append(x_mod)
 

@@ -260,7 +260,7 @@ def main(args):
     if args.model == 'glow':
         flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                       preprocessing=args.preprocessing_glow)
+                                       preprocessing_bij=args.preprocessing_glow)
     elif args.model == 'flowpp':
         flow = flow_builder.build_flowpp(minibatch, args.data_shape, n_components=args.n_components,
                                          n_blocks_flow=args.n_blocks_flow, n_blocks_dequant=args.n_blocks_dequant,
