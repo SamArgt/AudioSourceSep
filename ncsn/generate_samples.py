@@ -44,7 +44,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
     if return_arr:
         return x_arr
     else:
-        return x_mod
+        return x_mod.numpy()
 
 
 def setUp_optimizer(args):

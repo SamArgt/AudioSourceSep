@@ -79,6 +79,9 @@ def main(args):
         ds_train, ds_test = datasets['train'], datasets['test']
         ds_train = ds_train.map(lambda x: x['image'])
         ds_test = ds_test.map(lambda x: x['image'])
+        if args.dataset == 'mnist':
+            ds_train = ds_train.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
+            ds_test = ds_test.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
         BUFFER_SIZE = 10000
         BATCH_SIZE = args.batch_size
 
@@ -86,7 +89,6 @@ def main(args):
             sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
             used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
             X = tf.cast(image, tf.float32)
-            X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = X / 256. + tf.random.uniform(X.shape) / 256.
             perturbed_X = X + tf.random.normal(X.shape) * used_sigma
             inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
