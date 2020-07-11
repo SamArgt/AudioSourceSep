@@ -276,6 +276,8 @@ class CondRefineNetDilated(tfk.layers.Layer):
 
         if self.logit_transform:
             x = tf.math.log(x) - tf.math.log(1. - x)
+        else:
+            x = 2. * x - 1.
 
         output = self.begin_conv(x)
 
