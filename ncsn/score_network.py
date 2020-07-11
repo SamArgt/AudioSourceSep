@@ -188,14 +188,14 @@ class ConditionalInstanceNorm2dPlus(tfk.layers.Layer):
         weights_alpha = np.random.normal(size=(num_classes, num_features), loc=0., scale=0.02)
         if bias:
             self.embed = tfk.layers.Embedding(num_classes, 3 * num_features)
-            self.embed.build([None])
+            self.embed.build([])
             weights_beta = np.zeros((num_classes, num_features))
             weights = np.concatenate((weights_gamma, weights_alpha, weights_beta), axis=-1)
             assert weights.shape == (num_classes, 3 * num_features)
             self.embed.set_weights([weights])
         else:
             self.embed = tfk.layers.Embedding(num_classes, 2 * num_features)
-            self.embed.build([None])
+            self.embed.build([])
             weights = np.concatenate((weights_gamma, weights_alpha), axis=-1)
             assert weights.shape == (num_classes, 2 * num_features)
             self.embed.set_weights([weights])
@@ -266,7 +266,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
         self.refine3 = CondRefineBlock([2 * self.ngf, 2 * self.ngf], self.ngf, self.num_classes, self.norm, act=act, name="refine3")
         self.refine4 = CondRefineBlock([self.ngf, self.ngf], self.ngf, self.num_classes, self.norm, act=act, end=True, name="refine4")
 
-    def _compute_cond_module(self, module, x, y, training=False):
+    def _compute_cond_module(self, module, x, y, training=True):
         for m in module:
             x = m(x, y, training=training)
         return x
