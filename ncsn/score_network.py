@@ -274,9 +274,7 @@ class CondRefineNetDilated(tfk.layers.Layer):
     def call(self, inputs, training=True):
         x, y = inputs[0], inputs[1]
 
-        if self.logit_transform:
-            x = tf.math.log(x) - tf.math.log(1. - x)
-        else:
+        if not self.logit_transform:
             x = 2. * x - 1.
 
         output = self.begin_conv(x)
@@ -294,9 +292,6 @@ class CondRefineNetDilated(tfk.layers.Layer):
         output = self.normalizer(output, y, training=training)
         output = self.act(output)
         output = self.end_conv(output)
-
-        if self.logit_transform:
-            output = tf.nn.sigmoid(output)
 
         return output
 

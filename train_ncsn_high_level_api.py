@@ -141,7 +141,9 @@ def main(args):
             sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
             used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
             X = tf.cast(image, tf.float32)
-            X = X / 256. + tf.random.uniform(X.shape) / 256.
+            X = (X / 256.) + tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
+            if args.use_logit:
+                X = tf.math.log(X) - tf.math.log(1. - X)
             perturbed_X = X + tf.random.normal(X.shape) * used_sigma
             inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
             target = -(perturbed_X - X) / (used_sigma ** 2)
@@ -172,6 +174,8 @@ def main(args):
     with file_writer.as_default():
         inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
         sample = inputs["perturbed_X"]
+        if args.use_logit:
+            sample = 1. / (1. + np.exp(-sample))
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -213,6 +217,9 @@ def main(args):
                     gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
             else:
                 gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
+
+            if args.use_logit:
+                gen_samples = 1. / (1 + np.exp(-gen_samples))
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
