@@ -144,6 +144,8 @@ def main(args):
             X = (X / 256.) + tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
             if args.use_logit:
                 X = tf.math.log(X) - tf.math.log(1. - X)
+            else:
+                X += -0.5
             perturbed_X = X + tf.random.normal(X.shape) * used_sigma
             inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
             target = -(perturbed_X - X) / (used_sigma ** 2)
@@ -176,6 +178,8 @@ def main(args):
         sample = inputs["perturbed_X"]
         if args.use_logit:
             sample = 1. / (1. + np.exp(-sample))
+        else:
+            sample += 0.5
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -220,6 +224,8 @@ def main(args):
 
             if args.use_logit:
                 gen_samples = 1. / (1 + np.exp(-gen_samples))
+            else:
+                gen_samples += 0.5
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
