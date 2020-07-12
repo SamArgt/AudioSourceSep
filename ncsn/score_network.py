@@ -17,7 +17,7 @@ class CondCRPBlock(tfk.layers.Layer):
         self.act = tf.keras.layers.Activation(act)
         self.meanpool = tfk.layers.AveragePooling2D(pool_size=(5, 5), strides=1, padding='same', name="AveragePooling2D")
 
-    def call(self, x, y, training=False):
+    def call(self, x, y, training=True):
         x = self.act(x)
         path = tf.identity(x)
         for i in range(self.n_stages):
@@ -44,7 +44,7 @@ class CondRCUBlock(tfk.layers.Layer):
         self.n_stages = n_stages
         self.act = act
 
-    def call(self, x, y, training=False):
+    def call(self, x, y, training=True):
         for i in range(self.n_blocks):
             residual = tf.identity(x)
             for j in range(self.n_stages):
@@ -67,7 +67,7 @@ class CondMSFBlock(tfk.layers.Layer):
                                                 name='conv_{}'.format(i + 1)))
             self.norms.append(normalizer(in_planes[i], num_classes, bias=True, name='norm_{}'.format(i + 1)))
 
-    def call(self, xs, y, shape, training=False):
+    def call(self, xs, y, shape, training=True):
         for i in range(len(self.convs)):
             h = self.norms[i](xs[i], y, training=training)
             h = self.convs[i](h)
@@ -100,7 +100,7 @@ class CondRefineBlock(tfk.layers.Layer):
 
         self.crp = CondCRPBlock(features, 2, num_classes, normalizer, act, name="CondCRPBlock")
 
-    def call(self, xs, y, output_shape, training=False):
+    def call(self, xs, y, output_shape, training=True):
         assert isinstance(xs, tuple) or isinstance(xs, list)
         hs = []
         for i in range(len(xs)):
@@ -162,7 +162,7 @@ class ConditionalResidualBlock(tfk.layers.Layer):
 
         self.normalize1 = normalization(input_dim, num_classes, name="norm1")
 
-    def call(self, x, y, training=False):
+    def call(self, x, y, training=True):
         output = self.normalize1(x, y, training=training)
         output = self.act(output)
         output = self.conv1(output)
