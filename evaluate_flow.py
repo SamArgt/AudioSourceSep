@@ -97,9 +97,9 @@ def main(args_parsed):
     result_file = open(args_parsed.output, "a")
     sys.stdout = result_file
 
-    ds, ds_val, minibatch = data_loader.load_data(dataset=args_parsed.dataset, batch_size=args_parsed.batch_size,
-                                                  use_logit=args_parsed.use_logit, alpha=args_parsed.alpha,
-                                                  noise=args_parsed.noise, mirrored_strategy=None)
+    ds, ds_val, minibatch, n_train, n_test = data_loader.load_data(dataset=args_parsed.dataset, batch_size=args_parsed.batch_size,
+                                                                   use_logit=args_parsed.use_logit, alpha=args_parsed.alpha,
+                                                                   noise=args_parsed.noise, mirrored_strategy=None)
 
     flow = flow_builder.build_flow(minibatch, L=args_parsed.L, K=args_parsed.K, n_filters=args_parsed.n_filters,
                                    dataset=args_parsed.dataset, l2_reg=args_parsed.l2_reg,

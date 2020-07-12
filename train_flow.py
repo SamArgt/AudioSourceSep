@@ -238,16 +238,18 @@ def main(args):
         preprocessing_dataloader = True
 
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                                     mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
-                                                                                     noise=args.noise, alpha=args.alpha, preprocessing=preprocessing_dataloader)
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, _, _ = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
+                                                                                  mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
+                                                                                  noise=args.noise, alpha=args.alpha, preprocessing=preprocessing_dataloader)
         args.test_batch_size = 5000
     else:
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
-                                                                                           reshuffle=True,
-                                                                                           mirrored_strategy=mirrored_strategy)
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
+                                                                                                   batch_size=args.batch_size,
+                                                                                                   reshuffle=True,
+                                                                                                   mirrored_strategy=mirrored_strategy)
         args.test_batch_size = args.batch_size
-    args.n_train = n_train
+        args.n_train = n_train
+        args.n_test = n_test
     # Display original images
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]

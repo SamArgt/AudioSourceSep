@@ -127,7 +127,7 @@ def main(args):
         mirrored_strategy = None
         args.local_batch_size = args.batch_size
 
-    # Load Dataset
+    # Load and Preprocess Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
         datasets, info = tfds.load(
             name=args.dataset, with_info=True, as_supervised=False)
@@ -137,34 +137,39 @@ def main(args):
         if args.dataset == 'mnist':
             ds_train = ds_train.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
             ds_test = ds_test.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-        BUFFER_SIZE = 10000
-        BATCH_SIZE = args.batch_size
 
-        def preprocess(image):
-            sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
-            used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-            X = tf.cast(image, tf.float32)
-            X = (X / 256.) + tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
-            if args.use_logit:
-                X = tf.math.log(X) - tf.math.log(1. - X)
-            perturbed_X = X + tf.random.normal(X.shape) * used_sigma
-            inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
-            target = -(perturbed_X - X) / (used_sigma ** 2)
-            sample_weight = used_sigma ** 2
-            return inputs, target, sample_weight
+        args.dataset_maxval = 256.
 
-        train_dataset = ds_train.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-        train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-        eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
     else:
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train = data_loader.load_melspec_ds(args.dataset, batch_size=args.batch_size,
-                                                                                           reshuffle=True, model='ncsn',
-                                                                                           num_classes=args.num_classes,
-                                                                                           mirrored_strategy=mirrored_strategy,
-                                                                                           use_logt=args.use_logit)
+        ds_train, ds_test, _, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
+                                                                            reshuffle=True, batch_size=None, mirrored_strategy=None)
+        args.dataset_maxval = 100.1
+        args.n_train = n_train
+        args.n_test = n_test
+
+    BUFFER_SIZE = 10000
+    BATCH_SIZE = args.batch_size
+
+    def preprocess(image):
+        sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
+        used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
+        X = tf.cast(image, tf.float32) / args.dataset_maxval
+        if args.img_type == 'image':
+            X += tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
+        if args.use_logit:
+            X = tf.math.log(X) - tf.math.log(1. - X)
+        perturbed_X = X + tf.random.normal(X.shape) * used_sigma
+        inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
+        target = -(perturbed_X - X) / (used_sigma ** 2)
+        sample_weight = used_sigma ** 2
+        return inputs, target, sample_weight
+
+    train_dataset = ds_train.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+    train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+    eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     # Display original images
     # Clear any logs from previous runs
@@ -179,6 +184,8 @@ def main(args):
         sample = inputs["perturbed_X"]
         if args.use_logit:
             sample = 1. / (1. + np.exp(-sample))
+        if args.img_type == 'melspec':
+            sample *= args.dataset_maxval
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -223,6 +230,9 @@ def main(args):
 
             if args.use_logit:
                 gen_samples = 1. / (1 + np.exp(-gen_samples))
+
+            if args.img_type == 'melspec':
+                gen_samples = gen_samples * args.dataset_maxval
 
             figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                 sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)

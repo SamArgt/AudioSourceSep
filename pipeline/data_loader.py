@@ -109,34 +109,44 @@ def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=
     return mixed, x1, x2, gt1, gt2, minibatch
 
 
-def load_melspec_ds(dirpath, batch_size=256, reshuffle=True, mirrored_strategy=None):
+def load_melspec_ds(train_dirpath, test_dirpath, batch_size=256, reshuffle=True, mirrored_strategy=None):
 
-    melspec_files = []
-    dirpath = os.path.abspath(dirpath)
-    for root, dirs, files in os.walk(dirpath):
-        current_path = os.path.join(dirpath, root)
+    train_melspec_files = []
+    train_dirpath = os.path.abspath(train_dirpath)
+    for root, dirs, files in os.walk(train_dirpath):
+        current_path = os.path.join(train_dirpath, root)
         if len(files) > 0:
-            melspec_files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
+            train_melspec_files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
+
+    test_melspec_files = []
+    test_dirpath = os.path.abspath(test_dirpath)
+    for root, dirs, files in os.walk(test_dirpath):
+        current_path = os.path.join(test_dirpath, root)
+        if len(files) > 0:
+            test_melspec_files += [os.path.join(current_path, f) for f in files if re.match(".*(.)tfrecord$", f)]
 
     buffer_size = 2048
-    ds = load_tf_records(melspec_files)
-    ds = ds.shuffle(buffer_size, reshuffle_each_iteration=False)
-    ds = ds.map(lambda x: tf.expand_dims(x, axis=-1))
-    ds_size = len(list(ds.as_numpy_iterator()))
-    # split into training and testing_set
-    ds_test = ds.take(ds_size * 20 // 100)
-    ds_train = ds.skip(ds_size * 20 // 100)
-    n_train = ds_size - (ds_size * 20 // 100)
+    ds_train = load_tf_records(train_melspec_files)
+    ds_train = ds_train.shuffle(buffer_size, reshuffle_each_iteration=False)
+    ds_train = ds_train.map(lambda x: tf.expand_dims(x, axis=-1))
+    n_train = len(list(ds_train.as_numpy_iterator()))
 
-    ds_train = ds_train.batch(batch_size, drop_remainder=True)
-    minibatch = list(ds_train.take(1))[0]
+    ds_test = load_tf_records(test_melspec_files)
+    ds_test = ds_test.shuffle(buffer_size, reshuffle_each_iteration=False)
+    ds_test = ds_test.map(lambda x: tf.expand_dims(x, axis=-1))
+    n_test = len(list(ds_test.as_numpy_iterator()))
 
-    ds_test = ds_test.batch(batch_size, drop_remainder=True)
+    if batch_size is not None:
+
+        ds_train = ds_train.batch(batch_size, drop_remainder=True)
+        ds_test = ds_test.batch(batch_size, drop_remainder=True)
+
+    minibatch = list(ds_train.take(1).as_numpy_iterator())[0]
 
     if mirrored_strategy is not None:
         ds_train_dist = mirrored_strategy.experimental_distribute_dataset(ds_train)
         ds_test_dist = mirrored_strategy.experimental_distribute_dataset(ds_test)
-        return ds_train, ds_test, ds_train_dist, ds_test_dist, minibatch, n_train
+        return ds_train, ds_test, ds_train_dist, ds_test_dist, minibatch, n_train, n_test
 
     else:
-        return ds_train, ds_test, minibatch, n_train
+        return ds_train, ds_test, minibatch, n_train, n_test
