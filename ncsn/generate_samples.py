@@ -30,7 +30,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
         print("Sigma = {} ({} / {})".format(sigma, i + 1, len(sigmas)))
-        labels = tf.ones(n_samples) * i
+        labels = tf.ones(n_samples, dtype=tf.int32) * i
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
             if ((s + 1) % (n_steps_each // 10) == 0):

@@ -34,7 +34,7 @@ def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
-        labels = tf.ones(n_samples) * i
+        labels = tf.ones(n_samples, dtype=tf.int32) * i
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
@@ -53,9 +53,12 @@ class CustomLoss(tfk.losses.Loss):
     def __init__(self):
         super(CustomLoss, self).__init__()
 
-    def call(self, scores, target, sample_weights):
+    def call(self, scores, target, sample_weight=None):
         loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
-        return loss * sample_weights
+        if sample_weight is not None:
+            return loss * sample_weight
+        else:
+            return loss
 
 
 def main(args):
