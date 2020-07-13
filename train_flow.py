@@ -253,7 +253,6 @@ def main(args):
     # Display original images
     with train_summary_writer.as_default():
         sample = list(ds.take(1).as_numpy_iterator())[0]
-        sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
