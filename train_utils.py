@@ -112,7 +112,7 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
             spec_db_sample = librosa.power_to_db(postprocess_sample)
             specshow(spec_db_sample, sr=kwargs["sampling_rate"],
                      ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
-            if i > len(sample):
+            if i > len(sample) - 1:
                 return f
 
     return f
