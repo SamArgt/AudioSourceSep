@@ -104,6 +104,8 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
     if data_shape[-1] == 1:
         sample = np.squeeze(sample, axis=-1)
     for i, ax in enumerate(axes):
+        if i > (len(sample) - 1):
+            return f
         if img_type == "image":
             ax.imshow(np.clip(sample[i], 0., 1.))
             ax.set_axis_off()
@@ -112,7 +114,5 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
             spec_db_sample = librosa.power_to_db(postprocess_sample)
             specshow(spec_db_sample, sr=kwargs["sampling_rate"],
                      ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
-            if i > len(sample) - 1:
-                return f
 
     return f
