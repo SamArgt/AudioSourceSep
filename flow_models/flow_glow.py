@@ -277,7 +277,7 @@ class GlowBijector_4blocks(tfb.Bijector):
         z2, h2 = tf.split(output2, 2, axis=-1)
         z2 = tf.reshape(z2, (-1, self.H // 16, self.W // 16, 64 * self.C))
         output3 = self.glow_block3.forward(h2)
-        z3, h3 = tf.split(output3, 3, axis=-1)
+        z3, h3 = tf.split(output3, 2, axis=-1)
         z3 = tf.reshape(z3, (-1, self.H // 16, self.W // 16, 32 * self.C))
         z4 = self.glow_block4.forward(h3)
         z3_z4 = tf.concat((z3, z4), axis=-1)
