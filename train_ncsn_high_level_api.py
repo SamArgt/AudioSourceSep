@@ -151,7 +151,7 @@ def main(args):
     BATCH_SIZE = args.batch_size
 
     def preprocess(image):
-        sigma_idx = tf.random.uniform(shape=(), maxval=10, dtype=tf.int32)
+        sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
         X = tf.cast(image, tf.float32) / args.dataset_maxval
         if args.img_type == 'image':
