@@ -158,7 +158,7 @@ def main(args):
             X += tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
         if args.use_logit:
             X = tf.math.log(X) - tf.math.log(1. - X)
-        perturbed_X = X + tf.random.normal(X.shape) * used_sigma
+        perturbed_X = X + tf.random.normal(args.data_shape) * used_sigma
         inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
         target = -(perturbed_X - X) / (used_sigma ** 2)
         sample_weight = used_sigma ** 2
