@@ -81,10 +81,4 @@ loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
 
 print("Model compiled...")
-
-for elt in train_dataset:
-    inputs, target, sample_weight = elt
-    perturbed_X = inputs['perturbed_X']
-    is_nan = tf.reduce_any(tf.math.is_nan(perturbed_X))
-    if is_nan:
-        print(perturbed_X)
+model.fit(train_dataset)
