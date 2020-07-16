@@ -80,5 +80,7 @@ optimizer = tfk.optimizers.Adam()
 loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
 
-print("Model compiled...")
-model.fit(train_dataset)
+for elt in train_dataset:
+    _, target, _ = elt
+    is_nan = tf.reduce_any(tf.math.is_nan(target))
+    print(is_nan)
