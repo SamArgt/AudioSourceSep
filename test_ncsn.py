@@ -82,8 +82,4 @@ optimizer = tfk.optimizers.Adam()
 loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
 
-for elt in train_dataset:
-    inputs, target, sample_weight = elt
-    pertubed_X = inputs['perturbed_X']
-    is_null = tf.reduce_any(tf.math.equal(sample_weight, tf.constant(0.))).numpy()
-    print(is_null)
+
