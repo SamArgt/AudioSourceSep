@@ -146,13 +146,15 @@ def main(args):
     def preprocess(x):
         sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-        X = tf.cast(x['image'], tf.float32) / args.dataset_maxval
+        X = tf.cast(x['image'], tf.float32)
         if args.dataset == 'mnist':
             X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
         if args.img_type == 'image':
-            X += tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
+            X = (X + tf.random.uniform(args.data_shape)) / args.dataset_maxval
+        else:
+            X /= args.dataset_maxval
         if args.use_logit:
-            X = args.alpha + (1. - args.alpha) * X
+            X = X * (1. - args.alpha) + args.alpha
             X = tf.math.log(X) - tf.math.log(1. - X)
         perturbed_X = X + tf.random.normal(args.data_shape) * used_sigma
         inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
