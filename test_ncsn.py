@@ -83,7 +83,7 @@ model.compile(optimizer=optimizer, loss=loss_obj)
 print("Model compiled...")
 
 for elt in train_dataset:
-    inputs, target, sample_weight
+    inputs, target, sample_weight = elt
     perturbed_X = inputs['perturbed_X']
     is_nan = tf.reduce_any(tf.is_nan(perturbed_X))
     if is_nan:
