@@ -81,5 +81,4 @@ model = get_uncompiled_model()
 optimizer = tfk.optimizers.Adam()
 loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
-
-
+model.fit(train_dataset, validation_data=eval_dataset)
