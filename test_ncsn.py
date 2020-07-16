@@ -76,9 +76,10 @@ eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
 print('Data Loaded...')
-
-model = get_uncompiled_model()
-optimizer = tfk.optimizers.Adam()
+mirrored_strategy = tf.distribute.MirroredStrategy()
+with mirrored_strategy.scope():
+    model = get_uncompiled_model()
+    optimizer = tfk.optimizers.Adam()
 loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
 model.fit(train_dataset, validation_data=eval_dataset)
