@@ -132,6 +132,11 @@ def main(args):
         datasets = tfds.load(name=args.dataset, with_info=False, as_supervised=False)
         ds_train, ds_test = datasets['train'], datasets['test']
         args.dataset_maxval = 256.
+        if args.dataset == "mnist":
+            args.n_train = 50000
+        else:
+            args.n_train = 10000
+        args.n_test = 10000
 
     else:
         ds_train, ds_test, _, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
@@ -257,7 +262,7 @@ def main(args):
         tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/ckpt.{epoch:02d}",
                                       save_weights_only=True,
                                       monitor="loss",
-                                      save_freq=42210),
+                                      save_freq=int(round(args.n_train / args.batch_size, 0)) * args.n_epochs // 5),
         tfk.callbacks.TerminateOnNaN(),
         gen_samples_callback
     ]
