@@ -59,7 +59,7 @@ def preprocess(x):
     X = tf.cast(x['image'], tf.float32)
     X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
     X = (X + tf.random.uniform(data_shape)) / dataset_maxval
-    X = X * (1. - alpha) + alpha
+    X = X * (1. - 2 * alpha) + alpha
     X = tf.math.log(X) - tf.math.log(1. - X)
     perturbed_X = X + tf.random.normal(data_shape) * used_sigma
     inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
@@ -74,8 +74,8 @@ train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
 print('Data Loaded...')
+
 mirrored_strategy = tf.distribute.MirroredStrategy()
 with mirrored_strategy.scope():
     model = get_uncompiled_model()
