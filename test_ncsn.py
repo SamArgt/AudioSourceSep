@@ -81,6 +81,8 @@ loss_obj = CustomLoss()
 model.compile(optimizer=optimizer, loss=loss_obj)
 
 for elt in train_dataset:
-    _, target, _ = elt
-    is_nan = tf.reduce_any(tf.math.is_nan(target))
-    print(is_nan)
+    inputs, target, _ = elt
+    pertubed_X = inputs['pertubed_X']
+    is_nan = tf.reduce_any(tf.math.is_nan(pertubed_X)).numpy()
+    if is_nan:
+        print(pertubed_X)
