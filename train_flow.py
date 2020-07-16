@@ -232,18 +232,15 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    if args.model == 'flowpp':
-        preprocessing_dataloader = False
-    else:
-        preprocessing_dataloader = True
-
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, _, _ = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                                  mirrored_strategy=mirrored_strategy, use_logit=args.use_logit,
-                                                                                  noise=args.noise, alpha=args.alpha, preprocessing=preprocessing_dataloader)
+        ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
+                                                                            mirrored_strategy=mirrored_strategy,
+                                                                            use_logit=args.use_logit,
+                                                                            noise=args.noise, alpha=args.alpha)
         args.test_batch_size = 5000
     else:
-        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train',
+                                                                                                   args.dataset + '/test',
                                                                                                    batch_size=args.batch_size,
                                                                                                    reshuffle=True,
                                                                                                    mirrored_strategy=mirrored_strategy)

@@ -6,10 +6,7 @@ import re
 
 
 def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
-                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True,
-                 model='flow', num_classes=10):
-
-    assert model == 'flow' or model == 'ncsn'
+                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True):
 
     if dataset == 'mnist':
         data_shape = (32, 32, 1)
@@ -21,64 +18,39 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
     buffer_size = 2048
     global_batch_size = batch_size
     ds = tfds.load(dataset, split='train', shuffle_files=True)
-    n_train = len(list(ds.as_numpy_iterator()))
+    ds_val = tfds.load(dataset, split='test', shuffle_files=True)
+
     # Build your input pipeline
-    ds = ds.map(lambda x: x['image'])
-    ds = ds.map(lambda x: tf.cast(x, tf.float32))
-    if dataset == 'mnist':
-        ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
+    def map_fn(x):
+        x = tf.cast(x['image'], tf.float32)
+        if dataset == 'mnist':
+            x = tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]]))
+        if preprocessing and use_logit:
+            x = (x + tf.random.uniform(data_shape)) / 256.
+            x = x * (1. - alpha) + alpha
+            x = tf.math.log(x) - tf.math.log(1. - x)
+        elif preprocessing and (not use_logit):
+            x = x + tf.random.uniform(data_shape) / 256. - 0.5
+        if noise is not None:
+            x += tf.random.normal(data_shape) * noise
+        return x
 
-    if preprocessing and model == 'flow':
-        ds = ds.map(lambda x: x / 256. - 0.5)
-
-    if noise is not None:
-        ds = ds.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
-    ds = ds.map(lambda x: x + tf.random.uniform(shape=data_shape,
-                                                minval=0., maxval=1. / 256.))
-    if use_logit:
-        ds = ds.map(lambda x: alpha + (1 - alpha) * x)
-        ds = ds.map(lambda x: tf.math.log(x / (1 - x)))
-
-    if model == 'ncsn':
-        ds = ds.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds = ds.map(lambda x: (x, tf.random.uniform((), 0, num_classes, dtype=tf.int32)))
+    ds = ds.map(map_fn)
+    ds_val = ds_val.map(map_fn)
 
     ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds = ds.batch(global_batch_size, drop_remainder=True)
     minibatch = list(ds.take(1))[0]
-
-    # Validation Set
-    ds_val = tfds.load(dataset, split='test', shuffle_files=True)
-    ds_val = ds_val.map(lambda x: x['image'])
-    ds_val = ds_val.map(lambda x: tf.cast(x, tf.float32))
-    if dataset == 'mnist':
-        ds_val = ds_val.map(lambda x: tf.pad(
-            x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-
-    if preprocessing and model == 'flow':
-        ds_val = ds_val.map(lambda x: x / 256. - 0.5)
-        ds_val = ds_val.map(lambda x: x + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-
-    if noise is not None:
-        ds_val = ds_val.map(lambda x: x + tf.random.normal(shape=data_shape) * noise)
-
-    if use_logit:
-        ds_val = ds_val.map(lambda x: alpha + (1 - alpha) * x)
-        ds_val = ds_val.map(lambda x: tf.math.log(x / (1 - x)))
-
-    if model == 'ncsn':
-        ds_val = ds_val.map(lambda x: x / 256. + tf.random.uniform(shape=data_shape, minval=0., maxval=1. / 256.))
-        ds_val = ds_val.map(lambda x: (x, tf.random.uniform((), 0, num_classes, dtype=tf.int32)))
 
     ds_val = ds_val.batch(5000)
 
     if mirrored_strategy is not None:
         ds_dist = mirrored_strategy.experimental_distribute_dataset(ds)
         ds_val_dist = mirrored_strategy.experimental_distribute_dataset(ds_val)
-        return ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train
+        return ds, ds_val, ds_dist, ds_val_dist, minibatch
 
     else:
-        return ds, ds_val, minibatch, n_train
+        return ds, ds_val, minibatch
 
 
 def get_mixture(dataset='mnist', n_mixed=10, use_logit=False, alpha=None, noise=0.1, mirrored_strategy=None):

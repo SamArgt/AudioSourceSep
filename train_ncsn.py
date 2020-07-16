@@ -129,15 +129,8 @@ def main(args):
 
     # Load and Preprocess Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        datasets, info = tfds.load(
-            name=args.dataset, with_info=True, as_supervised=False)
+        datasets = tfds.load(name=args.dataset, with_info=False, as_supervised=False)
         ds_train, ds_test = datasets['train'], datasets['test']
-        ds_train = ds_train.map(lambda x: x['image'])
-        ds_test = ds_test.map(lambda x: x['image'])
-        if args.dataset == 'mnist':
-            ds_train = ds_train.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-            ds_test = ds_test.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
-
         args.dataset_maxval = 256.
 
     else:
@@ -150,13 +143,16 @@ def main(args):
     BUFFER_SIZE = 10000
     BATCH_SIZE = args.batch_size
 
-    def preprocess(image):
+    def preprocess(x):
         sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-        X = tf.cast(image, tf.float32) / args.dataset_maxval
+        X = tf.cast(x['image'], tf.float32) / args.dataset_maxval
+        if args.dataset == 'mnist':
+            X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
         if args.img_type == 'image':
             X += tf.random.uniform(X.shape, minval=0., maxval=(1. / 256.))
         if args.use_logit:
+            X = args.alpha + (1. - args.alpha) * X
             X = tf.math.log(X) - tf.math.log(1. - X)
         perturbed_X = X + tf.random.normal(args.data_shape) * used_sigma
         inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
@@ -184,6 +180,7 @@ def main(args):
         sample = inputs["perturbed_X"]
         if args.use_logit:
             sample = 1. / (1. + np.exp(-sample))
+            sample = (sample - args.alpha) / (1. - args.alpha)
         if args.img_type == 'melspec':
             sample *= args.dataset_maxval
         sample = sample[:32]
@@ -230,15 +227,21 @@ def main(args):
 
             if args.use_logit:
                 gen_samples = 1. / (1 + np.exp(-gen_samples))
-
+                gen_samples = (gen_samples - args.alpha) / (1. - args.alpha)
             if args.img_type == 'melspec':
                 gen_samples = gen_samples * args.dataset_maxval
+            try:
+                figure = image_grid(gen_samples, args.data_shape, args.img_type,
+                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+                sample_image = plot_to_image(figure)
+                with file_writer.as_default():
+                    tf.summary.image("Generated Samples", sample_image, step=epoch)
 
-            figure = image_grid(gen_samples, args.data_shape, args.img_type,
-                                sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-            sample_image = plot_to_image(figure)
-            with file_writer.as_default():
-                tf.summary.image("Generated Samples", sample_image, step=epoch)
+            except IndexError:
+                with train_summary_writer.as_default():
+                    tf.summary.text(name="display error",
+                                    data="Impossible to display spectrograms because of NaN values",
+                                    step=epoch)
 
         else:
             pass
@@ -289,6 +292,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
     parser.add_argument("--use_logit", action="store_true")
+    parser.add_argument("--alpha", type=float, default=0.05)
 
     parser.add_argument('--mirrored_strategy', action="store_false")
 
