@@ -13,7 +13,7 @@ from train_utils import *
 tfk = tf.keras
 
 BUFFER_SIZE = 10000
-BATCH_SIZE = 512
+BATCH_SIZE = 128
 alpha = 0.05
 
 data_shape = [32, 32, 1]
