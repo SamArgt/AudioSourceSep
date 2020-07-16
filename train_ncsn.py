@@ -53,12 +53,12 @@ class CustomLoss(tfk.losses.Loss):
     def __init__(self):
         super(CustomLoss, self).__init__()
 
-    def call(self, scores, target, sample_weight=None):
+    def __call__(self, scores, target, sample_weight=None):
         loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
         if sample_weight is not None:
-            return loss * sample_weight
+            return tf.reduce_mean(loss * sample_weight)
         else:
-            return loss
+            return tf.reduce_mean(loss)
 
 
 def main(args):
@@ -201,8 +201,8 @@ def main(args):
     else:
         model = get_uncompiled_model(args)
 
-    model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    # model.compile(optimizer=optimizer, loss=CustomLoss())
+    # model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
+    model.compile(optimizer=optimizer, loss=CustomLoss())
 
     # restore
     if args.restore is not None:
