@@ -13,10 +13,11 @@ from train_utils import *
 tfk = tf.keras
 
 BUFFER_SIZE = 10000
-BATCH_SIZE = 128
+BATCH_SIZE = 512
 alpha = 0.05
 
 data_shape = [32, 32, 1]
+
 
 def get_uncompiled_model():
     # inputs
@@ -40,6 +41,7 @@ class CustomLoss(tfk.losses.Loss):
             return tf.reduce_mean(loss * sample_weight)
         else:
             return tf.reduce_mean(loss)
+
 
 print("Start Testing...")
 
@@ -83,5 +85,5 @@ model.compile(optimizer=optimizer, loss=loss_obj)
 for elt in train_dataset:
     inputs, target, _ = elt
     pertubed_X = inputs['perturbed_X']
-    is_nan = tf.reduce_any(tf.math.is_nan(pertubed_X)).numpy()
+    is_nan = tf.reduce_any(tf.math.is_nan(target)).numpy()
     print(is_nan)
