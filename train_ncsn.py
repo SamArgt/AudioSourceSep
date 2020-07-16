@@ -202,7 +202,8 @@ def main(args):
         model = get_uncompiled_model(args)
 
     # model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    model.compile(optimizer=optimizer, loss=CustomLoss())
+    loss_obj = CustomLoss()
+    model.compile(optimizer=optimizer, loss=loss_obj)
 
     # restore
     if args.restore is not None:
