@@ -82,10 +82,5 @@ model.compile(optimizer=optimizer, loss=loss_obj)
 
 print("Model compiled...")
 
-for elt in train_dataset.take(1):
-    inputs, target, sample_weight = elt
-    scores = model(inputs)
-    loss = loss_obj.__call__(scores, target, sample_weight)
-
-print(scores)
-print(loss)
+print("Start Training...")
+model.fit(train_dataset, validation_data=eval_dataset)
