@@ -84,5 +84,4 @@ for elt in train_dataset:
     inputs, target, _ = elt
     pertubed_X = inputs['perturbed_X']
     is_nan = tf.reduce_any(tf.math.is_nan(pertubed_X)).numpy()
-    if is_nan:
-        print(pertubed_X)
+    print(is_nan)
