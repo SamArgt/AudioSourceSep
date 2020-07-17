@@ -300,7 +300,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
     parser.add_argument("--use_logit", action="store_true")
-    parser.add_argument("--alpha", type=float, default=0.05)
+    parser.add_argument("--alpha", type=float, default=1e-6)
 
     parser.add_argument('--mirrored_strategy', action="store_false")
 
