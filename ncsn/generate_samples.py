@@ -104,6 +104,9 @@ def main(args):
     x_arr = anneal_langevin_dynamics(args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point, training=args.training)
+    if args.use_logit:
+        x_arr = 1. / (1 - np.exp(-x_arr))
+        x_arr = (x_arr - args.alpha) / (1 - 2 * args.alpha)
 
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
@@ -137,7 +140,6 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
-
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
@@ -155,6 +157,7 @@ if __name__ == '__main__':
 
     # Preprocessing parameters
     parser.add_argument("--use_logit", action="store_true")
+    parser.add_argument("--alpha", type=float, default=0.05)
 
     # Optimization parameters
     parser.add_argument("--optimizer", type=str,
