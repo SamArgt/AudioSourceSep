@@ -187,7 +187,7 @@ def main(args):
         sample = inputs["perturbed_X"]
         if args.use_logit:
             sample = 1. / (1. + np.exp(-sample))
-            sample = (sample - args.alpha) / (1. - 2 * args.alpha)
+            sample = (sample - args.alpha) / (1. - 2. * args.alpha)
         if args.img_type == 'melspec':
             sample *= args.dataset_maxval
         sample = sample[:32]
@@ -234,8 +234,8 @@ def main(args):
                 gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
 
             if args.use_logit:
-                gen_samples = 1. / (1 + np.exp(-gen_samples))
-                gen_samples = (gen_samples - args.alpha) / (1. - 2 * args.alpha)
+                gen_samples = 1. / (1. + np.exp(-gen_samples))
+                gen_samples = (gen_samples - args.alpha) / (1. - 2. * args.alpha)
             if args.img_type == 'melspec':
                 gen_samples = gen_samples * args.dataset_maxval
             try:
