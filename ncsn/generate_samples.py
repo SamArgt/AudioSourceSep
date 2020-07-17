@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
     # Preprocessing parameters
     parser.add_argument("--use_logit", action="store_true")
-    parser.add_argument("--alpha", type=float, default=0.05)
+    parser.add_argument("--alpha", type=float, default=1e-6)
 
     # Optimization parameters
     parser.add_argument("--optimizer", type=str,
