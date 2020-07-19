@@ -105,7 +105,7 @@ def main(args):
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point, training=args.training)
     if args.use_logit:
-        x_arr = 1. / (1. - np.exp(-x_arr))
+        x_arr = 1. / (1. + np.exp(-x_arr))
         x_arr = (x_arr - args.alpha) / (1 - 2. * args.alpha)
 
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
