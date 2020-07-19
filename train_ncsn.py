@@ -63,10 +63,8 @@ class CustomLoss(tfk.losses.Loss):
 
 def main(args):
 
-    sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10),
-                            np.log(args.sigmaL) / np.log(10),
-                            num=args.num_classes)
-
+    # sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
+    sigmas_np = np.linspace(args.sigma1, args.sigmaL, num=args.num_classes)
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
