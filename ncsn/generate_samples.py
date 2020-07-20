@@ -100,11 +100,11 @@ def main(args):
 
     print("Start Generating {} samples....".format(args.n_samples))
     t0 = time.time()
-    x_mod = tf.random.uniform()
+    x_mod = tf.random.uniform(shape=[args.n_samples] + args.data_shape)
     if args.use_logit:
         x_mod = (1. - 2 * args.alpha) * x_mod + args.alpha
         x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
-    x_arr = anneal_langevin_dynamics(args.data_shape, model, args.n_samples, sigmas_np,
+    x_arr = anneal_langevin_dynamics(x_mod, args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point, training=args.training)
     if args.use_logit:
