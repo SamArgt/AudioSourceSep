@@ -20,12 +20,11 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100,
+def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100,
                              step_lr=0.00002, return_arr=True, training=False):
     """
     Anneal Langevin dynamics
     """
-    x_mod = tf.random.uniform([n_samples] + list(data_shape))
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
@@ -101,6 +100,10 @@ def main(args):
 
     print("Start Generating {} samples....".format(args.n_samples))
     t0 = time.time()
+    x_mod = tf.random.uniform()
+    if args.use_logit:
+        x_mod = (1. - 2 * args.alpha) * x_mod + args.alpha
+        x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
     x_arr = anneal_langevin_dynamics(args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point, training=args.training)
