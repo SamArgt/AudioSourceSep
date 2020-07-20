@@ -26,11 +26,10 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
+def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
     """
     Anneal Langevin dynamics
     """
-    x_mod = tf.random.uniform([n_samples] + list(data_shape))
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
@@ -225,11 +224,15 @@ def main(args):
 
     def display_generated_samples(epoch, logs):
         if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
+            x_mod = tf.random.uniform([32] + args.data_shape)
+            if args.use_logit:
+                x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
+                x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
+                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np)
             else:
-                gen_samples = anneal_langevin_dynamics(args.data_shape, model, 32, sigmas_np)
+                gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np)
 
             if args.use_logit:
                 gen_samples = 1. / (1. + np.exp(-gen_samples))
