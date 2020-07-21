@@ -145,13 +145,13 @@ def main(args):
     BUFFER_SIZE = 10000
     BATCH_SIZE = args.batch_size
 
-    def preprocess(x):
+    def preprocess(X):
         sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
         if args.img_type == 'image':
             if args.dataset == 'mnist':
                 X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
-            X = tf.cast(x['image'], tf.float32)
+            X = tf.cast(X['image'], tf.float32)
             X = (X + tf.random.uniform(args.data_shape)) / args.dataset_maxval
         else:
             X /= args.dataset_maxval
