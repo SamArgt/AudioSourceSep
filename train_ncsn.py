@@ -148,10 +148,10 @@ def main(args):
     def preprocess(x):
         sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-        X = tf.cast(x['image'], tf.float32)
-        if args.dataset == 'mnist':
-            X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
         if args.img_type == 'image':
+            if args.dataset == 'mnist':
+                X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
+            X = tf.cast(x['image'], tf.float32)
             X = (X + tf.random.uniform(args.data_shape)) / args.dataset_maxval
         else:
             X /= args.dataset_maxval
