@@ -11,14 +11,13 @@ tfk = tf.keras
 def build_realnvp(data_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_strategy=None):
 
     tfk.backend.clear_session()
-    shift_and_log_scale_layer = ShiftAndLogScaleResNet
     base_distr_shape = [data_shape[0] // 2, data_shape[1] // 2, data_shape[2] * 4]
 
     # Build Flow
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            flow_bijector = RealNVP(data_shape, shift_and_log_scale_layer, n_filters, n_blocks)
+            flow_bijector = RealNVP(data_shape, n_filters, n_blocks)
             inv_bijector = tfb.Invert(flow_bijector)
 
             if learntop:
@@ -37,7 +36,7 @@ def build_realnvp(data_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_
                     0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
-        flow_bijector = RealNVP(data_shape, shift_and_log_scale_layer, n_filters, n_blocks)
+        flow_bijector = RealNVP(data_shape, n_filters, n_blocks)
         inv_bijector = tfb.Invert(flow_bijector)
 
         if learntop:
