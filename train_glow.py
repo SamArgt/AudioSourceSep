@@ -196,7 +196,7 @@ def main(args):
             dataset = args.instrument
         else:
             dataset = args.dataset
-        output_dirname = args.model + '_' + dataset + '_' + str(args.L) + '_' + \
+        output_dirname = 'glow' + '_' + dataset + '_' + str(args.L) + '_' + \
             str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
