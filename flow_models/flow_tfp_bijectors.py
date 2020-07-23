@@ -17,11 +17,9 @@ class AffineCouplingLayerMasked(tfb.Bijector):
     as described in Real NVP
 
     Parameters:
-        event_shape (list): dimension of the input data
-        shift_anf_log_scale_layer: tfk.layers.Layer class
-        n_hidden_units : number of hidden units in the shift_and_log_scale layer
-            if shift_anf_log_scale_layer is a ConvNet: number of filters in the hidden layers
-            if it is a DenseNet: number of units in the hidden layers
+        event_shape (list of int): dimension of the input data
+        shift_and_log_scale_layer: tfk.layers.Layer for computing the scale and shift parameters
+        **kwargs: parameters for shift_and_log_scale_layer
 
     Perform coupling layer with a binary masked b:
     forward:
@@ -30,24 +28,13 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         x = b * y + ((1-b) * y - t) * tf.exp(-log_s)
     log_det:
         Sum of log_s * (1 - b)
-
     """
 
-    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units,
-                 masking='channel', mask_state=0, name='AffineCouplingLayer', dtype=tf.float32, **kwargs):
-        super(AffineCouplingLayerMasked, self).__init__(
-            forward_min_event_ndims=0, name=name)
+    def __init__(self, event_shape, shift_and_log_scale_layer, masking='channel', mask_state=0, name='AffineCouplingLayer', **kwargs):
 
-        if "l2_reg" in kwargs.items():
-            l2_reg = kwargs["l2_reg"]
-        else:
-            l2_reg = None
-
-        self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            event_shape, n_hidden_units, name='shiftAndLogScaleLayer', l2_reg=l2_reg)
-        self.binary_mask = self.binary_mask_fn(
-            event_shape, masking, mask_state, dtype)
-        self.tensor_dtype = dtype
+        super(AffineCouplingLayerMasked, self).__init__(forward_min_event_ndims=0, name=name)
+        self.shift_and_log_scale_fn = shift_and_log_scale_layer(event_shape, **kwargs)
+        self.binary_mask = self.binary_mask_fn(event_shape, masking, mask_state)
 
     def _forward(self, x):
         b = tf.repeat(self.binary_mask, x.shape[0], axis=0)
@@ -68,7 +55,16 @@ class AffineCouplingLayerMasked(tfb.Bijector):
         return log_det
 
     @staticmethod
-    def binary_mask_fn(input_shape, masking, mask_state, dtype):
+    def binary_mask_fn(input_shape, masking, mask_state):
+        """
+        Compute the binary mask
+
+        input_shape: shape of the binary mask
+        masking: type of masking
+        mask_state: 0 or 1. parameters to alternate between b and (1. - b)
+
+        Return binary mask
+        """
         if masking == 'channel':
             assert(input_shape[-1] % 2 == 0)
             sub_shape = np.copy(input_shape)
@@ -76,7 +72,7 @@ class AffineCouplingLayerMasked(tfb.Bijector):
             binary_mask = np.concatenate([np.ones(sub_shape),
                                           np.zeros(sub_shape)],
                                          axis=-1)
-        if masking == 'checkboard':
+        if masking == 'checkerboard':
             assert(len(input_shape) == 3)
             column_odd = [k % 2 for k in range(input_shape[-2])]
             column_even = [(k + 1) % 2 for k in range(input_shape[-2])]
@@ -92,25 +88,51 @@ class AffineCouplingLayerMasked(tfb.Bijector):
 
         binary_mask = binary_mask.reshape([1] + list(binary_mask.shape))
         if mask_state:
-            return tf.cast(binary_mask, dtype)
+            return tf.cast(binary_mask, tf.float32)
         else:
-            return tf.cast((1 - binary_mask), dtype)
+            return tf.cast((1 - binary_mask), tf.float32)
+
+
+class StackedMaskedCouplingLayers(tfb.Bijector):
+    """
+    Stack multiple coupling layers with BatchNormalization after each one.
+    Parameters:
+        event_shape (list of int)
+        n_coupling_layers: number of coupling layers to stack
+        shift_and_log_scale_layer: tf.keras.layers.Layer
+        masking: 'checkerboard' or 'channel'
+        **kwargs: parameters for the shift_and_log_scale_layer
+    """
+
+    def __init__(self, event_shape, n_coupling_layers, shift_and_log_scale_layer, masking, **kwargs):
+        super(StackedCouplingLayers, self).__init__(forward_min_event_ndims=3)
+
+        self.stack_layers = []
+        for i in range(n_coupling_layers):
+            self.stack_layers += [tfb.BatchNormalization(),
+                                  AffineCouplingLayerMasked(event_shape, shift_and_log_scale_layer,
+                                                            masking, mask_state=i % 2, **kwargs)]
+        self.bijector = tfb.Chain(self.stack_layers)
+
+    def _forward(self, x):
+        return self.bijector.forward(x)
+
+    def _inverse(self, y):
+        return self.bijector.inverse(y)
+
+    def _forward_log_det_jacobian(self, x):
+        return self.bijector.forward_log_det_jacobian(x, event_ndims=3)
 
 
 class AffineCouplingLayerSplit(tfb.Bijector):
-    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, name='AffineCouplingLayer', **kwargs):
+    def __init__(self, event_shape, shift_and_log_scale_layer, name='AffineCouplingLayer', **kwargs):
         super(AffineCouplingLayerSplit, self).__init__(
             forward_min_event_ndims=3, name=name)
 
         self.H, self.W, self.C = event_shape
         assert(self.C % 2 == 0)
 
-        if "l2_reg" in kwargs.items():
-            l2_reg = kwargs["l2_reg"]
-        else:
-            l2_reg = None
-        self.shift_and_log_scale_fn = shift_and_log_scale_layer(
-            [self.H, self.W, self.C // 2], n_hidden_units, name='shiftAndLogScaleLayer', l2_reg=l2_reg)
+        self.shift_and_log_scale_fn = shift_and_log_scale_layer([self.H, self.W, self.C // 2], **kwargs)
 
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
@@ -140,20 +162,50 @@ class AffineCouplingLayerSplit(tfb.Bijector):
         return tf.reduce_sum(log_s, axis=[1, 2, 3])
 
 
-class Squeeze(tfb.Reshape):
+class Squeeze(tfb.Bijector):
     """
     Squeezing operation as described in Real NVP
     """
 
-    def __init__(self, event_shape_in):
+    def __init__(self, event_shape_in, name="Squeeze"):
+        super(Squeeze, self).__init__(forward_min_event_ndims=3, name=name)
         H, W, C = event_shape_in
+        self.H, self.W, self.C = H, W, C
         assert(H % 2 == 0)
         assert(W % 2 == 0)
 
         self.event_shape_out = (H // 2, W // 2, 4 * C)
 
-        super(Squeeze, self).__init__(self.event_shape_out,
-                                      event_shape_in)
+    def _forward(self, x):
+        x = tf.reshape(x, [-1, self.H // 2, 2, self.W // 2, 2, self.C])
+        x = tf.transpose(x, [0, 1, 3, 5, 2, 4])
+        x = tf.reshape(x, [-1, self.H // 2, self.W // 2, self.C * 4])
+        return x
+
+    def _inverse(self, y):
+        y = tf.reshape(y, [-1, self.H // 2, self.W // 2, self.C, 2, 2])
+        y = tf.transpose(y, [0, 1, 4, 2, 5, 3])
+        y = tf.reshape(y, [-1, self.H, self.W, self.C])
+        return y
+
+    def _forward_log_det_jacobian(self, x):
+        return tf.zeros(shape=x.shape[0])
+
+    def _forward_event_shape_tensor(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _forward_event_shape(self, input_shape):
+        H, W, C = input_shape
+        return (H // 2, W // 2, C * 4)
+
+    def _inverse_event_shape_tensor(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
+
+    def _inverse_event_shape(self, output_shape):
+        H, W, C = output_shape
+        return (H * 2, W * 2, C // 4)
 
 
 class ActNorm(tfb.Bijector):
@@ -279,52 +331,37 @@ class Invertible1x1Conv(tfb.Bijector):
         return tf.repeat(log_det, x.shape[0], axis=0)
 
 
-class Preprocessing(tfp.bijectors.Bijector):
-    def __init__(self, event_shape, use_logit=False, uniform_noise=True, alpha=0.05, noise=None, name="Preprocessing"):
+class ImgPreprocessing(tfp.bijectors.Bijector):
+    """
+    Dequantize and Preprocess images by adding uniform and with the following operation:
+    x = logit(alpha + (1 - alpha) * x / 256.)
+    Parameters:
+        event_shape (list of int)
+        alpha (float)
+    """
+
+    def __init__(self, event_shape, alpha=0.05, name="Preprocessing"):
         super(Preprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
-        self.use_logit = use_logit
         self.event_shape = event_shape
-        self.uniform_noise = uniform_noise
-        self.noise = noise
         self.H, self.W, self.C = event_shape
-        self.event_shape = event_shape
 
     def _forward(self, x):
-        if self.uniform_noise:
-            x += tf.random.uniform(x.shape, minval=0., maxval=1.)
-
-        if self.use_logit:
-            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
-            x = tf.math.log(x) - tf.math.log(1. - x)
-        else:
-            x = x / 256. - .5
-
-        if self.noise is not None:
-            x += tf.random.normal(x.shape) * self.noise
-
+        x += tf.random.uniform(x.shape, minval=0., maxval=1.)
+        x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+        x = tf.math.log(x) - tf.math.log(1. - x)
         return x
 
     def _inverse(self, y):
-
-        if self.use_logit:
-            y = tf.math.sigmoid(y)
-            y = (y - self.alpha) * 256. / (1 - 2 * self.alpha)
-        else:
-            y = (y + .5) * 256.
-
+        y = tf.math.sigmoid(y)
+        y = (y - self.alpha) * 256. / (1 - 2 * self.alpha)
         return y
 
     def _forward_log_det_jacobian(self, x):
-
-        if self.use_logit:
-            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
-            log_det = tf.math.log((1. - 2 * self.alpha) / 256.) - tf.math.log(x) - tf.math.log(1. - x)
-            log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
-        else:
-            log_det = tf.math.log(1. / 256.) * self.H * self.W * self.C
-            log_det = tf.repeat(log_det, x.shape[0], axis=0)
-
+        x += tf.random.uniform(x.shape, minval=0., maxval=1.)
+        x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+        log_det = tf.math.log((1. - 2 * self.alpha) / 256.) - tf.math.log(x) - tf.math.log(1. - x)
+        log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
         return log_det
 
 

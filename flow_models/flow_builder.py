@@ -2,11 +2,61 @@ from .flow_glow import *
 from .flow_tfk_layers import *
 from .flow_tfp_bijectors import *
 from .flow_flowpp import *
+from.flow_real_nvp import *
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
+
+
+def build_realnvp(data_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_strategy=None):
+
+    tfk.backend.clear_session()
+    shift_and_log_scale_layer = ShiftAndLogScaleResNet
+    base_distr_shape = [data_shape[0] // 2, data_shape[1] // 2, data_shape[2] * 4]
+    # Build Flow
+    if mirrored_strategy is not None:
+        with mirrored_strategy.scope():
+
+            flow_bijector = RealNVP(data_shape, shift_and_log_scale_layer, n_filters, n_blocks)
+            inv_bijector = tfb.Invert(flow_bijector)
+
+            if learntop:
+                prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
+                    loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),
+                    scale_diag=tfp.util.TransformedVariable(
+                        tf.ones(base_distr_shape),
+                        bijector=tfb.Exp()),
+                    name='scale'),
+                    reinterpreted_batch_ndims=2,
+                    name='learnable_mvn_scaled_identity')
+                flow = tfd.TransformedDistribution(
+                    prior_distribution, inv_bijector)
+            else:
+                flow = tfd.TransformedDistribution(tfd.Normal(
+                    0., 1.), inv_bijector, event_shape=base_distr_shape)
+
+    else:
+        flow_bijector = RealNVP(data_shape, shift_and_log_scale_layer, n_filters, n_blocks)
+        inv_bijector = tfb.Invert(flow_bijector)
+
+        if learntop:
+            prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
+                loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),
+                scale_diag=tfp.util.TransformedVariable(
+                    tf.ones(base_distr_shape),
+                    bijector=tfb.Exp()),
+                name='scale'),
+                reinterpreted_batch_ndims=2,
+                name='learnable_mvn_scaled_identity')
+            flow = tfd.TransformedDistribution(
+                prior_distribution, inv_bijector)
+        else:
+            flow = tfd.TransformedDistribution(tfd.Normal(
+                0., 1.), inv_bijector, event_shape=base_distr_shape)
+
+    return flow
 
 
 def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l2_reg=None,
@@ -28,9 +78,9 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
     else:
         raise ValueError("L should be 2, 3 or 4")
 
-    shift_and_log_scale_layer = ShiftAndLogScaleResNet
+    shift_and_log_scale_layer = ShiftAndLogScaleConvNet
 
-    # Build Flow and Optimizer
+    # Build Flow
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 

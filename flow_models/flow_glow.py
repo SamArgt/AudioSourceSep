@@ -1,7 +1,5 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
-import numpy as np
-import scipy
 from .flow_tfp_bijectors import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
@@ -10,17 +8,16 @@ tfk = tf.keras
 
 class GlowStep(tfb.Bijector):
 
-    def __init__(self, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name='glowStep', **kwargs):
+    def __init__(self, event_shape, shift_and_log_scale_layer, minibatch, name='glowStep', **kwargs):
 
         super(GlowStep, self).__init__(forward_min_event_ndims=3, name=name)
 
         self.actnorm = ActNorm(event_shape, minibatch, name='ActNorm')
         self.inv1x1conv = Invertible1x1Conv(
             event_shape, name='inv1x1conv')
-        # self.coupling_layer = AffineCouplingLayerMasked(event_shape, shift_and_log_scale_layer,
-        #                                                n_hidden_units, name=name + '/couplingLayer')
+
         self.coupling_layer = AffineCouplingLayerSplit(event_shape, shift_and_log_scale_layer,
-                                                       n_hidden_units, name='couplingLayer', **kwargs)
+                                                       name='couplingLayer', **kwargs)
         self.bijector = tfb.Chain(
             [self.coupling_layer, self.inv1x1conv, self.actnorm])
 
@@ -36,7 +33,7 @@ class GlowStep(tfb.Bijector):
 
 class GlowBlock(tfb.Bijector):
 
-    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name='glowBlock', **kwargs):
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, minibatch, name='glowBlock', **kwargs):
 
         super(GlowBlock, self).__init__(forward_min_event_ndims=3, name=name)
 
@@ -47,8 +44,7 @@ class GlowBlock(tfb.Bijector):
         for k in range(K):
             glow_step = GlowStep(self.event_shape_out,
                                  shift_and_log_scale_layer,
-                                 n_hidden_units, minibatch_updated,
-                                 name='glowStep_' + str(k), **kwargs)
+                                 minibatch_updated, name='glowStep_' + str(k), **kwargs)
             minibatch_updated = glow_step.forward(minibatch_updated)
             self.glow_steps.append(glow_step)
 
@@ -83,7 +79,7 @@ class GlowBlock(tfb.Bijector):
 
 class GlowBijector_2blocks(tfb.Bijector):
 
-    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name="GlowBijector_2blocks", **kwargs):
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_filters, minibatch, name="GlowBijector_2blocks", **kwargs):
 
         super(GlowBijector_2blocks, self).__init__(forward_min_event_ndims=3, name=name)
 
@@ -91,8 +87,8 @@ class GlowBijector_2blocks(tfb.Bijector):
 
         self.glow_block1 = GlowBlock(K, event_shape,
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch,
-                                     name='glowBlock1', **kwargs)
+                                     minibatch, name='glowBlock1',
+                                     n_filters=n_filters, **kwargs)
 
         H1, W1, C1 = self.glow_block1.event_shape_out
         minibatch_updated = self.glow_block1.forward(minibatch)
@@ -100,8 +96,8 @@ class GlowBijector_2blocks(tfb.Bijector):
 
         self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name='glowBlock2', **kwargs)
+                                     minibatch_updated, name='glowBlock2',
+                                     n_filters=n_filters, **kwargs)
 
     def _forward(self, x):
         output1 = self.glow_block1.forward(x)
@@ -148,7 +144,7 @@ class GlowBijector_2blocks(tfb.Bijector):
 
 class GlowBijector_3blocks(tfb.Bijector):
 
-    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name="GlowBijector_3blocks", **kwargs):
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_filters, minibatch, name="GlowBijector_3blocks", **kwargs):
 
         super(GlowBijector_3blocks, self).__init__(forward_min_event_ndims=3, name=name)
 
@@ -156,8 +152,8 @@ class GlowBijector_3blocks(tfb.Bijector):
 
         self.glow_block1 = GlowBlock(K, event_shape,
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch,
-                                     name='glowBlock1', **kwargs)
+                                     minibatch, name='glowBlock1',
+                                     n_filters=n_filters, **kwargs)
 
         H1, W1, C1 = self.glow_block1.event_shape_out
         minibatch_updated = self.glow_block1.forward(minibatch)
@@ -165,8 +161,8 @@ class GlowBijector_3blocks(tfb.Bijector):
 
         self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name='glowBlock2', **kwargs)
+                                     minibatch, name='glowBlock2',
+                                     n_filters=n_filters, **kwargs)
 
         H2, W2, C2 = self.glow_block2.event_shape_out
         minibatch_updated = self.glow_block2.forward(minibatch_updated)
@@ -174,8 +170,8 @@ class GlowBijector_3blocks(tfb.Bijector):
 
         self.glow_block3 = GlowBlock(K, [H2, W2, C2 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name='glowBlock3', **kwargs)
+                                     minibatch, name='glowBlock3',
+                                     n_filters=n_filters, **kwargs)
 
     def _forward(self, x):
         output1 = self.glow_block1.forward(x)
@@ -231,7 +227,7 @@ class GlowBijector_3blocks(tfb.Bijector):
 
 class GlowBijector_4blocks(tfb.Bijector):
 
-    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_hidden_units, minibatch, name='GlowBijector_4blocks', **kwargs):
+    def __init__(self, K, event_shape, shift_and_log_scale_layer, n_filters, minibatch, name='GlowBijector_4blocks', **kwargs):
 
         super(GlowBijector_4blocks, self).__init__(forward_min_event_ndims=3, name=name)
 
@@ -239,8 +235,8 @@ class GlowBijector_4blocks(tfb.Bijector):
 
         self.glow_block1 = GlowBlock(K, event_shape,
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch,
-                                     name='glowBlock1', **kwargs)
+                                     minibatch, name='glowBlock1',
+                                     n_filters=n_filters, **kwargs)
 
         H1, W1, C1 = self.glow_block1.event_shape_out
         minibatch_updated = self.glow_block1.forward(minibatch)
@@ -248,8 +244,8 @@ class GlowBijector_4blocks(tfb.Bijector):
 
         self.glow_block2 = GlowBlock(K, [H1, W1, C1 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name='glowBlock2', **kwargs)
+                                     minibatch, name='glowBlock21',
+                                     n_filters=n_filters, **kwargs)
 
         H2, W2, C2 = self.glow_block2.event_shape_out
         minibatch_updated = self.glow_block2.forward(minibatch_updated)
@@ -257,8 +253,8 @@ class GlowBijector_4blocks(tfb.Bijector):
 
         self.glow_block3 = GlowBlock(K, [H2, W2, C2 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name='glowBlock3', **kwargs)
+                                     minibatch, name='glowBlock3',
+                                     n_filters=n_filters, **kwargs)
 
         H3, W3, C3 = self.glow_block3.event_shape_out
         minibatch_updated = self.glow_block3.forward(minibatch_updated)
@@ -266,8 +262,8 @@ class GlowBijector_4blocks(tfb.Bijector):
 
         self.glow_block4 = GlowBlock(K, [H3, W3, C3 // 2],
                                      shift_and_log_scale_layer,
-                                     n_hidden_units, minibatch_updated,
-                                     name="glowBlock4", **kwargs)
+                                     minibatch, name='glowBlock4',
+                                     n_filters=n_filters, **kwargs)
 
     def _forward(self, x):
         output1 = self.glow_block1.forward(x)

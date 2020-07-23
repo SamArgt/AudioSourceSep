@@ -28,7 +28,7 @@ class ShiftAndLofScaleDenseNet(tfk.layers.Layer):
         return log_s, t
 
 
-class ShiftAndLogScaleResNet(tfk.layers.Layer):
+class ShiftAndLogScaleConvNet(tfk.layers.Layer):
 
     """
     Convolutional Neural Networks
@@ -44,8 +44,8 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
     """
 
     def __init__(self, input_shape, n_filters, data_format='channels_last',
-                 name='ShiftAndLogScaleResNet', l2_reg=None, dtype=tf.float32):
-        super(ShiftAndLogScaleResNet, self).__init__(dtype=dtype, name=name)
+                 name='ShiftAndLogScaleConvNet', l2_reg=None, dtype=tf.float32):
+        super(ShiftAndLogScaleConvNet, self).__init__(dtype=dtype, name=name)
 
         def l2_regularizer(l2_reg):
             if l2_reg is None:
@@ -81,6 +81,88 @@ class ShiftAndLogScaleResNet(tfk.layers.Layer):
         # !! Without the hyperbolic tangeant activation:
         # Get nan !!
         log_s = self.activation_log_s(log_s)
+        return log_s, t
+
+
+class WeightNormConv2D(tfk.layers.Layer):
+    """Convolutional Layer with Weight Normalization"""
+
+    def __init__(self, filters, kernel_size=3, padding='same', use_bias=True, activation=None, **kwargs):
+        super(WeightNormConv2D, self).__init__()
+        self.conv = tfa.layers.WeightNormalization(
+            tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size,
+                                   padding=padding, use_bias=use_bias, activation=activation, **kwargs))
+
+    def call(self, x):
+        return self.conv(x)
+
+
+class ResidualBlock(tfk.layers.Layer):
+    """Residual Block"""
+
+    def __init__(self, n_filters, name="ResBlock"):
+        super(ResidualBlock, self).__init__(name=name)
+
+        self.batchnorm1 = tfk.layers.BatchNormalization()
+        self.conv1 = WeightNormConv2D(filters=n_filters, kernel_size=3, padding='same', use_bias=False)
+        self.batchnorm2 = tfk.layers.BatchNormalization()
+        self.conv2 = WeightNormConv2D(filters=n_filters, kernel_size=3, padding='same', use_bias=True)
+
+    def call(self, x):
+        skip = tf.identity(x)
+        x = self.batchnorm1(x)
+        x = tf.nn.relu(x)
+        x = self.conv1(x)
+        x = self.batchnorm2(x)
+        x = tf.nn.relu(x)
+        x = self.conv2(x)
+        return x + skip
+
+
+class ShiftAndLogScaleResNet(tfk.layers.Layer):
+
+    """
+    Residual Convolutional Neural Networks
+    Return shift and log scale for Affine Coupling Layer
+
+    Parameters:
+        input shape (list): (H, W, C) input dimension of the network
+        n_filters (int): Number of filters in the hidden layers
+        n_blocks (int): Number of residual blocks
+    """
+
+    def __init__(self, input_shape, n_filters, n_blocks, name='ShiftAndLogScaleResNet'):
+        super(ShiftAndLogScaleResNet, self).__init__(name=name)
+        self.n_blocks = n_blocks
+        self.batch_norm1 = tfk.layers.BatchNormalization(input_shape=input_shape)
+        self.conv1 = WeightNormConv2D(filters=n_filters, kernel_size=3, padding='same')
+
+        self.skip1 = WeightNormConv2D(filters=n_filters, kernel_size=3, padding='same')
+
+        self.blocks = [ResidualBlock(n_filters) for _ in range(n_blocks)]
+        self.skips = [WeightNormConv2D(filters=n_filters, kernel_size=3, padding='same') for _ in range(n_blocks)]
+
+        self.last_batchnorm = tfk.layers.BatchNormalization()
+        self.last_conv = WeightNormConv2D(filters=2 * input_shape[-1], kernel_size=3, padding='same', kernel_initializer='zeros')
+
+        learned_scale_init = tf.ones(input_shape)
+        self.learned_scale = tf.Variable(name="learned_scale", initial_value=learned_scale_init)
+
+    def call(self, x):
+        x = self.batch_norm1(x)
+        x = tf.concat([x, -x], axis=-1)
+        x = tf.nn.relu(x)
+        x = self.conv1(x)
+        skip = self.skip1(x)
+        for i in range(self.n_blocks):
+            x = self.blocks[i](x)
+            skip += self.skips[i](x)
+
+        x = self.last_batchnorm(skip)
+        x = tf.nn.relu(x)
+        x = self.last_conv(x)
+        log_s, t = tf.split(x, num_or_size_splits=2, axis=-1)
+        log_s = tf.math.tanh(log_s)
         return log_s, t
 
 
