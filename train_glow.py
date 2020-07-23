@@ -69,7 +69,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         samples = flow.sample(32)
     samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
     try:
-        figure = image_grid(samples, args.data_shape, args.img_type,
+        figure = image_grid(samples, args.data_shape, args.data_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         with train_summary_writer.as_default():
             tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
@@ -153,7 +153,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 samples = flow.sample(32)
             samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
             try:
-                figure = image_grid(samples, args.data_shape, args.img_type,
+                figure = image_grid(samples, args.data_shape, args.data_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
                 with train_summary_writer.as_default():
                     tf.summary.image("32 generated samples", plot_to_image(figure),
@@ -266,14 +266,14 @@ def main(args):
     # Display original images
     with train_summary_writer.as_default():
         sample = post_processing(list(ds.take(1).as_numpy_iterator())[0])
-        figure = image_grid(sample, args.data_shape, args.img_type,
+        figure = image_grid(sample, args.data_shape, args.data_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
     flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                    l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                   preprocessing_bij=args.preprocessing_glow, minval=args.minval, maxval=args.maxval,
+                                   data_type=args.data_type, minval=args.minval, maxval=args.maxval,
                                    use_logit=args.use_logit, alpha=args.alpha)
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)

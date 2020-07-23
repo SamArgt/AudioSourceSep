@@ -97,7 +97,7 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(sample, data_shape, img_type="image", **kwargs):
+def image_grid(sample, data_shape, data_type="image", **kwargs):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
@@ -106,12 +106,11 @@ def image_grid(sample, data_shape, img_type="image", **kwargs):
     for i, ax in enumerate(axes):
         if i > (len(sample) - 1):
             return f
-        if img_type == "image":
-            ax.imshow(np.clip(sample[i], 0., 1.))
+        if data_type == "image":
+            ax.imshow(sample[i])
             ax.set_axis_off()
-        elif img_type == "melspec":
-            postprocess_sample = np.clip(sample[i], 0., 100.)
-            spec_db_sample = librosa.power_to_db(postprocess_sample)
+        elif data_type == "melspec":
+            spec_db_sample = librosa.power_to_db(sample[i])
             specshow(spec_db_sample, sr=kwargs["sampling_rate"],
                      ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
 
