@@ -256,6 +256,7 @@ def main(args):
         args.test_batch_size = args.batch_size
         args.n_train = n_train
         args.n_test = n_test
+        args.max_val = 100.
 
     # post processing
     def post_processing(x):
@@ -265,6 +266,9 @@ def main(args):
                 x = (x - args.alpha) / (1. - 2 * args.alpha)
             else:
                 x += 0.5
+                x = np.clip(x, 0., 1.)
+        else:
+            x = np.clip(x, 0., args.max_val)
         return x
 
     # Display original images

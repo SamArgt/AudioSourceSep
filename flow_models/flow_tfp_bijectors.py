@@ -7,9 +7,6 @@ tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
 
-global max_log_s
-max_log_s = 30.
-
 
 class AffineCouplingLayerMasked(tfb.Bijector):
     """
@@ -137,8 +134,6 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _forward(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(xb)
-        log_s = tf.minimum(log_s, 30.)
-        log_s = tf.maximum(log_s, -30.)
         s = tf.exp(log_s)
         ya = s * xa + t
         yb = xb
@@ -147,8 +142,6 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _inverse(self, y):
         ya, yb = tf.split(y, 2, axis=-1)
         log_s, t = self.shift_and_log_scale_fn(yb)
-        log_s = tf.minimum(log_s, max_log_s)
-        log_s = tf.maximum(log_s, -max_log_s)
         s = tf.exp(log_s)
         xa = (ya - t) / s
         xb = yb
@@ -157,8 +150,6 @@ class AffineCouplingLayerSplit(tfb.Bijector):
     def _forward_log_det_jacobian(self, x):
         xa, xb = tf.split(x, 2, axis=-1)
         log_s, _ = self.shift_and_log_scale_fn(xb)
-        log_s = tf.minimum(log_s, max_log_s)
-        log_s = tf.maximum(log_s, -max_log_s)
         return tf.reduce_sum(log_s, axis=[1, 2, 3])
 
 
