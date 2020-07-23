@@ -105,7 +105,7 @@ class StackedMaskedCouplingLayers(tfb.Bijector):
     """
 
     def __init__(self, event_shape, n_coupling_layers, shift_and_log_scale_layer, masking, **kwargs):
-        super(StackedCouplingLayers, self).__init__(forward_min_event_ndims=3)
+        super(StackedMaskedCouplingLayers, self).__init__(forward_min_event_ndims=3)
 
         self.stack_layers = []
         for i in range(n_coupling_layers):
