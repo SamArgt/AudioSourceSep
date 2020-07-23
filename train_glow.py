@@ -250,7 +250,15 @@ def main(args):
         args.test_batch_size = args.batch_size
         args.n_train = n_train
         args.n_test = n_test
-        args.max_val = 100.
+        if args.scale == 'power':
+            args.minval = 1e-10
+            args.maxval = 100.
+        elif args.scale == 'dB':
+            args.minval = -100.
+            args.maxval = 20.
+        args.fmin = 125
+        args.fmax = 7600
+        args.sampling_rate = 16000
 
     # post processing
     def post_processing(x):
@@ -329,7 +337,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
 
-    # preprocessing parameters (only for toy dataset)
+    # preprocessing parameters
     parser.add_argument('--use_logit', action="store_true",
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=1e-10,
@@ -339,14 +347,7 @@ if __name__ == '__main__':
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
-    parser.add_argument("--sampling_rate", type=int, default=16000)
-    parser.add_argument("--fmin", type=int, default=125)
-    parser.add_argument("--fmax", type=int, default=7600)
-    parser.add_argument("--maxval", type=float, default=100,
-                        help="maximum value of the spectrograms")
-    parser.add_argument("--minval", type=float, default=1e-10,
-                        help="minimum value of the spectrograms")
-    parser.add_argument("--scale", type=str, default="power")
+    parser.add_argument("--scale", type=str, default="power", help="power or dB")
 
     # Output and Restore Directory
     parser.add_argument('--output', type=str, default='trained_flow',

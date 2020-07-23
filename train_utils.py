@@ -110,8 +110,7 @@ def image_grid(sample, data_shape, data_type="image", **kwargs):
             ax.imshow(sample[i])
             ax.set_axis_off()
         elif data_type == "melspec":
-            spec_db_sample = librosa.power_to_db(sample[i])
-            specshow(spec_db_sample, sr=kwargs["sampling_rate"],
+            specshow(sample[i], sr=kwargs["sampling_rate"],
                      ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
 
     return f
