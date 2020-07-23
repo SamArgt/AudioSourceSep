@@ -58,7 +58,7 @@ def main(args):
                 print("Epoch {:03d}: Train Loss: {:.3f}".format(epoch, avg_train_loss.result()))
 
     print("Start Training on {} epochs".format(args.n_epochs))
-    train(ds_train, ds_test, args.n_epochs, flow)
+    train(args.n_epochs)
 
 
 if __name__ == '__main__':

@@ -174,10 +174,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 def main(args):
     # miscellaneous paramaters
     if args.dataset == 'mnist':
-        if args.model == 'glow':
-            args.data_shape = [32, 32, 1]
-        elif args.model == 'realnvp':
-            args.data_shape = [28, 28, 1]
+        args.data_shape = [32, 32, 1]
         args.img_type = "image"
         args.preprocessing_glow = None
     elif args.dataset == 'cifar10':
@@ -199,17 +196,8 @@ def main(args):
             dataset = args.instrument
         else:
             dataset = args.dataset
-        if args.model == 'glow':
-            output_dirname = args.model + '_' + dataset + '_' + str(args.L) + '_' + \
-                str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
-        elif args.model == 'flowpp':
-            output_dirname = args.model + '_' + dataset + '_' + str(args.n_components) + '_' + \
-                str(args.n_blocks_flow) + '_' + str(args.filters) + '_' + str(args.batch_size)
-        elif args.model == 'realnvp':
-            output_dirname = args.model + '_' + dataset + '_' + str(args.n_filters) + '_' + \
-                str(args.n_blocks) + '_' + str(args.batch_size)
-        else:
-            raise ValueError("model should be glow or realnvp")
+        output_dirname = args.model + '_' + dataset + '_' + str(args.L) + '_' + \
+            str(args.K) + '_' + str(args.n_filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
             output_dirname += '_logit'
@@ -241,15 +229,11 @@ def main(args):
 
     # Load Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        if args.model == 'realnvp':
-            args.preprocessing_toy_data = False
-        else:
-            args.preprocessing_toy_data = True
         ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
                                                                                mirrored_strategy=mirrored_strategy,
                                                                                use_logit=args.use_logit,
                                                                                noise=args.noise, alpha=args.alpha,
-                                                                               preprocessing=args.preprocessing_toy_data)
+                                                                               preprocessing=True)
         args.test_batch_size = 5000
         if args.dataset == "mnist":
             args.n_train = 60000
@@ -274,14 +258,9 @@ def main(args):
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Build Flow
-    if args.model == 'glow':
-        flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
-                                       l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                       preprocessing_bij=args.preprocessing_glow)
-    elif args.model == 'realnvp':
-        flow = flow_builder.build_realnvp(args.data_shape, args.n_filters, args.n_blocks,
-                                          learntop=True, mirrored_strategy=mirrored_strategy)
-
+    flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
+                                   preprocessing_bij=args.preprocessing_glow)
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
@@ -352,7 +331,6 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
-    parser.add_argument('--model', default='glow', type=str, help='(for future work)')
     parser.add_argument("--learntop", action="store_true",
                         help="learnable prior distribution")
     # Glow hyperparameters
@@ -364,9 +342,6 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
-
-    # Real NVP hyperparameters
-    parser.add_argument("--n_blocks", type=int, default=4)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,
