@@ -340,8 +340,8 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
         alpha (float)
     """
 
-    def __init__(self, event_shape, alpha=0.05, name="Preprocessing"):
-        super(Preprocessing, self).__init__(forward_min_event_ndims=3, name=name)
+    def __init__(self, event_shape, alpha=0.05, name="ImgPreprocessing"):
+        super(ImgPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
         self.event_shape = event_shape
         self.H, self.W, self.C = event_shape
