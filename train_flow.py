@@ -202,9 +202,11 @@ def main(args):
         elif args.model == 'flowpp':
             output_dirname = args.model + '_' + dataset + '_' + str(args.n_components) + '_' + \
                 str(args.n_blocks_flow) + '_' + str(args.filters) + '_' + str(args.batch_size)
-        elif args.model == 'real_nvp':
+        elif args.model == 'realnvp':
             output_dirname = args.model + '_' + dataset + '_' + str(args.n_filters) + '_' + \
                 str(args.n_blocks) + '_' + str(args.batch_size)
+        else:
+            raise ValueError("model should be glow or realnvp")
 
         if args.use_logit:
             output_dirname += '_logit'
@@ -369,7 +371,7 @@ if __name__ == '__main__':
     parser.add_argument('--clipnorm', type=float, default=None,
                         help='Clip norm for Adam optimize')
 
-    # preprocessing parameters
+    # preprocessing parameters (only for glow)
     parser.add_argument('--use_logit', action="store_true",
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
