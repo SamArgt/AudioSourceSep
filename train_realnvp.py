@@ -18,7 +18,7 @@ def main(args):
     event_shape = [28, 28, 1]
     flow = flow_builder.build_realnvp(event_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_strategy=None)
     ds_train, ds_val, _ = data_loader.load_toydata(dataset='mnist', batch_size=256, preprocessing=False)
-
+    optimizer = tfk.optimizers.Adam()
     print("flow sample shape: ", flow.sample(1).shape)
 
     total_trainable_variables = utils.total_trainable_variables(flow)
