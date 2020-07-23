@@ -335,7 +335,7 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
 
     def _forward(self, x):
         x += tf.random.uniform(x.shape, minval=0., maxval=1.)
-        if use_logit:
+        if self.use_logit:
             x = self.alpha + (1. - 2 * self.alpha) * x / 256.
             x = tf.math.log(x) - tf.math.log(1. - x)
         else:
