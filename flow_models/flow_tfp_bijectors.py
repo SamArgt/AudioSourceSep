@@ -331,7 +331,7 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
         alpha (float)
     """
 
-    def __init__(self, event_shape, alpha=0.05, use_logit=True, name="ImgPreprocessing"):
+    def __init__(self, event_shape, alpha=0.05, use_logit=True, name="ImgPreprocessing", **kwargs):
         super(ImgPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
         self.use_logit = use_logit
@@ -367,7 +367,7 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
 
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
-    def __init__(self, minval, maxval, alpha=1e-10, use_logit=True, name="SpecPreprocessing"):
+    def __init__(self, minval, maxval, alpha=1e-10, use_logit=True, name="SpecPreprocessing", **kwargs):
         super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.maxval = maxval
         self.minval = minval
