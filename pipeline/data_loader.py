@@ -52,6 +52,9 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
         return ds, ds_val, ds_dist, ds_val_dist, minibatch
 
     else:
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        ds_val = ds_val.prefetch(tf.data.experimental.AUTOTUNE)
+
         return ds, ds_val, minibatch
 
 
