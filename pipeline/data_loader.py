@@ -31,7 +31,7 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
             x = x * (1. - alpha) + alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
         else:
-            x = x + tf.random.uniform(data_shape) / 256. - 0.5
+            x = (x + tf.random.uniform(data_shape)) / 256. - 0.5
         if noise is not None:
             x += tf.random.normal(data_shape) * noise
         return x
