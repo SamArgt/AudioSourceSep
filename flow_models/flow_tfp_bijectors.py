@@ -331,49 +331,70 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
         alpha (float)
     """
 
-    def __init__(self, event_shape, alpha=0.05, name="ImgPreprocessing"):
+    def __init__(self, event_shape, alpha=0.05, use_logit=True, name="ImgPreprocessing"):
         super(ImgPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
+        self.use_logit = use_logit
         self.event_shape = event_shape
         self.H, self.W, self.C = event_shape
 
     def _forward(self, x):
         x += tf.random.uniform(x.shape, minval=0., maxval=1.)
-        x = self.alpha + (1. - 2 * self.alpha) * x / 256.
-        x = tf.math.log(x) - tf.math.log(1. - x)
+        if use_logit:
+            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+            x = tf.math.log(x) - tf.math.log(1. - x)
+        else:
+            x = x / 256. - 0.5
         return x
 
     def _inverse(self, y):
-        y = tf.math.sigmoid(y)
-        y = (y - self.alpha) * 256. / (1 - 2 * self.alpha)
+        if self.use_logit:
+            y = tf.math.sigmoid(y)
+            y = (y - self.alpha) * 256. / (1 - 2 * self.alpha)
+        else:
+            y = (y + 0.5) * 256.
         return y
 
     def _forward_log_det_jacobian(self, x):
         x += tf.random.uniform(x.shape, minval=0., maxval=1.)
-        x = self.alpha + (1. - 2 * self.alpha) * x / 256.
-        log_det = tf.math.log((1. - 2 * self.alpha) / 256.) - tf.math.log(x) - tf.math.log(1. - x)
+        if self.use_logit:
+            x = self.alpha + (1. - 2 * self.alpha) * x / 256.
+            log_det = tf.math.log(x) - tf.math.log(1. - x) + tf.math.log((1. - 2 * self.alpha) / 256.)
+        else:
+            log_det = tf.ones(x.shape) / 256.
         log_det = tf.reduce_sum(log_det, axis=[1, 2, 3])
         return log_det
 
 
 class SpecPreprocessing(tfp.bijectors.Bijector):
-    def __init__(self, val_max=100.1, name="SpecPreprocessing"):
+    def __init__(self, minval, maxval, alpha=1e-10, use_logit=True, name="SpecPreprocessing"):
         super(SpecPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
-        self.val_max = val_max
+        self.maxval = maxval
+        self.minval = minval
+        self.alpha = alpha
+        self.use_logit = use_logit
 
     def _forward(self, x):
-        x = x / self.val_max
-        x = tf.math.log(x) - tf.math.log(1. - x)
+        x = (x - self.minval) / self.maxval
+        if self.use_logit:
+            x = (1. - 2 * alpha) * x + alpha
+            x = tf.math.log(x) - tf.math.log(1. - x)
         return x
 
     def _inverse(self, y):
-        y = tf.math.sigmoid(y)
-        y = y * self.val_max
+        if self.use_logit:
+            y = tf.math.sigmoid(y)
+            y = (y - alpha) / (1. - 2 * alpha)
+        y = y * self.maxval + self.minval
         return y
 
     def _forward_log_det_jacobian(self, x):
-        x = x / self.val_max
-        log_det = -tf.math.log(x) - tf.math.log(1. - x) - tf.math.log(self.val_max)
+        x = (x - self.minval) / self.maxval
+        if self.use_logit:
+            x = (1. - 2 * alpha) * x + alpha
+            log_det = -tf.math.log(x) - tf.math.log(1. - x) + tf.math.log((1. - 2 * alpha) / self.maxval)
+        else:
+            log_det = tf.ones(x.shape) / self.maxval
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
 
 

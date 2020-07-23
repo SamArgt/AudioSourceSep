@@ -9,6 +9,7 @@ import time
 import os
 import sys
 from train_utils import *
+import librosa
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -54,20 +55,19 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
     def post_processing(x):
-        if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-            if args.use_logit:
-                x = 1. / (1. + np.exp(-x))
-                x = (x - args.alpha) / (1. - 2 * args.alpha)
-            else:
-                x += 0.5
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
         return x
 
     # Display first generated samples
     with mirrored_strategy.scope():
         samples = flow.sample(32)
-    if args.img_type == "image":
-        samples += 0.5
-    samples = samples.numpy().reshape([32] + args.data_shape)
+    samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
     try:
         figure = image_grid(samples, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -181,17 +181,14 @@ def main(args):
     # miscellaneous paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
-        args.img_type = "image"
-        args.preprocessing_glow = None
+        args.data_type = "image"
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
-        args.img_type = "image"
-        args.preprocessing_glow = None
+        args.data_type = "image"
     else:
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
-        args.img_type = "melspec"
-        args.preprocessing_glow = "melspec"
+        args.data_type = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
     # output directory
@@ -234,12 +231,9 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    if (args.dataset == "mnist") or (args.dataset == "cifar10"):
+    if args.data_type == "image":
         ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
-                                                                               mirrored_strategy=mirrored_strategy,
-                                                                               use_logit=args.use_logit,
-                                                                               noise=args.noise, alpha=args.alpha,
-                                                                               preprocessing=True)
+                                                                               mirrored_strategy=mirrored_strategy)
         args.test_batch_size = 5000
         if args.dataset == "mnist":
             args.n_train = 60000
@@ -260,15 +254,13 @@ def main(args):
 
     # post processing
     def post_processing(x):
-        if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-            if args.use_logit:
-                x = 1. / (1. + np.exp(-x))
-                x = (x - args.alpha) / (1. - 2 * args.alpha)
-            else:
-                x += 0.5
-                x = np.clip(x, 0., 1.)
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
         else:
-            x = np.clip(x, 0., args.max_val)
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
         return x
 
     # Display original images
@@ -281,7 +273,8 @@ def main(args):
     # Build Flow
     flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                    l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
-                                   preprocessing_bij=args.preprocessing_glow)
+                                   preprocessing_bij=args.preprocessing_glow, minval=args.minval, maxval=args.maxval,
+                                   use_logit=args.use_logit, alpha=args.alpha)
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
@@ -336,12 +329,24 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
 
+    # preprocessing parameters (only for toy dataset)
+    parser.add_argument('--use_logit', action="store_true",
+                        help="Either to use logit function to preprocess the data")
+    parser.add_argument('--alpha', type=float, default=1e-10,
+                        help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
+    parser.add_argument('--noise', type=float, default=None, help='noise level for BASIS separation')
+
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--sampling_rate", type=int, default=16000)
     parser.add_argument("--fmin", type=int, default=125)
     parser.add_argument("--fmax", type=int, default=7600)
+    parser.add_argument("--maxval", type=float, default=100,
+                        help="maximum value of the spectrograms")
+    parser.add_argument("--minval", type=float, default=1e-10,
+                        help="minimum value of the spectrograms")
+    parser.add_argument("--scale", type=str, default="power")
 
     # Output and Restore Directory
     parser.add_argument('--output', type=str, default='trained_flow',
@@ -375,13 +380,6 @@ if __name__ == '__main__':
                         help="Clip value for Adam optimizer")
     parser.add_argument('--clipnorm', type=float, default=None,
                         help='Clip norm for Adam optimize')
-
-    # preprocessing parameters (only for glow)
-    parser.add_argument('--use_logit', action="store_true",
-                        help="Either to use logit function to preprocess the data")
-    parser.add_argument('--alpha', type=float, default=10**(-6),
-                        help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
-    parser.add_argument('--noise', type=float, default=None, help='noise level for BASIS separation')
 
     args = parser.parse_args()
 

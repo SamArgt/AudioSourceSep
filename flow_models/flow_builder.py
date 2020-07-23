@@ -58,7 +58,7 @@ def build_realnvp(data_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_
 
 
 def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l2_reg=None,
-               mirrored_strategy=None, preprocessing_bij=None):
+               mirrored_strategy=None, data_type="image", **kwargs):
     tfk.backend.clear_session()
 
     if L == 2:
@@ -82,19 +82,18 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
 
-            if preprocessing_bij == "melspec":
-                prepocessing_bijector = SpecPreprocessing()
-                minibatch = prepocessing_bijector.forward(minibatch)
-
-                flow_bijector = bijector_cls(K, data_shape,
-                                             shift_and_log_scale_layer,
-                                             n_filters, minibatch, **{'l2_reg': l2_reg})
-
-                flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
+            if data_type == "image":
+                prepocessing_bijector = ImgPreprocessing(**kwargs)
             else:
-                flow_bijector = bijector_cls(K, data_shape,
-                                             shift_and_log_scale_layer,
-                                             n_filters, minibatch, **{'l2_reg': l2_reg})
+                prepocessing_bijector = SpecPreprocessing(**kwargs)
+
+            minibatch = prepocessing_bijector.forward(minibatch)
+
+            flow_bijector = bijector_cls(K, data_shape,
+                                         shift_and_log_scale_layer,
+                                         n_filters, minibatch, l2_reg=l2_reg)
+
+            flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
 
             inv_bijector = tfb.Invert(flow_bijector)
 
@@ -114,22 +113,20 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
                     0., 1.), inv_bijector, event_shape=base_distr_shape)
 
     else:
+        if data_type == "image":
+            prepocessing_bijector = ImgPreprocessing(**kwargs)
+        else:
+            prepocessing_bijector = SpecPreprocessing(**kwargs)
+
+        minibatch = prepocessing_bijector.forward(minibatch)
+
         flow_bijector = bijector_cls(K, data_shape,
                                      shift_and_log_scale_layer,
-                                     n_filters, minibatch, **{'l2_reg': l2_reg})
-        if preprocessing_bij == "melspec":
-            prepocessing_bijector = SpecPreprocessing()
-            minibatch = prepocessing_bijector.forward(minibatch)
+                                     n_filters, minibatch, l2_reg=l2_reg)
 
-            flow_bijector = bijector_cls(K, data_shape,
-                                         shift_and_log_scale_layer,
-                                         n_filters, minibatch, **{'l2_reg': l2_reg})
+        flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
 
-            flow_bijector = tfb.Chain([flow_bijector, prepocessing_bijector])
-        else:
-            flow_bijector = bijector_cls(K, data_shape,
-                                         shift_and_log_scale_layer,
-                                         n_filters, minibatch, **{'l2_reg': l2_reg})
+        inv_bijector = tfb.Invert(flow_bijector)
 
         inv_bijector = tfb.Invert(flow_bijector)
 

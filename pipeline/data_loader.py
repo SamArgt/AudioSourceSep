@@ -5,15 +5,7 @@ import os
 import re
 
 
-def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
-                 alpha=0.01, mirrored_strategy=None, reshuffle=True, preprocessing=True):
-
-    if dataset == 'mnist':
-        data_shape = (32, 32, 1)
-    elif dataset == 'cifar10':
-        data_shape = (32, 32, 3)
-    else:
-        raise ValueError("dataset should be mnist or cifar10")
+def load_toydata(dataset='mnist', batch_size=256, mirrored_strategy=None, reshuffle=True):
 
     buffer_size = 2048
     global_batch_size = batch_size
@@ -22,23 +14,9 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
     ds = ds.map(lambda x: tf.cast(x['image'], tf.float32))
     ds_val = ds_val.map(lambda x: tf.cast(x['image'], tf.float32))
 
-    # Build your input pipeline
-    def map_fn(x):
-        if dataset == 'mnist':
-            x = tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]]))
-        if use_logit:
-            x = (x + tf.random.uniform(data_shape)) / 256.
-            x = x * (1. - alpha) + alpha
-            x = tf.math.log(x) - tf.math.log(1. - x)
-        else:
-            x = (x + tf.random.uniform(data_shape)) / 256. - 0.5
-        if noise is not None:
-            x += tf.random.normal(data_shape) * noise
-        return x
-
-    if preprocessing:
-        ds = ds.map(map_fn)
-        ds_val = ds_val.map(map_fn)
+    if dataset == 'mnist':
+        ds = ds.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
+        ds_val = ds_val.map(lambda x: tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]])))
 
     ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds = ds.batch(global_batch_size, drop_remainder=True)
