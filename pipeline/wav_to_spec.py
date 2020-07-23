@@ -50,7 +50,7 @@ def main(args):
         else:
             melspectrograms_ds = mel_spectrograms_from_ds(
                 song_ds, rate, args.n_fft, args.hop_length, args.n_mels,
-                fmin=args.fmin, fmax=args.fmax, dbmin=args.dbmin, dbmax=args.dbmax)
+                fmin=args.fmin, fmax=args.fmax, dbmin=args.dbmin, dbmax=args.dbmax, use_dB=args.use_dB)
             print("\t Mel Spectrograms computed using librosa")
 
         # save the spectrograms
@@ -95,6 +95,7 @@ if __name__ == '__main__':
     parser.add_argument('--fmax', type=int, default=7600, help="Maximum frequency of the mel filter")
     parser.add_argument("--dbmin", type=int, default=-100, help="Minimum DB of the spectrogram")
     parser.add_argument("--dbmax", type=int, default=20, help="Maximum DB of the spectrogram")
+    parser.add_argument("--use_dB", action="store_true", help="Compute the dB spectrograms instead of the power spectrograms")
 
     parser.add_argument('--use_signal', action="store_true",
                         help='Either to use tf.signal or not (otherwise use librosa)')

@@ -374,12 +374,17 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         if self.use_logit:
             x = (1. - 2 * alpha) * x + alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
+
+        else:
+            x = x - 0.5
         return x
 
     def _inverse(self, y):
         if self.use_logit:
             y = tf.math.sigmoid(y)
             y = (y - alpha) / (1. - 2 * alpha)
+        else:
+            y += 0.5
         y = y * self.maxval + self.minval
         return y
 

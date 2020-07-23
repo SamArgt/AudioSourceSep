@@ -58,7 +58,8 @@ def load_multiple_wav(path, length_sec):
 
 
 def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
-                             n_mels=128, fmin=125, fmax=7600, dbmin=-100, dbmax=20):
+                             n_mels=128, fmin=125, fmax=7600, dbmin=-100, dbmax=20,
+                             use_dB=False):
     """
     Take as input a dataset of raw audio:
 
@@ -93,6 +94,9 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
     powermin = np.exp(dbmin * np.log(10) / 10)
     powermax = np.exp(dbmax * np.log(10) / 10)
     spect_dataset = spect_dataset.map(lambda x: tf.clip_by_value(x, powermin, powermax))
+
+    if use_dB:
+        spect_dataset = spect_dataset.map(lambda x: 10 * tf.math.log(x) / tf.math.log(10))
 
     return spect_dataset
 
