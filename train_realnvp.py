@@ -49,7 +49,7 @@ def main(args):
 
             if epoch % 5 == 0:
                 for batch in ds_val:
-                    loss = compute_loss(X)
+                    loss = compute_loss(batch)
                     avg_test_loss.update_state(loss)
                 print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                     epoch, avg_train_loss.result(), avg_test_loss.result()))

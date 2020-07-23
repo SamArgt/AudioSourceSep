@@ -53,6 +53,15 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_step, args=(dataset_inputs,))
         return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
+    def post_processing(x):
+        if (args.dataset == "mnist") or (args.dataset == "cifar10"):
+            if args.use_logit:
+                x = 1. / (1. + np.exp(-x))
+                x = (x - args.alpha) / (1. - 2 * args.alpha)
+            else:
+                x += 0.5
+        return x
+
     # Display first generated samples
     with mirrored_strategy.scope():
         samples = flow.sample(32)
@@ -142,9 +151,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             # Generate some samples and visualize them on tensorboard
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
-            if args.img_type == "image":
-                samples += 0.5
-            samples = samples.numpy().reshape([32] + args.data_shape)
+            samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
             try:
                 figure = image_grid(samples, args.data_shape, args.img_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -249,9 +256,20 @@ def main(args):
         args.test_batch_size = args.batch_size
         args.n_train = n_train
         args.n_test = n_test
+
+    # post processing
+    def post_processing(x):
+        if (args.dataset == "mnist") or (args.dataset == "cifar10"):
+            if args.use_logit:
+                x = 1. / (1. + np.exp(-x))
+                x = (x - args.alpha) / (1. - 2 * args.alpha)
+            else:
+                x += 0.5
+        return x
+
     # Display original images
     with train_summary_writer.as_default():
-        sample = list(ds.take(1).as_numpy_iterator())[0]
+        sample = post_processing(list(ds.take(1).as_numpy_iterator())[0])
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
