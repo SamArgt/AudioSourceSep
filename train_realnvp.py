@@ -28,7 +28,6 @@ def main(args):
     def compute_loss(X):
         return tf.reduce_mean(-flow.log_prob(X))
 
-    @tf.function
     def train_step(X):
         with tf.GradientTape() as tape:
             tape.watch(flow.trainable_variables)

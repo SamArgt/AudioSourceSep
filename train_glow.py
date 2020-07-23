@@ -129,7 +129,6 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                     prev_history_loss_avg = curr_loss_history
                 history_loss_avg.reset_states()
 
-        # every 10 epochs
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
             # Compute validation loss and monitor it on tensoboard
             test_loss.reset_states()
