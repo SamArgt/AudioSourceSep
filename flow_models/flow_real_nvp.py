@@ -36,8 +36,8 @@ class RealNVP(tfb.Bijector):
         self.scale1 = tfb.Chain([self.scale1_stack2, self.scale1_squeeze, self.scale1_stack1, self.preprocessing])
         # Second Scale after factoring out half the dimension
         event_shape_new = [self.H // 2, self.W // 2, self.C * 2]
-        self.scale2_stack = StackedCouplingLayers(event_shape_new, 4, shift_and_log_scale_layer, 'checkerboard',
-                                                  n_blocks=n_blocks, n_filters=2 * n_filters)
+        self.scale2_stack = StackedMaskedCouplingLayers(event_shape_new, 4, shift_and_log_scale_layer, 'checkerboard',
+                                                        n_blocks=n_blocks, n_filters=2 * n_filters)
 
     def _forward(self, x):
         z1_h1 = self.scale1.forward(x)
