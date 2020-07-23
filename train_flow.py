@@ -270,7 +270,7 @@ def main(args):
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
                                        preprocessing_bij=args.preprocessing_glow)
     elif args.model == 'realnvp':
-        flow = flow_builder.build_realnvp(data_shape, args.n_filters, args.n_blocks,
+        flow = flow_builder.build_realnvp(args.data_shape, args.n_filters, args.n_blocks,
                                           learntop=True, mirrored_strategy=mirrored_strategy)
 
     # Set up optimizer
