@@ -128,8 +128,6 @@ def build_glow(minibatch, data_shape, L=3, K=32, n_filters=512, learntop=True, l
 
         inv_bijector = tfb.Invert(flow_bijector)
 
-        inv_bijector = tfb.Invert(flow_bijector)
-
         if learntop:
             prior_distribution = tfd.Independent(tfd.MultivariateNormalDiag(
                 loc=tf.Variable(tf.zeros(base_distr_shape), name='loc'),

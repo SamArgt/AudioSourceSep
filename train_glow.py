@@ -256,6 +256,8 @@ def main(args):
         elif args.scale == 'dB':
             args.minval = -100.
             args.maxval = 20.
+        else:
+            raise ValueError("scale should be 'power' or 'dB'")
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
