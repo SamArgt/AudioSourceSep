@@ -91,12 +91,12 @@ def mel_spectrograms_from_ds(song_ds, sr, n_fft=2048, hop_length=512,
     spect_dataset = song_ds.map(
         lambda x: tf.py_function(map_fn, inp=[x], Tout=tf.float32))
 
-    powermin = np.exp(dbmin * np.log(10) / 10)
-    powermax = np.exp(dbmax * np.log(10) / 10)
+    powermin = np.exp(dbmin * np.log(10.) / 10.)
+    powermax = np.exp(dbmax * np.log(10.) / 10.)
     spect_dataset = spect_dataset.map(lambda x: tf.clip_by_value(x, powermin, powermax))
 
     if use_dB:
-        spect_dataset = spect_dataset.map(lambda x: 10 * tf.math.log(x) / tf.math.log(10))
+        spect_dataset = spect_dataset.map(lambda x: 10. * tf.math.log(x) / tf.math.log(10.))
 
     return spect_dataset
 
