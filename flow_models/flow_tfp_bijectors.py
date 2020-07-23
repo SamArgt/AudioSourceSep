@@ -326,17 +326,12 @@ class ImgPreprocessing(tfp.bijectors.Bijector):
     """
     Dequantize and Preprocess images by adding uniform and with the following operation:
     x = logit(alpha + (1 - alpha) * x / 256.)
-    Parameters:
-        event_shape (list of int)
-        alpha (float)
     """
 
-    def __init__(self, event_shape, alpha=0.05, use_logit=True, name="ImgPreprocessing", **kwargs):
+    def __init__(self, alpha=0.05, use_logit=True, name="ImgPreprocessing", **kwargs):
         super(ImgPreprocessing, self).__init__(forward_min_event_ndims=3, name=name)
         self.alpha = alpha
         self.use_logit = use_logit
-        self.event_shape = event_shape
-        self.H, self.W, self.C = event_shape
 
     def _forward(self, x):
         x += tf.random.uniform(x.shape, minval=0., maxval=1.)
