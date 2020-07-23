@@ -174,7 +174,10 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 def main(args):
     # miscellaneous paramaters
     if args.dataset == 'mnist':
-        args.data_shape = [32, 32, 1]
+        if args.model == 'glow':
+            args.data_shape = [32, 32, 1]
+        elif args.model == 'realnvp':
+            args.data_shape = [28, 28, 1]
         args.img_type = "image"
         args.preprocessing_glow = None
     elif args.dataset == 'cifar10':
