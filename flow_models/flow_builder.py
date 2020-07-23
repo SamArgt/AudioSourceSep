@@ -3,8 +3,6 @@ from .flow_tfk_layers import *
 from .flow_tfp_bijectors import *
 from .flow_flowpp import *
 from.flow_real_nvp import *
-import tensorflow as tf
-import tensorflow_probability as tfp
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -15,6 +13,7 @@ def build_realnvp(data_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_
     tfk.backend.clear_session()
     shift_and_log_scale_layer = ShiftAndLogScaleResNet
     base_distr_shape = [data_shape[0] // 2, data_shape[1] // 2, data_shape[2] * 4]
+
     # Build Flow
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():

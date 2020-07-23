@@ -202,6 +202,9 @@ def main(args):
         elif args.model == 'flowpp':
             output_dirname = args.model + '_' + dataset + '_' + str(args.n_components) + '_' + \
                 str(args.n_blocks_flow) + '_' + str(args.filters) + '_' + str(args.batch_size)
+        elif args.model == 'real_nvp':
+            output_dirname = args.model + '_' + dataset + '_' + str(args.n_filters) + '_' + \
+                str(args.n_blocks) + '_' + str(args.batch_size)
 
         if args.use_logit:
             output_dirname += '_logit'
@@ -233,10 +236,15 @@ def main(args):
 
     # Load Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
-        ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                            mirrored_strategy=mirrored_strategy,
-                                                                            use_logit=args.use_logit,
-                                                                            noise=args.noise, alpha=args.alpha)
+        if args.model == 'realnvp':
+            args.preprocessing_toy_data = False
+        else:
+            args.preprocessing_toy_data = True
+        ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
+                                                                               mirrored_strategy=mirrored_strategy,
+                                                                               use_logit=args.use_logit,
+                                                                               noise=args.noise, alpha=args.alpha,
+                                                                               preprocessing=args.preprocessing_toy_data)
         args.test_batch_size = 5000
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train',
@@ -259,8 +267,9 @@ def main(args):
         flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
                                        l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
                                        preprocessing_bij=args.preprocessing_glow)
-    else:
-        raise ValueError("model should be glow")
+    elif args.model == 'realnvp':
+        flow = flow_builder.build_real_nvp(data_shape, args.n_filters, args.n_blocks,
+                                           learntop=True, mirrored_strategy=mirrored_strategy)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
@@ -344,6 +353,9 @@ if __name__ == '__main__':
                         help="number of filters in the Convolutional Network")
     parser.add_argument('--l2_reg', type=float, default=None,
                         help="L2 regularization for the coupling layer")
+
+    # Real NVP hyperparameters
+    parser.add_argument("--n_blocks", type=int, default=4)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=100,

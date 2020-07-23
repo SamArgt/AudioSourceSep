@@ -19,24 +19,26 @@ def load_toydata(dataset='mnist', batch_size=256, use_logit=False, noise=None,
     global_batch_size = batch_size
     ds = tfds.load(dataset, split='train', shuffle_files=True)
     ds_val = tfds.load(dataset, split='test', shuffle_files=True)
+    ds = ds.map(lambda x: tf.cast(x['image'], tf.float32))
+    ds_val = ds_val.map(lambda x: tf.cast(x['image'], tf.float32))
 
     # Build your input pipeline
     def map_fn(x):
-        x = tf.cast(x['image'], tf.float32)
         if dataset == 'mnist':
             x = tf.pad(x, tf.constant([[2, 2], [2, 2], [0, 0]]))
-        if preprocessing and use_logit:
+        if use_logit:
             x = (x + tf.random.uniform(data_shape)) / 256.
             x = x * (1. - alpha) + alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
-        elif preprocessing and (not use_logit):
+        else:
             x = x + tf.random.uniform(data_shape) / 256. - 0.5
         if noise is not None:
             x += tf.random.normal(data_shape) * noise
         return x
 
-    ds = ds.map(map_fn)
-    ds_val = ds_val.map(map_fn)
+    if preprocessing:
+        ds = ds.map(map_fn)
+        ds_val = ds_val.map(map_fn)
 
     ds = ds.shuffle(buffer_size, reshuffle_each_iteration=reshuffle)
     ds = ds.batch(global_batch_size, drop_remainder=True)
