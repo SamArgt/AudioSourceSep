@@ -17,7 +17,7 @@ tfk = tf.keras
 def main(args):
     event_shape = [28, 28, 1]
     flow = flow_builder.build_realnvp(event_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_strategy=None)
-    ds, ds_val, _ = data_loader.load_toydata(dataset='mnist', batch_size=256, preprocessing=False)
+    ds_train, ds_val, _ = data_loader.load_toydata(dataset='mnist', batch_size=256, preprocessing=False)
 
     print("flow sample shape: ", flow.sample(1).shape)
 
@@ -38,7 +38,7 @@ def main(args):
             list(zip(gradients, flow.trainable_variables)))
         return loss
 
-    def train(ds_train, ds_test, flow, n_epochs):
+    def train(n_epochs):
         avg_train_loss = tfk.metrics.Mean()
         avg_test_loss = tfk.metrics.Mean()
         for epoch in range(n_epochs):
@@ -49,7 +49,7 @@ def main(args):
                 avg_train_loss.update_state(loss)
 
             if epoch % 5 == 0:
-                for batch in ds_test:
+                for batch in ds_val:
                     loss = compute_loss(X)
                     avg_test_loss.update_state(loss)
                 print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
