@@ -130,9 +130,9 @@ def main(args):
         ds_train, ds_test = datasets['train'], datasets['test']
         args.dataset_maxval = 256.
         if args.dataset == "mnist":
-            args.n_train = 50000
+            args.n_train = 60000
         else:
-            args.n_train = 10000
+            args.n_train = 50000
         args.n_test = 10000
 
     else:

@@ -248,6 +248,12 @@ def main(args):
                                                                                noise=args.noise, alpha=args.alpha,
                                                                                preprocessing=args.preprocessing_toy_data)
         args.test_batch_size = 5000
+        if args.dataset == "mnist":
+            args.n_train = 60000
+        else:
+            args.n_train = 50000
+        args.n_test = 10000
+
     else:
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train',
                                                                                                    args.dataset + '/test',
