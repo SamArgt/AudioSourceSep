@@ -372,7 +372,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
     def _forward(self, x):
         x = (x - self.minval) / (self.maxval - self.minval)
         if self.use_logit:
-            x = (1. - 2 * alpha) * x + alpha
+            x = (1. - 2 * self.alpha) * x + self.alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
 
         else:
@@ -382,7 +382,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
     def _inverse(self, y):
         if self.use_logit:
             y = tf.math.sigmoid(y)
-            y = (y - alpha) / (1. - 2 * alpha)
+            y = (y - self.alpha) / (1. - 2 * self.alpha)
         else:
             y += 0.5
         y = y * (self.maxval - self.minval) + self.minval
@@ -391,8 +391,8 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
     def _forward_log_det_jacobian(self, x):
         x = (x - self.minval) / (self.maxval - self.minval)
         if self.use_logit:
-            x = (1. - 2 * alpha) * x + alpha
-            log_det = -tf.math.log(x) - tf.math.log(1. - x) + tf.math.log((1. - 2 * alpha) / (self.maxval - self.minval))
+            x = (1. - 2 * self.alpha) * x + self.alpha
+            log_det = -tf.math.log(x) - tf.math.log(1. - x) + tf.math.log((1. - 2 * self.alpha) / (self.maxval - self.minval))
         else:
             log_det = tf.ones(x.shape) / self.maxval
         return tf.reduce_sum(log_det, axis=[1, 2, 3])
