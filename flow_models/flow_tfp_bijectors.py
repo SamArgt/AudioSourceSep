@@ -372,7 +372,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
     def _forward(self, x):
         x = (x - self.minval) / (self.maxval - self.minval)
         if self.use_logit:
-            x = (1. - 2 * self.alpha) * x + self.alpha
+            x = (1. - 2. * self.alpha) * x + self.alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
 
         else:
