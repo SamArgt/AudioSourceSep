@@ -390,7 +390,7 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
 
     def _forward_log_det_jacobian(self, x):
         x = (x - self.minval) / (self.maxval - self.minval)
-        log_det = tf.ones(x.shape) / (self.maxval - self.minval)
+        log_det = tf.math.log(tf.ones(x.shape) / (self.maxval - self.minval))
         if self.use_logit:
             x = (1. - 2. * self.alpha) * x + self.alpha
             log_det += -tf.math.log(x) - tf.math.log(1. - x) + tf.math.log((1. - 2. * self.alpha))
