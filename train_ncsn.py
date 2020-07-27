@@ -134,11 +134,22 @@ def main(args):
         else:
             args.n_train = 50000
         args.n_test = 10000
+        args.minval = 0.
+        args.maxval = 256.
 
     else:
         ds_train, ds_test, _, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
                                                                             reshuffle=True, batch_size=None, mirrored_strategy=None)
-        args.dataset_maxval = 100.1
+        args.fmin = 125
+        args.fmax = 7600
+        if args.scale == 'power':
+            args.maxval = 100.
+            args.minval = 1e-10
+        elif args.scale == 'dB':
+            args.maxval = 20.
+            args.minval = -100.
+        else:
+            raise ValueError("scale should be 'power' or 'dB'")
         args.n_train = n_train
         args.n_test = n_test
 
@@ -154,7 +165,7 @@ def main(args):
             X = tf.cast(X['image'], tf.float32)
             X = (X + tf.random.uniform(args.data_shape)) / args.dataset_maxval
         else:
-            X /= args.dataset_maxval
+            X = (X - args.minval) / (args.maxval - args.minval)
         if args.use_logit:
             X = X * (1. - 2 * args.alpha) + args.alpha
             X = tf.math.log(X) - tf.math.log(1. - X)
@@ -308,9 +319,7 @@ if __name__ == '__main__':
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
-    parser.add_argument("--sampling_rate", type=int, default=16000)
-    parser.add_argument("--fmin", type=int, default=125)
-    parser.add_argument("--fmax", type=int, default=7600)
+    parser.add_argument("--scale", type=str, default="power", help="power or dB")
 
     # Output and Restore Directory
     parser.add_argument('--output', type=str, default='trained_ncsn',
