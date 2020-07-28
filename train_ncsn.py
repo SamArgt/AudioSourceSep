@@ -142,6 +142,7 @@ def main(args):
                                                                             reshuffle=True, batch_size=None, mirrored_strategy=None)
         args.fmin = 125
         args.fmax = 7600
+        args.sampling_rate = 16000
         if args.scale == 'power':
             args.maxval = 100.
             args.minval = 1e-10
