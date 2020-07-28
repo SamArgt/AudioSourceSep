@@ -163,9 +163,8 @@ def main(args):
             if args.dataset == 'mnist':
                 X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = tf.cast(X['image'], tf.float32)
-            X = (X + tf.random.uniform(args.data_shape)) / args.dataset_maxval
-        else:
-            X = (X - args.minval) / (args.maxval - args.minval)
+            X = X + tf.random.uniform(args.data_shape)
+        X = (X - args.minval) / (args.maxval - args.minval)
         if args.use_logit:
             X = X * (1. - 2 * args.alpha) + args.alpha
             X = tf.math.log(X) - tf.math.log(1. - X)
@@ -196,8 +195,7 @@ def main(args):
         if args.use_logit:
             sample = 1. / (1. + np.exp(-sample))
             sample = (sample - args.alpha) / (1. - 2. * args.alpha)
-        if args.img_type == 'melspec':
-            sample *= args.dataset_maxval
+        sample = sample * (args.maxval - args.minval) + args.minval
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -248,8 +246,7 @@ def main(args):
             if args.use_logit:
                 gen_samples = 1. / (1. + np.exp(-gen_samples))
                 gen_samples = (gen_samples - args.alpha) / (1. - 2. * args.alpha)
-            if args.img_type == 'melspec':
-                gen_samples = gen_samples * args.dataset_maxval
+            gen_samples = gen_samples * (args.maxval - args.minval) + args.minval
             try:
                 figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
