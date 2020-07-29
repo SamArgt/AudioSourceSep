@@ -374,7 +374,6 @@ class SpecPreprocessing(tfp.bijectors.Bijector):
         if self.use_logit:
             x = (1. - 2. * self.alpha) * x + self.alpha
             x = tf.math.log(x) - tf.math.log(1. - x)
-
         else:
             x = x - 0.5
         return x
