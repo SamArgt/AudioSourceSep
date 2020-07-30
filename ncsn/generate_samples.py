@@ -55,12 +55,11 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
 
 
 def setUp_optimizer(args):
-    lr = args.learning_rate
 
     if args.optimizer == 'adam':
-        optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+        optimizer = tfk.optimizers.Adam()
     elif args.optimizer == 'adamax':
-        optimizer = tfk.optimizers.Adamax(lr=lr)
+        optimizer = tfk.optimizers.Adamax()
     else:
         raise ValueError("optimizer argument should be adam or adamax")
 
@@ -95,9 +94,7 @@ def main(args):
         args.maxval = 256.
     else:
         args.data_shape = [args.height, args.width, 1]
-        args.dataset = os.path.abspath(args.dataset)
         args.img_type = "melspec"
-        args.instrument = os.path.split(args.dataset)[-1]
         if args.scale == 'power':
             args.minval = 1e-10
             args.maxval = 100.
@@ -135,6 +132,9 @@ def main(args):
 
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
+    if args.filename is None:
+        args.filename = os.path.split(abs_restore_path)[0]
+        args.filename = os.path.join(args.filename, "generated_samples")
     try:
         np.save(args.filename, x_arr)
         print("Generated Samples saved at {}".format(args.filename + ".npy"))
@@ -166,9 +166,11 @@ if __name__ == '__main__':
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--scale", type=str, default='dB',
+                        help="power or dB")
 
     # Output and Restore Directory
-    parser.add_argument('--filename', type=str, default='ncsn_generated_samples',
+    parser.add_argument('--filename', type=str, default=None,
                         help='filename for savings')
 
     # Model hyperparameters
@@ -185,12 +187,6 @@ if __name__ == '__main__':
     # Optimization parameters
     parser.add_argument("--optimizer", type=str,
                         default="adam", help="adam or adamax")
-    parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--clipvalue', type=float, default=None,
-                        help="Clip value for Adam optimizer")
-    parser.add_argument('--clipnorm', type=float, default=None,
-                        help='Clip norm for Adam optimize')
 
     args = parser.parse_args()
 
