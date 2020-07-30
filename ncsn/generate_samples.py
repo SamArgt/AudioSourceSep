@@ -20,25 +20,33 @@ def get_uncompiled_model(args):
     return model
 
 
-def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100,
-                             step_lr=0.00002, return_arr=True, training=False):
+class CustomLoss(tfk.losses.Loss):
+    def __init__(self):
+        super(CustomLoss, self).__init__()
+
+    def __call__(self, scores, target, sample_weight=None):
+        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+        if sample_weight is not None:
+            return tf.reduce_mean(loss * sample_weight)
+        else:
+            return tf.reduce_mean(loss)
+
+
+def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
     """
     Anneal Langevin dynamics
     """
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
-        print("Sigma = {} ({} / {})".format(sigma, i + 1, len(sigmas)))
         labels = tf.ones(n_samples, dtype=tf.int32) * i
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
-            if ((s + 1) % (n_steps_each // 10) == 0):
-                print("Step {} / {}".format(s + 1, n_steps_each))
-                if return_arr:
-                    x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
-            grad = model([x_mod, labels], training=training)
+            grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
+            if return_arr:
+                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
 
     if return_arr:
         return x_arr
@@ -87,14 +95,14 @@ def main(args):
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
         args.img_type = "melspec"
-        args.preprocessing_glow = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
     model = get_uncompiled_model(args)
     optimizer = setUp_optimizer(args)
-    model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
+    loss_obj = CustomLoss()
+    model.compile(optimizer=optimizer, loss=loss_obj)
     model.load_weights(abs_restore_path)
     print("Weights loaded")
 
@@ -106,7 +114,7 @@ def main(args):
         x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
     x_arr = anneal_langevin_dynamics(x_mod, args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
-                                     return_arr=args.return_last_point, training=args.training)
+                                     return_arr=args.return_last_point)
     if args.use_logit:
         x_arr = 1. / (1. + np.exp(-x_arr))
         x_arr = (x_arr - args.alpha) / (1 - 2. * args.alpha)
@@ -137,8 +145,6 @@ if __name__ == '__main__':
                         help="learning rate in the lengevin dynamics")
     parser.add_argument("--return_last_point", action="store_false",
                         help="Either to return array of every steps or just the last point")
-    parser.add_argument("--training", action='store_true',
-                        help="Either to use inference mode or training mode in the network")
 
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
