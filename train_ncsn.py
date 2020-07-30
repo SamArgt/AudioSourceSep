@@ -40,7 +40,8 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
             grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
-                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
+                if ((s + 1) % (n_steps_each // 10) == 0):
+                    x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
 
     if return_arr:
         return x_arr
@@ -106,6 +107,10 @@ def main(args):
         os.chdir(output_dirpath)
     except FileExistsError:
         os.chdir(output_dirpath)
+    try:
+        os.mkdir("generated_samples")
+    except FileExistsError:
+        pass
     log_file = open('out.log', 'w')
     if args.debug is False:
         sys.stdout = log_file
@@ -243,7 +248,7 @@ def main(args):
     tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
                                                      profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
 
-    def display_generated_samples(epoch, logs):
+    def generate_samples(epoch, logs):
         if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
             x_mod = tf.random.uniform([32] + args.data_shape)
             if args.use_logit:
@@ -251,13 +256,13 @@ def main(args):
                 x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np)
+                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np, return_arr=True)
             else:
-                gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np)
+                gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np, return_arr=True)
 
             gen_samples = post_processing(gen_samples)
             try:
-                figure = image_grid(gen_samples, args.data_shape, args.img_type,
+                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.img_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
                 sample_image = plot_to_image(figure)
                 with file_writer.as_default():
@@ -268,11 +273,12 @@ def main(args):
                     tf.summary.text(name="display error",
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
+            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
 
         else:
             pass
 
-    gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=display_generated_samples)
+    gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=generate_samples)
     # earlystopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
 
     callbacks = [
