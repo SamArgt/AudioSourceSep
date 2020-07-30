@@ -127,7 +127,6 @@ def main(args):
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
         datasets = tfds.load(name=args.dataset, with_info=False, as_supervised=False)
         ds_train, ds_test = datasets['train'], datasets['test']
-        args.dataset_maxval = 256.
         if args.dataset == "mnist":
             args.n_train = 60000
         else:

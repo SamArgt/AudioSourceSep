@@ -87,17 +87,17 @@ def main(args):
     # data paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
-        args.img_type = "image"
+        args.data_type = "image"
         args.minval = 0.
         args.maxval = 256.
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
-        args.img_type = "image"
+        args.data_type = "image"
         args.minval = 0.
         args.maxval = 256.
     else:
         args.data_shape = [args.height, args.width, 1]
-        args.img_type = "melspec"
+        args.data_type = "melspec"
         if args.scale == 'power':
             args.minval = 1e-10
             args.maxval = 100.
