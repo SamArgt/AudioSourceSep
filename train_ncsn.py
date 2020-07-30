@@ -70,14 +70,14 @@ def main(args):
     # miscellaneous paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
-        args.img_type = "image"
+        args.data_type = "image"
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
-        args.img_type = "image"
+        args.imgdata_type_type = "image"
     else:
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
-        args.img_type = "melspec"
+        args.data_type = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
     # output directory
@@ -94,7 +94,7 @@ def main(args):
 
         if args.use_logit:
             output_dirname += '_logit'
-        if args.img_type == 'melspec':
+        if args.data_type == 'melspec':
             output_dirname += '_' + args.scale
         if args.restore is not None:
             output_dirname += '_ctd'
@@ -163,7 +163,7 @@ def main(args):
     def preprocess(X):
         sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-        if args.img_type == 'image':
+        if args.data_type == 'image':
             if args.dataset == 'mnist':
                 X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
             X = tf.cast(X['image'], tf.float32)
@@ -212,7 +212,7 @@ def main(args):
         sample = inputs["perturbed_X"]
         sample = post_processing(sample)
         sample = sample[:32]
-        figure = image_grid(sample, args.data_shape, args.img_type,
+        figure = image_grid(sample, args.data_shape, args.data_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
         tf.summary.image("perturbed images", plot_to_image(
             figure), max_outputs=1, step=0)
@@ -262,7 +262,7 @@ def main(args):
 
             gen_samples = post_processing(gen_samples)
             try:
-                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.img_type,
+                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.data_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
                 sample_image = plot_to_image(figure)
                 with file_writer.as_default():
