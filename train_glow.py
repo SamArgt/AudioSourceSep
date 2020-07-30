@@ -204,6 +204,8 @@ def main(args):
 
         if args.use_logit:
             output_dirname += '_logit'
+        if args.img_type == 'melspec':
+            output_dirname += '_' + args.scale
         if args.restore is not None:
             output_dirname += '_ctd'
 

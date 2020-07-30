@@ -70,16 +70,13 @@ def main(args):
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
         args.img_type = "image"
-        args.preprocessing_glow = None
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
         args.img_type = "image"
-        args.preprocessing_glow = None
     else:
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
         args.img_type = "melspec"
-        args.preprocessing_glow = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
     # output directory
@@ -96,6 +93,8 @@ def main(args):
 
         if args.use_logit:
             output_dirname += '_logit'
+        if args.img_type == 'melspec':
+            output_dirname += '_' + args.scale
         if args.restore is not None:
             output_dirname += '_ctd'
 
@@ -182,6 +181,20 @@ def main(args):
     eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
     eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
+    def post_processing(x):
+        if args.use_logit:
+            x = 1. / (1. + np.exp(-x))
+            x = (x - args.alpha) / (1. - 2. * args.alpha)
+        x = x * (args.maxval - args.minval) + args.minval
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
+        return x
+
     # Display original images
     # Clear any logs from previous runs
     try:
@@ -193,12 +206,7 @@ def main(args):
     with file_writer.as_default():
         inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
         sample = inputs["perturbed_X"]
-        if args.use_logit:
-            sample = 1. / (1. + np.exp(-sample))
-            sample = (sample - args.alpha) / (1. - 2. * args.alpha)
-        sample = sample * (args.maxval - args.minval) + args.minval
-        if args.img_type == 'image':
-            sample = sample.astype(np.int32)
+        sample = post_processing(sample)
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -246,12 +254,7 @@ def main(args):
             else:
                 gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np)
 
-            if args.use_logit:
-                gen_samples = 1. / (1. + np.exp(-gen_samples))
-                gen_samples = (gen_samples - args.alpha) / (1. - 2. * args.alpha)
-            gen_samples = gen_samples * (args.maxval - args.minval) + args.minval
-            if args.img_type == 'image':
-                gen_samples = gen_samples.astype(np.int32)
+            gen_samples = post_processing(gen_samples)
             try:
                 figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)

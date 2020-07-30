@@ -39,9 +39,12 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
+        print("Sigma = {} ({} / {})".format(sigma, i + 1, len(sigmas)))
         labels = tf.ones(n_samples, dtype=tf.int32) * i
         step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
         for s in range(n_steps_each):
+            if ((s + 1) % (n_steps_each // 10) == 0):
+                print("Step {} / {}".format(s + 1, n_steps_each))
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
@@ -104,6 +107,18 @@ def main(args):
         else:
             raise ValueError("scale should be 'power' or 'dB'")
 
+    def post_processing(x):
+        if args.use_logit:
+            x = 1. / (1. + np.exp(-x))
+            x = (x - args.alpha) / (1. - 2. * args.alpha)
+        x = x * (args.maxval - args.minval) + args.minval
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+        return x
+
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
     model = get_uncompiled_model(args)
@@ -122,14 +137,7 @@ def main(args):
     x_arr = anneal_langevin_dynamics(x_mod, args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.n_steps_each, step_lr=args.step_lr,
                                      return_arr=args.return_last_point)
-    if args.use_logit:
-        x_arr = 1. / (1. + np.exp(-x_arr))
-        x_arr = (x_arr - args.alpha) / (1 - 2. * args.alpha)
-
-    x_arr = x_arr * (args.maxval - args.minval) + args.minval
-    if args.img_type == 'image':
-        x_arr = x_arr.astype(np.int32)
-
+    x_arr = post_processing(x_arr)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
     if args.filename is None:
