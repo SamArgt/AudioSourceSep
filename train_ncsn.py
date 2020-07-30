@@ -197,6 +197,8 @@ def main(args):
             sample = 1. / (1. + np.exp(-sample))
             sample = (sample - args.alpha) / (1. - 2. * args.alpha)
         sample = sample * (args.maxval - args.minval) + args.minval
+        if args.img_type == 'image':
+            sample = sample.astype(np.int32)
         sample = sample[:32]
         figure = image_grid(sample, args.data_shape, args.img_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -248,6 +250,8 @@ def main(args):
                 gen_samples = 1. / (1. + np.exp(-gen_samples))
                 gen_samples = (gen_samples - args.alpha) / (1. - 2. * args.alpha)
             gen_samples = gen_samples * (args.maxval - args.minval) + args.minval
+            if args.img_type == 'image':
+                gen_samples = gen_samples.astype(np.int32)
             try:
                 figure = image_grid(gen_samples, args.data_shape, args.img_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)

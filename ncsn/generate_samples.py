@@ -82,20 +82,30 @@ def main(args):
                             np.log(args.sigmaL) / np.log(10),
                             num=args.num_classes)
 
-    # miscellaneous paramaters
+    # data paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
         args.img_type = "image"
-        args.preprocessing_glow = None
+        args.minval = 0.
+        args.maxval = 256.
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
         args.img_type = "image"
-        args.preprocessing_glow = None
+        args.minval = 0.
+        args.maxval = 256.
     else:
         args.data_shape = [args.height, args.width, 1]
         args.dataset = os.path.abspath(args.dataset)
         args.img_type = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
+        if args.scale == 'power':
+            args.minval = 1e-10
+            args.maxval = 100.
+        elif args.scale == 'dB':
+            args.minval = -100.
+            args.maxval = 20.
+        else:
+            raise ValueError("scale should be 'power' or 'dB'")
 
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
@@ -118,6 +128,10 @@ def main(args):
     if args.use_logit:
         x_arr = 1. / (1. + np.exp(-x_arr))
         x_arr = (x_arr - args.alpha) / (1 - 2. * args.alpha)
+
+    x_arr = x_arr * (args.maxval - args.minval) + args.minval
+    if args.img_type == 'image':
+        x_arr = x_arr.astype(np.int32)
 
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
