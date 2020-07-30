@@ -303,9 +303,10 @@ def main(args):
                         data=tf.constant(template), step=0)
 
     # Train
+    initial_epoch = optimizer.iterations // args.batch_size
     t0 = time.time()
-    model.fit(train_dataset, epochs=args.n_epochs, validation_data=eval_dataset,
-              callbacks=callbacks, verbose=2, validation_freq=10, initial_epoch=optimizer.iterations // args.batch_size)
+    model.fit(train_dataset, epochs=args.n_epochs + initial_epoch, validation_data=eval_dataset,
+              callbacks=callbacks, verbose=2, validation_freq=10, initial_epoch=initial_epoch)
 
     model.save_weights("save_weights")
 
