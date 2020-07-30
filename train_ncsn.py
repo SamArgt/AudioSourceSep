@@ -232,9 +232,11 @@ def main(args):
             with mirrored_strategy.scope():
                 model.load_weights(abs_restore_path)
                 print("Model Weights loaded from {}".format(abs_restore_path))
+                assert optimizer.iterations > 0
         else:
             model.load_weights(abs_restore_path)
             print("Model Weights loaded from {}".format(abs_restore_path))
+            assert optimizer.iterations > 0
 
     # Set up callbacks
     logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -278,7 +280,7 @@ def main(args):
         tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/ckpt.{epoch:02d}",
                                       save_weights_only=True,
                                       monitor="loss",
-                                      save_freq=int(round(args.n_train / args.batch_size, 0)) * args.n_epochs // 5),
+                                      save_freq=int(round(args.n_train / args.batch_size, 0)) * args.n_epochs // 10),
         tfk.callbacks.TerminateOnNaN(),
         gen_samples_callback
     ]
@@ -297,7 +299,7 @@ def main(args):
     # Train
     t0 = time.time()
     model.fit(train_dataset, epochs=args.n_epochs, validation_data=eval_dataset,
-              callbacks=callbacks, verbose=2, validation_freq=10)
+              callbacks=callbacks, verbose=2, validation_freq=10, initial_epoch=optimizer.iterations // batch_size)
 
     model.save_weights("save_weights")
 
