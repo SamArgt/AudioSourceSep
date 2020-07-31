@@ -139,7 +139,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 history_loss_avg.reset_states()
 
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
-            # Compute validation loss and monitor it on tensoboard
+            # Compute validation loss and monitor it on tensorboard
             test_loss.reset_states()
             for elt in ds_val_dist:
                 test_loss.update_state(distributed_test_step(elt))
