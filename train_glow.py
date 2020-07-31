@@ -152,6 +152,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             with mirrored_strategy.scope():
                 samples = flow.sample(32)
             samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
+            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), samples)
             try:
                 figure = image_grid(samples, args.data_shape, args.data_type,
                                     sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
@@ -217,6 +218,10 @@ def main(args):
         os.chdir(output_dirpath)
     except FileExistsError:
         os.chdir(output_dirpath)
+    try:
+        os.mkdir("generated_samples")
+    except FileExistsError:
+        pass
     log_file = open('out.log', 'w')
     if args.debug is False:
         sys.stdout = log_file
