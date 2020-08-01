@@ -49,7 +49,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
 
 
 def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, args):
+          train_summary_writer, test_summary_writer, manager, args):
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
     with mirrored_strategy.scope():
         def compute_train_loss(scores, target, sample_weight):
@@ -371,7 +371,7 @@ def main(args):
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, args)
+          train_summary_writer, test_summary_writer, manager, args)
     print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
 
     log_file.close()
