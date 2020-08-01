@@ -61,10 +61,11 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
 
     def get_noise_conditionned_data(X):
-        sigma_idx = tf.random.uniform(shape=(args.local_batch_size,), maxval=args.num_classes, dtype=tf.int32)
+        local_batch_size = X.shape[-1]
+        sigma_idx = tf.random.uniform(shape=(local_batch_size,), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
-        used_sigma = tf.reshape(used_sigma, (args.local_batch_size, 1, 1, 1))
-        perturbed_X = X + tf.random.normal([args.local_batch_size] + args.data_shape) * used_sigma
+        used_sigma = tf.reshape(used_sigma, (local_batch_size, 1, 1, 1))
+        perturbed_X = X + tf.random.normal([local_batch_size] + args.data_shape) * used_sigma
         inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
         target = -(perturbed_X - X) / (used_sigma ** 2)
         sample_weight = used_sigma ** 2
