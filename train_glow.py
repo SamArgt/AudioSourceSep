@@ -81,7 +81,6 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
     N_EPOCHS = args.n_epochs
     batch_size = args.batch_size
     t0 = time.time()
-    loss_history = []
     count_step = optimizer.iterations.numpy()
     min_val_loss = 1e6
     prev_history_loss_avg = None
@@ -115,7 +114,6 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
                 # Save history and monitor it on tensorboard
                 curr_loss_history = history_loss_avg.result()
-                loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
                     step_int = int(loss_per_epoch * count_step * batch_size / n_train)
                     tf.summary.scalar(
@@ -134,8 +132,8 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                                             data=tf.constant(
                                                 "Huge jump in the loss. Model weights saved at {}".format(save_path)),
                                             step=step_int)
+                        prev_history_loss_avg = curr_loss_history
 
-                    prev_history_loss_avg = curr_loss_history
                 history_loss_avg.reset_states()
 
         if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):

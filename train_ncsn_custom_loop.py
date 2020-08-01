@@ -142,7 +142,6 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
                 # Save history and monitor it on tensorboard
                 curr_loss_history = history_loss_avg.result()
-                loss_history.append(curr_loss_history)
                 with train_summary_writer.as_default():
                     step_int = int(loss_per_epoch * count_step * batch_size / n_train)
                     tf.summary.scalar(
