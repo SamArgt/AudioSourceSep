@@ -54,10 +54,12 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
     with mirrored_strategy.scope():
         def compute_train_loss(scores, target, sample_weight):
             per_example_loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+            per_example_loss *= sample_weight
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
 
         def compute_test_loss(scores, target, sample_weight):
             per_example_loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+            per_example_loss *= sample_weight
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
 
     def get_noise_conditionned_data(X):
@@ -118,7 +120,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
     history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
     epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
     is_nan_loss = False
-    loss_per_epoch = 10
+    loss_per_epoch = 5
     count_step = optimizer.iterations.numpy()
     for epoch in range(args.n_epochs):
         epoch_loss_avg.reset_states()
