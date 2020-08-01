@@ -189,7 +189,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                                     step=epoch)
 
         # 10 times during training: Save model
-        if (args.n_epochs < 10) or (epoch % (args.n_epoch // 10) == 0):
+        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
             save_path = manager.save()
             print("Model Saved at {}".format(save_path))
 
