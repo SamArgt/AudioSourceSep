@@ -6,7 +6,6 @@ from pipeline import data_loader
 import tensorflow_datasets as tfds
 import argparse
 import time
-import datetime
 import os
 import sys
 from train_utils import *
@@ -133,7 +132,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             epoch_loss_avg.update_state(loss)
             count_step += 1
 
-            # every loss_per_epoch train step
+            # every loss_per_epoch iterations
             if count_step % (args.n_train // (args.batch_size * loss_per_epoch)) == 0:
                 # check nan loss
                 if (tf.math.is_nan(loss)) or (tf.math.is_inf(loss)):
@@ -151,48 +150,52 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
                 history_loss_avg.reset_states()
 
-            # 10 times during training
-            if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10)) == 0:
-                test_loss.reset_states()
+        # Every 10 epochs: Compute validation loss
+        if (epoch % 10) == 0:
+            test_loss.reset_states()
 
-                # Compute validation loss
-                for elt in distr_eval_dataset:
-                    test_loss.update_state(distributed_test_step(elt))
+            for elt in distr_eval_dataset:
+                test_loss.update_state(distributed_test_step(elt))
 
-                step_int = int(loss_per_epoch * count_step * args.batch_size / args.n_train)
-                with test_summary_writer.as_default():
-                    tf.summary.scalar('loss', test_loss.result(), step=step_int)
-                print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
-                    epoch, epoch_loss_avg.result(), test_loss.result()))
+            step_int = int(loss_per_epoch * count_step * args.batch_size / args.n_train)
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss.result(), step=step_int)
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
+                epoch, epoch_loss_avg.result(), test_loss.result()))
 
-                # Generate some samples and visualize them on tensorboard
-                x_mod = tf.random.uniform([32] + args.data_shape)
-                if args.use_logit:
-                    x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
-                    x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
-                if mirrored_strategy is not None:
-                    with mirrored_strategy.scope():
-                        gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
-                                                               32, sigmas_np, return_arr=True)
+        # Every 20 epochs: Generate Samples
+        if (epoch % 20) == 0:
+            x_mod = tf.random.uniform([32] + args.data_shape)
+            if args.use_logit:
+                x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
+                x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
+            if mirrored_strategy is not None:
+                with mirrored_strategy.scope():
+                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
+                                                           32, sigmas_np, return_arr=True)
 
-                gen_samples = post_processing(gen_samples)
-                np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
-                try:
-                    figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.data_type,
-                                        sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-                    with train_summary_writer.as_default():
-                        tf.summary.image("32 generated samples", plot_to_image(figure),
-                                         max_outputs=50, step=epoch)
-                except IndexError:
-                    with train_summary_writer.as_default():
-                        tf.summary.text(name="display error",
-                                        data="Impossible to display spectrograms because of NaN values",
-                                        step=epoch)
+            gen_samples = post_processing(gen_samples)
+            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
+            try:
+                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.data_type,
+                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+                with train_summary_writer.as_default():
+                    tf.summary.image("32 generated samples", plot_to_image(figure),
+                                     max_outputs=50, step=epoch)
+            except IndexError:
+                with train_summary_writer.as_default():
+                    tf.summary.text(name="display error",
+                                    data="Impossible to display spectrograms because of NaN values",
+                                    step=epoch)
+
+        # 10 times during training: Save model
+        if (args.n_epochs < 10) or (epoch % (args.n_epoch // 10) == 0):
+            save_path = manager.save()
+            print("Model Saved at {}".format(save_path))
 
 def main(args):
 
     sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
-    # sigmas_np = np.linspace(args.sigma1, args.sigmaL, num=args.num_classes)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
@@ -225,6 +228,8 @@ def main(args):
             output_dirname += '_' + args.scale
         if args.restore is not None:
             output_dirname += '_ctd'
+
+        output_dirname += '_custom_loop'
 
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
@@ -336,7 +341,7 @@ def main(args):
 
     # Set up checkpoint
     ckpt, manager, manager_issues = setUp_checkpoint(
-        mirrored_strategy, args, model, optimizer)
+        mirrored_strategy, args, model, optimizer, max_to_keep=10)
 
     # restore
     if args.restore is not None:
