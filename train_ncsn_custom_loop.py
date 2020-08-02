@@ -146,7 +146,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                 # Save history and monitor it on tensorboard
                 curr_loss_history = history_loss_avg.result()
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch * count_step * args.batch_size / args.n_train)
+                    step_int = int(10 * count_step * args.batch_size / args.n_train)
                     tf.summary.scalar(
                         'loss', curr_loss_history, step=step_int)
 
@@ -159,7 +159,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             for elt in distr_eval_dataset:
                 test_loss.update_state(distributed_test_step(elt))
 
-            step_int = int(loss_per_epoch * count_step * args.batch_size / args.n_train)
+            step_int = int(10 * count_step * args.batch_size / args.n_train)
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(

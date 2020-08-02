@@ -115,7 +115,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
                 # Save history and monitor it on tensorboard
                 curr_loss_history = history_loss_avg.result()
                 with train_summary_writer.as_default():
-                    step_int = int(loss_per_epoch * count_step * batch_size / n_train)
+                    step_int = int(10 * count_step * batch_size / n_train)
                     tf.summary.scalar(
                         'loss', curr_loss_history, step=step_int)
 
@@ -141,7 +141,7 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
             test_loss.reset_states()
             for elt in ds_val_dist:
                 test_loss.update_state(distributed_test_step(elt))
-            step_int = int(loss_per_epoch * count_step * batch_size / n_train)
+            step_int = int(10 * count_step * batch_size / n_train)
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=step_int)
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
