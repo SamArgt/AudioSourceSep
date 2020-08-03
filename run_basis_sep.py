@@ -47,11 +47,11 @@ def image_grid(n_display, x, y, z, data_type="image", separation=True, **kwargs)
             ax2.set_axis_off()
             ax3.set_axis_off()
         else:
-            specshow(x[i], sr=kwargs["sampling_rate"],
+            specshow(x[i].squeeze(), sr=kwargs["sampling_rate"],
                      ax=ax1, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
-            specshow(y[i], sr=kwargs["sampling_rate"],
+            specshow(y[i].squeeze(), sr=kwargs["sampling_rate"],
                      ax=ax2, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
-            specshow(z[i], sr=kwargs["sampling_rate"],
+            specshow(z[i].squeeze(), sr=kwargs["sampling_rate"],
                      ax=ax3, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
 
     if separation:
