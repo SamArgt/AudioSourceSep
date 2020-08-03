@@ -355,8 +355,8 @@ def main(args):
     # set up optimizer
     optimizer = train_utils.setUp_optimizer(None, args)
     # checkpoint
-    ckpt1 = train_utils.setUp_checkpoint(None, model1, optimizer)
-    ckpt2 = train_utils.setUp_checkpoint(None, model2, optimizer)
+    ckpt1 = train_utils.setUp_checkpoint(None, args, model1, optimizer)
+    ckpt2 = train_utils.setUp_checkpoint(None, args, model2, optimizer)
     if args.model_type == "ncsn":
         restore_checkpoint(ckpt1, abs_restore_path_1, model1, optimizer)
         print("Model 1 restore from {}".format(abs_restore_path_1))
