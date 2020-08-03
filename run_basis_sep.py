@@ -353,10 +353,10 @@ def main(args):
         model2 = tfk.Model(inputs=[perturbed_X_2, sigma_idx_2], outputs=outputs_2, name="ScoreNetwork1")
 
     # set up optimizer
-    optimizer = train_utils.setUp_optimizer(args)
+    optimizer = train_utils.setUp_optimizer(None, args)
     # checkpoint
-    ckpt1 = train_utils.setUp_checkpoint(model1, optimizer)
-    ckpt2 = train_utils.setUp_checkpoint(model2, optimizer)
+    ckpt1 = train_utils.setUp_checkpoint(None, model1, optimizer)
+    ckpt2 = train_utils.setUp_checkpoint(None, model2, optimizer)
     if args.model_type == "ncsn":
         restore_checkpoint(ckpt1, abs_restore_path_1, model1, optimizer)
         print("Model 1 restore from {}".format(abs_restore_path_1))
