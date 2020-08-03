@@ -128,9 +128,10 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
     violin_ds, _ = load_wav(violin_path, length_sec, sr=sr)
 
     n_extract = int(round(duration / length_sec, 0))
-    mix_raw = list(mix_ds.take(n_extract).as_numpy_iterator())
-    piano_raw = list(piano_ds.take(n_extract).as_numpy_iterator())
-    violin_raw = list(violin_ds.take(n_extract).as_numpy_iterator())
+    # skip 2 first frames
+    mix_raw = list(mix_ds.skip(2).take(n_extract).as_numpy_iterator())
+    piano_raw = list(piano_ds.skip(2).take(n_extract).as_numpy_iterator())
+    violin_raw = list(violin_ds.skip(2).take(n_extract).as_numpy_iterator())
 
     mix_raw_concat = np.concatenate(mix_raw)
     piano_raw_concat = np.concatenate(piano_raw)
