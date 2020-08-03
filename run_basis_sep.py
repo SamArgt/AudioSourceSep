@@ -145,8 +145,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape)
 
         if model_type == 'ncsn':
-            inputs1 = {'perturbed_X_1': x1, 'sigma_idx_1': sigma_idx}
-            inputs2 = {'perturbed_X_2': x2, 'sigma_idx_2': sigma_idx}
+            inputs1 = {'perturbed_X_1': x1, 'sigma_idx_1': tf.ones(shape=(n_mixed,), dtype=tf.float32) * sigma_idx}
+            inputs2 = {'perturbed_X_2': x2, 'sigma_idx_2': tf.ones(shape=(n_mixed,), dtype=tf.float32) * sigma_idx}
         else:
             inputs1 = x1
             inputs2 = x2
@@ -154,8 +154,10 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         grad_logprob1 = compute_grad_logprob(inputs1, model1, model_type)
         grad_logprob2 = compute_grad_logprob(inputs2, model2, model_type)
 
-        mixing = g(x1, x2)
+        mixing = tf.constant(g(x1, x2), dtype=tf.float32)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
+        grad_mixing_x1 = tf.constant(grad_mixing_x1, dtype=tf.float32)
+        grad_mixing_x2 = tf.constant(grad_mixing_x2, dtype=tf.float32)
 
         if debug:
             assert grad_logprob1.shape == x1.shape
