@@ -250,7 +250,7 @@ def main(args):
         args.data_type = "image"
     elif args.dataset == 'cifar10':
         args.data_shape = [32, 32, 3]
-        args.imgdata_type_type = "image"
+        args.data_type = "image"
     else:
         if args.song_dir is None:
             raise ValueError('song_dir is None')
