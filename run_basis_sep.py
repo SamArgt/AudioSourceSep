@@ -180,9 +180,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                     n_display = 5
                 else:
                     n_display = n_mixed
-                sample_mix = mixed.numpy()[:n_display].reshape([n_display] + data_shape)
-                sample_x1 = x1.numpy()[:n_display].reshape([args.n_display] + data_shape)
-                sample_x2 = x2.numpy()[:n_display].reshape([n_display] + data_shape)
+                sample_mix = post_processing_fn(mixed.numpy())
+                sample_x1 = post_processing_fn(x1.numpy())
+                sample_x2 = post_processing_fn(x2.numpy())
                 figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True, **kwargs)
                 tf.summary.image("Components", train_utils.plot_to_image(figure),
                                  max_outputs=50, step=step + t)
@@ -221,9 +221,9 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
         step += 1
         with train_summary_writer.as_default():
 
-            sample_mix = post_processing(mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
-            sample_x1 = post_processing(x1.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
-            sample_x2 = post_processing(x2.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
+            sample_mix = post_processing(mixed.numpy())
+            sample_x1 = post_processing(x1.numpy())
+            sample_x2 = post_processing(x2.numpy())
             figure = image_grid(args.n_display, sample_mix, sample_x1, sample_x2, args.dataset, separation=True,
                                 data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
             tf.summary.image("Components", train_utils.plot_to_image(figure),
