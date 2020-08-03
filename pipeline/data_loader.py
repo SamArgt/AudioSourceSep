@@ -170,8 +170,8 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
         mel_violin.append(mel_violin_extract)
         mel_piano.append(mel_piano_extract)
 
-    mel_spec = [tf.expand_dims(mel_mix, axis=-1),
-                tf.expand_dims(mel_piano, axis=-1),
-                tf.expand_dims(mel_violin, axis=-1)]
+    mel_spec = [tf.cast(tf.expand_dims(mel_mix, axis=-1), tf.float32),
+                tf.cast(tf.expand_dims(mel_piano, axis=-1), tf.float32),
+                tf.cast(tf.expand_dims(mel_violin, axis=-1), tf.float32)]
 
     return mel_spec, raw_audio
