@@ -11,10 +11,6 @@ import argparse
 import time
 import os
 import sys
-import shutil
-import datetime
-import io
-import re
 import matplotlib.pyplot as plt
 tfd = tfp.distributions
 tfb = tfp.bijectors
@@ -78,19 +74,21 @@ def compute_grad_logprob(inputs, model, model_type='ncsn'):
     return gradients
 
 
-def post_processing(x, args):
-    if args.use_logit:
-        x = 1. / (1. + np.exp(-x))
-        x = (x - args.alpha) / (1. - 2. * args.alpha)
-    x = x * (args.maxval - args.minval) + args.minval
-    if args.data_type == 'image':
-        x = np.clip(x, 0., 255.)
-        x = np.round(x, decimals=0).astype(int)
-    else:
-        x = np.clip(x, args.minval, args.maxval)
-        if args.scale == "power":
-            x = librosa.power_to_db(x)
-    return x
+def post_processing_fn(args):
+    def post_processing(x):
+        if args.use_logit:
+            x = 1. / (1. + np.exp(-x))
+            x = (x - args.alpha) / (1. - 2. * args.alpha)
+        x = x * (args.maxval - args.minval) + args.minval
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
+        return x
+    return post_processing
 
 
 def mixing_process(args):
@@ -131,7 +129,7 @@ def mixing_process(args):
     return g, grad_g
 
 
-def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g,
+def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g, post_processing_fn,
                      model_type='ncsn', delta=3e-5, T=100, debug=True,
                      train_summary_writer=None, step=None, **kwargs):
 
@@ -196,7 +194,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
                      ckpt1, ckpt2, args, train_summary_writer):
 
     step = 0
-
+    post_processing = post_processing_fn(args)
     g, grad_g = mixing_process(args)
 
     for sigma_idx, sigma in enumerate(sigmas):
@@ -210,7 +208,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
         else:
             pass
 
-        x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g,
+        x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g, post_processing,
                                   model_type=args.model_type, delta=3e-5, T=args.T, debug=args.debug,
                                   train_summary_writer=train_summary_writer, step=step * args.T,
                                   data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
@@ -218,9 +216,9 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
         step += 1
         with train_summary_writer.as_default():
 
-            sample_mix = mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
-            sample_x1 = x1.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
-            sample_x2 = x2.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
+            sample_mix = post_processing(mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
+            sample_x1 = post_processing(x1.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
+            sample_x2 = post_processing(x2.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
             figure = image_grid(args.n_display, sample_mix, sample_x1, sample_x2, args.dataset, separation=True,
                                 data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
             tf.summary.image("Components", train_utils.plot_to_image(figure),
@@ -258,7 +256,6 @@ def main(args):
             raise ValueError('song_dir is None')
         song_dir_abspath = os.path.abspath(args.song_dir)
         args.data_shape = [args.height, args.width, 1]
-        args.dataset = os.path.abspath(args.dataset)
         args.data_type = "melspec"
         args.instrument = os.path.split(args.dataset)[-1]
 
@@ -320,6 +317,14 @@ def main(args):
             args.minval = -100.
         else:
             raise ValueError("scale should be 'power' or 'dB'")
+        # preprocessing mixture
+        mixed = (mixed - args.minval) / (args.maxval - args.minval)
+        if args.use_logit:
+            mixed = mixed * (1. - 2 * args.alpha) + args.alpha
+            mixed = tf.math.log(mixed) - tf.math.log(1. - mixed)
+
+        # post_processing
+        post_processing = post_processing_fn(args)
 
     with train_summary_writer.as_default():
         if args.n_mixed > 5:
@@ -327,7 +332,7 @@ def main(args):
         else:
             args.n_display = args.n_mixed
 
-        sample_mix = mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
+        sample_mix = post_processing(mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
         sample_gt1 = gt1.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
         sample_gt2 = gt2.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
         figure = image_grid(args.n_display, sample_mix, sample_gt1, sample_gt2, data_type=args.data_type, separation=False,
@@ -359,7 +364,9 @@ def main(args):
     ckpt2 = train_utils.setUp_checkpoint(model2, optimizer)
     if args.model_type == "ncsn":
         restore_checkpoint(ckpt1, abs_restore_path_1, model1, optimizer)
-        restore_checkpoint(ckpt2, abs_restore_path_1, model2, optimizer)
+        print("Model 1 restore from {}".format(abs_restore_path_1))
+        restore_checkpoint(ckpt2, abs_restore_path_2, model2, optimizer)
+        print("Model 2 restored from {}".format(abs_restore_path_2))
 
     # run BASIS separation
     t0 = time.time()
@@ -389,7 +396,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action="store_true")
 
     # dataset parameters
-    parser.add_argument('--dataset', type=str, default="mnist",
+    parser.add_argument('--dataset', type=str, default="melspec",
                         help="mnist or cifar10 or melspec")
 
     # song directory path to separate
