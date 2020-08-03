@@ -170,6 +170,8 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
         mel_violin.append(mel_violin_extract)
         mel_piano.append(mel_piano_extract)
 
-    mel_spec = [np.array(mel_mix), np.array(mel_piano), np.array(mel_violin)]
+    mel_spec = [tf.expand_dims(mel_mix, axis=-1),
+                tf.expand_dims(mel_piano, axis=-1),
+                tf.expand_dims(mel_violin, axis=-1)]
 
     return mel_spec, raw_audio

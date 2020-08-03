@@ -293,7 +293,7 @@ def main(args):
         duration = 2.04 * args.n_mixed
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
-        mixed, gt1, gt2 = tf.constant(mel_spec[0]), tf.constant(mel_spec[1]), tf.constant(mel_spec[2])
+        mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
         x1 = tf.random.normal([args.n_mixed] + args.data_shape)
         x2 = tf.random.normal([args.n_mixed] + args.data_shape)
         args.fmin = 125
@@ -325,9 +325,9 @@ def main(args):
         else:
             args.n_display = args.n_mixed
 
-        sample_mix = post_processing(mixed.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape))
-        sample_gt1 = gt1.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
-        sample_gt2 = gt2.numpy()[:args.n_display].reshape([args.n_display] + args.data_shape)
+        sample_mix = post_processing(mixed.numpy())
+        sample_gt1 = gt1.numpy()
+        sample_gt2 = gt2.numpy()
         figure = image_grid(args.n_display, sample_mix, sample_gt1, sample_gt2, data_type=args.data_type, separation=False,
                             fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
