@@ -342,12 +342,14 @@ def main(args):
     else:
         perturbed_X_1 = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X_1")
         sigma_idx_1 = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx_1")
-        outputs_1 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters)
+        outputs_1 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                       args.n_sigmas, args.use_logit)([perturbed_X_1, sigma_idx_1])
         model1 = tfk.Model(inputs=[perturbed_X_1, sigma_idx_1], outputs=outputs_1, name="ScoreNetwork1")
 
         perturbed_X_2 = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X_2")
         sigma_idx_2 = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx_2")
-        outputs_2 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters)
+        outputs_2 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                       args.n_sigmas, args.use_logit)([perturbed_X_2, sigma_idx_2])
         model2 = tfk.Model(inputs=[perturbed_X_2, sigma_idx_2], outputs=outputs_2, name="ScoreNetwork1")
 
     # set up optimizer
