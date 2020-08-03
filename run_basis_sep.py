@@ -257,7 +257,6 @@ def main(args):
         song_dir_abspath = os.path.abspath(args.song_dir)
         args.data_shape = [args.height, args.width, 1]
         args.data_type = "melspec"
-        args.instrument = os.path.split(args.dataset)[-1]
 
     try:
         os.mkdir(args.output)
@@ -303,7 +302,7 @@ def main(args):
         duration = 2.04 * args.n_mixed
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
-        mixed, gt1, gt1 = mel_spec[0], mel_spec[1], mel_spec[2]
+        mixed, gt1, gt1 = tf.constant(mel_spec[0]), tf.constant(mel_spec[1]), tf.constant(mel_spec[2])
         x1 = tf.random.normal([args.n_mixed] + args.data_shape)
         x2 = tf.random.normal([args.n_mixed] + args.data_shape)
         args.fmin = 125
@@ -323,9 +322,12 @@ def main(args):
             mixed = mixed * (1. - 2 * args.alpha) + args.alpha
             mixed = tf.math.log(mixed) - tf.math.log(1. - mixed)
 
-        # post_processing
-        post_processing = post_processing_fn(args)
+    print("Data Loaded")
 
+    # post_processing
+    post_processing = post_processing_fn(args)
+
+    # display originals
     with train_summary_writer.as_default():
         if args.n_mixed > 5:
             args.n_display = 5
