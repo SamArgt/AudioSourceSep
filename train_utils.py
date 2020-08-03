@@ -52,7 +52,7 @@ def setUp_tensorboard():
     return train_summary_writer, test_summary_writer
 
 
-def setUp_checkpoint(mirrored_strategy, args, model, optimizer, max_to_keep=5, debug=False):
+def setUp_checkpoint(mirrored_strategy, model, optimizer, max_to_keep=5, debug=False):
 
     # Checkpoint object
     if mirrored_strategy is not None:

@@ -346,7 +346,7 @@ def main(args):
 
     # Set up checkpoint
     ckpt, manager, manager_issues = setUp_checkpoint(
-        mirrored_strategy, args, model, optimizer, max_to_keep=10)
+        mirrored_strategy, model, optimizer, max_to_keep=10)
 
     # restore
     if args.restore is not None:

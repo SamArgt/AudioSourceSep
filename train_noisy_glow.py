@@ -48,7 +48,7 @@ def setUp_tensorboard():
     return train_summary_writer, test_summary_writer
 
 
-def setUp_checkpoint(mirrored_strategy, args, flow, optimizer):
+def setUp_checkpoint(mirrored_strategy, flow, optimizer):
 
     # Checkpoint object
     with mirrored_strategy.scope():
@@ -159,7 +159,7 @@ def main(args):
 
         # Set up checkpoint
         ckpt, manager = setUp_checkpoint(
-            mirrored_strategy, args, flow, optimizer)
+            mirrored_strategy, flow, optimizer)
 
         # restore
         with mirrored_strategy.scope():
