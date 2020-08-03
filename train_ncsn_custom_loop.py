@@ -195,6 +195,9 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             save_path = manager.save()
             print("Model Saved at {}".format(save_path))
 
+    save_path = manager.save()
+    print("Model Saved at {}".format(save_path))
+
 def main(args):
 
     sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
@@ -273,7 +276,7 @@ def main(args):
 
     else:
         ds_train, ds_test, _, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
-                                                                            reshuffle=True, batch_size=None, mirrored_strategy=None)
+                                                                            shuffle=True, batch_size=None, mirrored_strategy=None)
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000

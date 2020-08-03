@@ -250,7 +250,7 @@ def main(args):
         ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train',
                                                                                                    args.dataset + '/test',
                                                                                                    batch_size=args.batch_size,
-                                                                                                   reshuffle=True,
+                                                                                                   shuffle=True,
                                                                                                    mirrored_strategy=mirrored_strategy)
         args.test_batch_size = args.batch_size
         args.n_train = n_train
