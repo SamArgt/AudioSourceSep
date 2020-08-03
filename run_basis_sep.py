@@ -63,14 +63,11 @@ def image_grid(n_display, x, y, z, data_type="image", separation=True, **kwargs)
 
 
 @tf.function
-def compute_grad_logprob(inputs, model, model_type='ncsn'):
-    if model_type == 'ncsn':
-        gradients = model(inputs)
-    else:
-        with tf.GradientTape() as tape:
-            tape.watch(inputs)
-            loss = model.log_prob(inputs)
-        gradients = tape.gradient(loss, inputs)
+def compute_grad_logprob(inputs, model):
+    with tf.GradientTape() as tape:
+        tape.watch(inputs)
+        loss = model.log_prob(inputs)
+    gradients = tape.gradient(loss, inputs)
     return gradients
 
 
@@ -146,14 +143,15 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
 
         if model_type == 'ncsn':
-            inputs1 = {'perturbed_X_1': x1, 'sigma_idx_1': tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx}
-            inputs2 = {'perturbed_X_2': x2, 'sigma_idx_2': tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx}
+            inputs1 = [x1, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
+            inputs2 = [x2, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
+            grad_logprob1 = model1(inputs1, training=True)
+            grad_logprob2 = model2(inputs2, training=True)
         else:
             inputs1 = x1
             inputs2 = x2
-
-        grad_logprob1 = compute_grad_logprob(inputs1, model1, model_type)
-        grad_logprob2 = compute_grad_logprob(inputs2, model2, model_type)
+            grad_logprob1 = compute_grad_logprob(inputs1, model1)
+            grad_logprob2 = compute_grad_logprob(inputs2, model2)
 
         mixing = tf.cast(g(x1, x2), dtype=tf.float32)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
