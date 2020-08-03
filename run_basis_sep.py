@@ -95,35 +95,37 @@ def mixing_process(args):
     if args.data_type == 'image':
         def g(*sources):
             sources = np.array(sources)
-            return np.mean(sources, axis=0)
+            return np.mean(sources, axis=0, dtype=np.float32)
 
         def grad_g(*sources):
             sources = np.array(sources)
-            return list(np.ones_like(np.array(sources)) / len(sources))
+            return list(np.ones_like(np.array(sources), dtype=np.float32) / len(sources))
     else:
         if args.scale == 'dB':
             def g(*sources):
                 sources = np.array(sources)
-                return 20. * np.log10(np.mean(np.exp(sources * np.log(10.) / 20.), axis=0))
+                mixing = 20. * np.log10(np.mean(np.exp(sources * np.log(10.) / 20.), axis=0), dtype=np.float32)
+                return mixing.astype(np.float32)
 
             def grad_g(*sources):
                 sources = np.array(sources)
                 grad_sources = []
                 for source in sources:
-                    grad = (20. / np.log(10.)) * np.exp(source * np.log(10.) / 20.) / np.sum(np.exp(sources * np.log(10.) / 20.), axis=0)
+                    grad = (20. / np.log(10.)) * np.exp(source * np.log(10.) / 20.) / np.sum(np.exp(sources * np.log(10.) / 20.))
+                    grad = grad.astype(np.float32)
                     grad_sources.append(grad)
                 return grad_sources
 
         else:
             def g(*sources):
                 sources = np.array(sources)
-                return np.mean(np.sqrt(sources), axis=0)**2
+                return np.mean(np.sqrt(sources), axis=0, dtype=np.float32)**2
 
             def grad_g(*sources):
                 sources = np.array(sources)
                 grad_sources = []
                 for source in sources:
-                    grad_sources.append((1 / (np.sqrt(source) + 1e-8)) * np.mean(np.sqrt(sources), axis=0)**2)
+                    grad_sources.append((1 / (np.sqrt(source) + 1e-8)) * np.mean(np.sqrt(sources), axis=0, dtype=np.float32)**2)
                 return grad_sources
 
     return g, grad_g
@@ -141,8 +143,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
     eta = float(delta * (sigma / sigmaL) ** 2)
     lambda_recon = 1.0 / (sigma ** 2)
     for t in range(T):
-        epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape)
-        epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape)
+        epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
+        epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
 
         if model_type == 'ncsn':
             inputs1 = {'perturbed_X_1': x1, 'sigma_idx_1': tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx}
@@ -200,6 +202,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
     g, grad_g = mixing_process(args)
 
     for sigma_idx, sigma in enumerate(sigmas):
+        print("Start sigma {}".format(sigma))
         if args.model_type == 'glow':
             restore_path_1 = args.restore_dict_1[sigma]
             restore_checkpoint(ckpt1, restore_path_1, model1, optimizer)
@@ -296,8 +299,8 @@ def main(args):
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
-        x1 = tf.random.normal([args.n_mixed] + args.data_shape)
-        x2 = tf.random.normal([args.n_mixed] + args.data_shape)
+        x1 = tf.random.normal([args.n_mixed] + args.data_shape, dtype=tf.float32)
+        x2 = tf.random.normal([args.n_mixed] + args.data_shape, dtype=tf.float32)
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
