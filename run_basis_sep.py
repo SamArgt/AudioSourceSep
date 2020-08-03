@@ -331,7 +331,7 @@ def main(args):
         figure = image_grid(args.n_display, sample_mix, sample_gt1, sample_gt2, data_type=args.data_type, separation=False,
                             fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
-        tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav')
+        tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
 
     # build model
     if args.model_type == "glow":
