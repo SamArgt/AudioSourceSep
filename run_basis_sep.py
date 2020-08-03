@@ -292,9 +292,9 @@ def main(args):
         mix_path = os.path.join(song_dir_abspath, 'mix.wav')
         piano_path = os.path.join(song_dir_abspath, 'piano.wav')
         violin_path = os.path.join(song_dir_abspath, 'violin.wav')
-
+        use_dB = (args.scale == 'dB')
         spec_params = {'length_sec': 2.04, 'dbmin': -100, 'dbmax': 20, 'fmin': 125,
-                       'fmax': 7600, 'use_dB': args.scale == 'scale', 'n_fft': 2048,
+                       'fmax': 7600, 'use_dB': use_dB, 'n_fft': 2048,
                        'hop_length': 512, 'n_mels': 96, 'sr': 16000}
         duration = 2.04 * args.n_mixed
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
