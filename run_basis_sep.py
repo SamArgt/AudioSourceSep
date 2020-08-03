@@ -136,8 +136,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                      train_summary_writer=None, step=None, **kwargs):
 
     full_data_shape = list(mixed.shape)
-    n_mixed = full_data_shape[-1]
-    data_shape = full_data_shape[1:]
+    n_mixed = full_data_shape[0]
     sigma = sigmas[sigma_idx]
     sigmaL = sigmas[-1]
     eta = float(delta * (sigma / sigmaL) ** 2)
