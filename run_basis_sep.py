@@ -292,9 +292,9 @@ def main(args):
         mix_path = os.path.join(song_dir_abspath, 'mix.wav')
         piano_path = os.path.join(song_dir_abspath, 'piano.wav')
         violin_path = os.path.join(song_dir_abspath, 'violin.wav')
-        use_dB = (args.scale == 'dB')
+        args.use_dB = (args.scale == 'dB')
         spec_params = {'length_sec': 2.04, 'dbmin': -100, 'dbmax': 20, 'fmin': 125,
-                       'fmax': 7600, 'use_dB': use_dB, 'n_fft': 2048,
+                       'fmax': 7600, 'use_dB': args.use_dB, 'n_fft': 2048,
                        'hop_length': 512, 'n_mels': 96, 'sr': 16000}
         duration = 2.04 * args.n_mixed
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
@@ -334,7 +334,7 @@ def main(args):
         sample_mix = post_processing(mixed.numpy())
         sample_gt1 = gt1.numpy()
         sample_gt2 = gt2.numpy()
-        figure = image_grid(args.n_display, sample_mix, sample_gt1, sample_gt2, data_type=args.data_type, separation=False,
+        figure = image_grid(args.n_display, sample_gt1, sample_gt2, sample_mix, data_type=args.data_type, separation=False,
                             fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
         tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
