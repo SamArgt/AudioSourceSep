@@ -173,6 +173,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
+            print('step : {} / {}'.format(t, T))
             with train_summary_writer.as_default():
 
                 if n_mixed > 5:
