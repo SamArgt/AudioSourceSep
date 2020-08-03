@@ -331,11 +331,9 @@ def main(args):
         else:
             args.n_display = args.n_mixed
 
-        sample_mix = post_processing(mixed.numpy())
-        sample_gt1 = gt1.numpy()
-        sample_gt2 = gt2.numpy()
-        figure = image_grid(args.n_display, sample_gt1, sample_gt2, sample_mix, data_type=args.data_type, separation=False,
-                            fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
+        mix_post_process = post_processing(mixed.numpy())
+        figure = image_grid(args.n_display, gt1.numpy(), gt2.numpy(), mix_post_process, data_type=args.data_type,
+                            separation=False, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
         tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
 
