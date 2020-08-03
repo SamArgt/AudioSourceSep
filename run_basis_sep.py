@@ -271,15 +271,6 @@ def main(args):
     # set up tensorboard
     train_summary_writer, test_summary_writer = train_utils.setUp_tensorboard()
 
-    params_dict = vars(args)
-    template = 'BASIS Separation \n\t '
-    for k, v in params_dict.items():
-        template += '{} = {} \n\t '.format(k, v)
-    print(template)
-    with train_summary_writer.as_default():
-        tf.summary.text(name='Parameters',
-                        data=tf.constant(template), step=0)
-
     # get mixture
     if args.data_type == "image":
         mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture_toydata(dataset=args.dataset, n_mixed=args.n_mixed,
@@ -302,7 +293,7 @@ def main(args):
         duration = 2.04 * args.n_mixed
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
-        mixed, gt1, gt1 = tf.constant(mel_spec[0]), tf.constant(mel_spec[1]), tf.constant(mel_spec[2])
+        mixed, gt1, gt2 = tf.constant(mel_spec[0]), tf.constant(mel_spec[1]), tf.constant(mel_spec[2])
         x1 = tf.random.normal([args.n_mixed] + args.data_shape)
         x2 = tf.random.normal([args.n_mixed] + args.data_shape)
         args.fmin = 125
@@ -370,6 +361,15 @@ def main(args):
         restore_checkpoint(ckpt2, abs_restore_path_2, model2, optimizer)
         print("Model 2 restored from {}".format(abs_restore_path_2))
 
+    # print parameters
+    params_dict = vars(args)
+    template = 'BASIS Separation \n\t '
+    for k, v in params_dict.items():
+        template += '{} = {} \n\t '.format(k, v)
+    print(template)
+    with train_summary_writer.as_default():
+        tf.summary.text(name='Parameters',
+                        data=tf.constant(template), step=0)
     # run BASIS separation
     t0 = time.time()
     x1, x2 = basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
