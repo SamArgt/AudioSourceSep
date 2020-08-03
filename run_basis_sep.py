@@ -155,12 +155,13 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         grad_logprob1 = compute_grad_logprob(inputs1, model1, model_type)
         grad_logprob2 = compute_grad_logprob(inputs2, model2, model_type)
 
-        mixing = tf.constant(g(x1, x2), dtype=tf.float32)
+        mixing = tf.cast(g(x1, x2), dtype=tf.float32)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
-        grad_mixing_x1 = tf.constant(grad_mixing_x1, dtype=tf.float32)
-        grad_mixing_x2 = tf.constant(grad_mixing_x2, dtype=tf.float32)
+        grad_mixing_x1 = tf.cast(grad_mixing_x1, dtype=tf.float32)
+        grad_mixing_x2 = tf.cast(grad_mixing_x2, dtype=tf.float32)
 
         if debug:
+            print('step : {} / {}'.format(t, T))
             assert grad_logprob1.shape == x1.shape
             assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
             assert grad_logprob2.shape == x2.shape
@@ -299,8 +300,8 @@ def main(args):
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
-        x1 = tf.random.normal([args.n_mixed] + args.data_shape, dtype=tf.float32)
-        x2 = tf.random.normal([args.n_mixed] + args.data_shape, dtype=tf.float32)
+        x1 = tf.random.normal(mixed.shape, dtype=tf.float32)
+        x2 = tf.random.normal(mixed.shape, dtype=tf.float32)
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
