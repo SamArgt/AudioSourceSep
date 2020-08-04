@@ -321,6 +321,18 @@ def main(args):
         if args.song_dir is None:
             raise ValueError("song directory path is None")
 
+        args.fmin = 125
+        args.fmax = 7600
+        args.sampling_rate = 16000
+        if args.scale == 'power':
+            args.maxval = 100.
+            args.minval = 1e-10
+        elif args.scale == 'dB':
+            args.maxval = 20.
+            args.minval = -100.
+        else:
+            raise ValueError("scale should be 'power' or 'dB'")
+
         mix_path = os.path.join(song_dir_abspath, 'mix.wav')
         piano_path = os.path.join(song_dir_abspath, 'piano.wav')
         violin_path = os.path.join(song_dir_abspath, 'violin.wav')
@@ -345,18 +357,6 @@ def main(args):
         p_x1, p_x2 = tf.unstack(tf.nn.softmax(tf.stack([x1, x2], axis=0), axis=0), axis=0)
         x1 = p_x1 * mixed
         x2 = p_x2 * mixed
-
-        args.fmin = 125
-        args.fmax = 7600
-        args.sampling_rate = 16000
-        if args.scale == 'power':
-            args.maxval = 100.
-            args.minval = 1e-10
-        elif args.scale == 'dB':
-            args.maxval = 20.
-            args.minval = -100.
-        else:
-            raise ValueError("scale should be 'power' or 'dB'")
 
     print("Data Loaded in {} seconds".format(round(time.time() - t0, 3)))
 
