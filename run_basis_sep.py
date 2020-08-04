@@ -428,7 +428,8 @@ def main(args):
     # Save results
     x1 = post_processing(x1.numpy().squeeze())
     x2 = post_processing(x2.numpy().squeeze())
-    np.savez('results', x1=x1, x2=x2, gt1=gt1, gt2=gt2, mixed=mixed)
+    mixed = post_processing(mixed.numpy().squeeze())
+    np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed)
 
     # Inverse mel spec
     if args.data_type == "melspec":
