@@ -429,6 +429,8 @@ def main(args):
     x1 = post_processing(x1.numpy().squeeze())
     x2 = post_processing(x2.numpy().squeeze())
     mixed = post_processing(mixed.numpy().squeeze())
+    gt1 = gt1.numpy().squeeze()
+    gt2 = gt2.numpy().squeeze()
     np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed)
 
     # Inverse mel spec
