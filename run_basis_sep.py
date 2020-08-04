@@ -123,8 +123,7 @@ def mixing_process(args):
             def grad_g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                grad_sources = (20. / tf.math.log(10.)) * tf.math.exp(sources * tf.math.log(10.) / 20.)
-                grad_sources /= tf.reduce_sum(tf.math.exp(sources * tf.math.log(10.) / 20.), axis=0, keepdims=True)
+                grad_sources = tf.nn.softmax(sources, axis=0)
                 return tf.unstack(grad_sources, K, axis=0)
 
         else:
@@ -185,8 +184,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
-        x1 = x1 + eta * (grad_logprob1 - lambda_recon * (mixed - mixing)) + epsilon1
-        x2 = x2 + eta * (grad_logprob2 - lambda_recon * (mixed - mixing)) + epsilon2
+        x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
+        x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
 
         #x1 = tf.clip_by_value(x1, -3., 3.)
         #x2 = tf.clip_by_value(x2, -3., 3.)
