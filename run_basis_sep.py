@@ -426,15 +426,16 @@ def main(args):
     print("Duration: {} seconds".format(round(t1 - t0, 3)))
 
     # Save results
-    x1 = post_processing(x1.numpy())
-    x2 = post_processing(x2.numpy())
+    x1 = post_processing(x1.numpy().squeeze())
+    x2 = post_processing(x2.numpy().squeeze())
     np.savez('results', x1=x1, x2=x2, gt1=gt1, gt2=gt2, mixed=mixed)
 
     # Inverse mel spec
     if args.data_type == "melspec":
         x1_audio = spectrogram_inversion(x1, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
         x2_audio = spectrogram_inversion(x2, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
-        tf.summary.audio("Separate Audio", np.reshape([x1_audio, x2_audio], (2, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=1000)
+        sep_audio = np.reshape(np.array([x1_audio, x2_audio]), (2, -1, 1))
+        tf.summary.audio("Separated Audio", sep_audio, sample_rate=args.sampling_rate, encoding='wav', step=1000)
         sf.write("sep1.wav", data=x1_audio, samplerate=args.sampling_rate)
         sf.write("sep2.wav", data=x2_audio, samplerate=args.sampling_rate)
 
