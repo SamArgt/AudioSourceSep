@@ -124,7 +124,7 @@ def mixing_process(args):
             def grad_g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                grad_sources = tf.nn.softmax(sources * tf.math.log(10) / 20., axis=0)
+                grad_sources = tf.nn.softmax(sources * tf.math.log(10.) / 20., axis=0)
                 return tf.unstack(grad_sources, K, axis=0)
 
         else:
