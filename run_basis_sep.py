@@ -142,15 +142,15 @@ def mixing_process(args):
     return g, grad_g
 
 
-def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g, post_processing_fn,
-                     model_type='ncsn', delta=3e-5, T=100, debug=True,
+def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g, post_processing,
+                     model_type='ncsn', delta=2e-5, T=100, debug=True,
                      train_summary_writer=None, step=None, **kwargs):
 
     full_data_shape = list(mixed.shape)
     n_mixed = full_data_shape[0]
     sigma = sigmas[sigma_idx]
     sigmaL = sigmas[-1]
-    eta = float(delta * (sigma / sigmaL) ** 2)
+    eta = tf.constant(delta * (sigma / sigmaL) ** 2, dtype=tf.float32)
     lambda_recon = 1.0 / (sigma ** 2)
     for t in range(T):
         epsilon1 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
@@ -188,8 +188,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
 
-        #x1 = tf.clip_by_value(x1, -3., 3.)
-        #x2 = tf.clip_by_value(x2, -3., 3.)
+        # x1 = tf.clip_by_value(x1, -3., 3.)
+        # x2 = tf.clip_by_value(x2, -3., 3.)
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
@@ -199,9 +199,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                     n_display = 5
                 else:
                     n_display = n_mixed
-                sample_mix = post_processing_fn(mixed.numpy())
-                sample_x1 = post_processing_fn(x1.numpy())
-                sample_x2 = post_processing_fn(x2.numpy())
+                sample_mix = post_processing(mixed.numpy())
+                sample_x1 = post_processing(x1.numpy())
+                sample_x2 = post_processing(x2.numpy())
                 figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True, **kwargs)
                 tf.summary.image("Components", train_utils.plot_to_image(figure),
                                  max_outputs=50, step=step + t)
@@ -217,7 +217,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
     g, grad_g = mixing_process(args)
 
     for sigma_idx, sigma in enumerate(sigmas):
-        print("Start sigma {}".format(sigma))
+        print("Start sigma number {}: {}".format(sigma_idx, sigma))
         if args.model_type == 'glow':
             restore_path_1 = args.restore_dict_1[sigma]
             restore_checkpoint(ckpt1, restore_path_1, model1, optimizer)
@@ -229,7 +229,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
             pass
 
         x1, x2 = basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g, post_processing,
-                                  model_type=args.model_type, delta=3e-5, T=args.T, debug=args.debug,
+                                  model_type=args.model_type, delta=2e-5, T=args.T, debug=args.debug,
                                   train_summary_writer=train_summary_writer, step=step * args.T,
                                   data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
 
@@ -315,8 +315,8 @@ def main(args):
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
-        x1 = tf.random.normal(mixed.shape, dtype=tf.float32)
-        x2 = tf.random.normal(mixed.shape, dtype=tf.float32)
+        x1 = tf.random.uniform(mixed.shape, dtype=tf.float32)
+        x2 = tf.random.uniform(mixed.shape, dtype=tf.float32)
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
