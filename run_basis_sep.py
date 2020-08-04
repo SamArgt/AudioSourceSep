@@ -179,11 +179,11 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             assert mixing.shape == mixed.shape
             assert grad_mixing_x1.shape == x1.shape
             assert grad_mixing_x2.shape == x2.shape
+            assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
+            assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
-        t0 = time.time()
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
-        print("Update duration: {} seconds".format(time.time() - t0))
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
@@ -199,10 +199,6 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                 figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True, **kwargs)
                 tf.summary.image("Components", train_utils.plot_to_image(figure),
                                  max_outputs=50, step=step + t)
-
-    if debug:
-        assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
-        assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
     return x1, x2
 
