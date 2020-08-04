@@ -114,7 +114,18 @@ def mixing_process(args):
             return tf.unstack(grad_sources, K, axis=0)
 
     else:
-        if args.scale == 'dB':
+        if args.scale == 'power':
+            def g(*sources):
+                sources = tf.stack(sources, axis=0)
+                return tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32)**2
+
+            def grad_g(*sources):
+                K = len(sources)
+                sources = tf.stack(sources, axis=0)
+                grad_sources = (1 / (tf.math.sqrt(sources) + 1e-8))
+                grad_sources *= tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32, keepdims=True) ** 2
+                return tf.unstack(grad_sources, K, axis=0)
+        else:
             def g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
@@ -125,18 +136,6 @@ def mixing_process(args):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
                 grad_sources = tf.nn.softmax(sources * tf.math.log(10.) / 20., axis=0)
-                return tf.unstack(grad_sources, K, axis=0)
-
-        else:
-            def g(*sources):
-                sources = tf.stack(sources, axis=0)
-                return tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32)**2
-
-            def grad_g(*sources):
-                K = len(sources)
-                sources = tf.stack(sources, axis=0)
-                grad_sources = (1 / (tf.math.sqrt(sources) + 1e-8))
-                grad_sources *= tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32, keepdims=True) ** 2
                 return tf.unstack(grad_sources, K, axis=0)
 
     return g, grad_g
@@ -333,8 +332,20 @@ def main(args):
         mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
+        # preprocessing mixture
+        mixed = (mixed - args.minval) / (args.maxval - args.minval)
+        if args.use_logit:
+            mixed = mixed * (1. - 2 * args.alpha) + args.alpha
+            mixed = tf.math.log(mixed) - tf.math.log(1. - mixed)
+
         x1 = tf.random.uniform(mixed.shape, dtype=tf.float32)
         x2 = tf.random.uniform(mixed.shape, dtype=tf.float32)
+
+        # wiener filter:
+        p_x1, p_x2 = tf.unstack(tf.nn.softmax(tf.stack([x1, x2], axis=0), axis=0), axis=0)
+        x1 = p_x1 * mixed
+        x2 = p_x2 * mixed
+
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
@@ -346,11 +357,6 @@ def main(args):
             args.minval = -100.
         else:
             raise ValueError("scale should be 'power' or 'dB'")
-        # preprocessing mixture
-        mixed = (mixed - args.minval) / (args.maxval - args.minval)
-        if args.use_logit:
-            mixed = mixed * (1. - 2 * args.alpha) + args.alpha
-            mixed = tf.math.log(mixed) - tf.math.log(1. - mixed)
 
     print("Data Loaded in {} seconds".format(round(time.time() - t0, 3)))
 
