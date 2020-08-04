@@ -116,8 +116,9 @@ def mixing_process(args):
     else:
         if args.scale == 'dB':
             def g(*sources):
+                K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                mixing = (20. / tf.math.log(10.)) * tf.math.log(tf.reduce_mean(tf.math.exp(sources * np.log(10.) / 20.), axis=0))
+                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * np.log(10.) / 20., axis=0) - tf.math.log(K))
                 return mixing
 
             def grad_g(*sources):
