@@ -410,12 +410,13 @@ def main(args):
     t0 = time.time()
     x1, x2 = basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
                               ckpt1, ckpt2, args, train_summary_writer)
+
     t1 = time.time()
     print("Duration: {} seconds".format(round(t1 - t0, 3)))
 
     # Save results
-    x1 = x1.numpy()
-    x2 = x2.numpy()
+    x1 = post_processing(x1.numpy())
+    x2 = post_processing(x2.numpy())
     np.savez('results', x1=x1, x2=x2, gt1=gt1, gt2=gt2, mixed=mixed)
 
     log_file.close()
