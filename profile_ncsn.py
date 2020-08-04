@@ -46,9 +46,12 @@ def main(args):
     abs_restore_path = os.path.abspath(args.RESTORE)
     # model
     model = get_uncompiled_model()
+    # optimizer
+    optimizer = tfk.optimizers.Adam()
     # checkpoint
+    ckpt = tf.train.Checkpoint(variables=model.variables, optimizer=optimizer)
     t0 = time.time()
-    model.load_weights(abs_restore_path)
+    ckpt.restore(abs_restore_path)
     print("Mode restored in {} seconds".format(round(time.time() - t0, 3)))
 
     t_init = time.time()
