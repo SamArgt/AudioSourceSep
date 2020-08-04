@@ -123,9 +123,9 @@ def main(args):
     abs_restore_path = os.path.abspath(args.RESTORE)
     model = get_uncompiled_model(args)
     optimizer = setUp_optimizer(args)
-    loss_obj = CustomLoss()
-    model.compile(optimizer=optimizer, loss=loss_obj)
-    model.load_weights(abs_restore_path)
+    ckpt = tf.train.Checkpoint(variables=model.variables, optimizer=optimizer)
+    status = ckpt.restore(abs_restore_path)
+    status.assert_existing_objects_matched()
     print("Weights loaded")
 
     print("Start Generating {} samples....".format(args.n_samples))
