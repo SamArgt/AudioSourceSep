@@ -17,6 +17,19 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+def get_uncompiled_model(args, name="ScoreNetwork"):
+    # inputs
+    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
+    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
+    # outputs
+    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
+                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+    # model
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
+
+    return model
+
+
 def restore_checkpoint(ckpt, restore_path, model, optimizer, latest=True):
     if latest:
         checkpoint_restore_path = tf.train.latest_checkpoint(restore_path)
@@ -143,23 +156,28 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
 
         if model_type == 'ncsn':
+            t0 = time.time()
             inputs1 = [x1, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
             inputs2 = [x2, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
             grad_logprob1 = model1(inputs1, training=True)
             grad_logprob2 = model2(inputs2, training=True)
+            print("score computation duration: {} seconds".format(round(time.time() - t0, 3)))
         else:
             inputs1 = x1
             inputs2 = x2
             grad_logprob1 = compute_grad_logprob(inputs1, model1)
             grad_logprob2 = compute_grad_logprob(inputs2, model2)
 
+        t0 = time.time()
         mixing = tf.cast(g(x1, x2), dtype=tf.float32)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
         grad_mixing_x1 = tf.cast(grad_mixing_x1, dtype=tf.float32)
         grad_mixing_x2 = tf.cast(grad_mixing_x2, dtype=tf.float32)
+        print("g and grad_g computation duration {}".format(round(time.time() - t0, 3)))
 
         if debug:
             print('step : {} / {}'.format(t, T))
+            print("x1 shape and x2 shape: {} \t {}".format(x1.shape, x2.shape))
             assert grad_logprob1.shape == x1.shape
             assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
             assert grad_logprob2.shape == x2.shape
@@ -168,8 +186,10 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             assert grad_mixing_x1.shape == x1.shape
             assert grad_mixing_x2.shape == x2.shape
 
+        t0 = time.time()
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
+        print("Update duration: {}".format(time.time() - t0))
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
@@ -342,17 +362,8 @@ def main(args):
         model2 = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                          l2_reg=args.l2_reg, mirrored_strategy=None)
     else:
-        perturbed_X_1 = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X_1")
-        sigma_idx_1 = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx_1")
-        outputs_1 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                       args.n_sigmas, args.use_logit)([perturbed_X_1, sigma_idx_1])
-        model1 = tfk.Model(inputs=[perturbed_X_1, sigma_idx_1], outputs=outputs_1, name="ScoreNetwork1")
-
-        perturbed_X_2 = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X_2")
-        sigma_idx_2 = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx_2")
-        outputs_2 = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                       args.n_sigmas, args.use_logit)([perturbed_X_2, sigma_idx_2])
-        model2 = tfk.Model(inputs=[perturbed_X_2, sigma_idx_2], outputs=outputs_2, name="ScoreNetwork1")
+        model1 = get_uncompiled_model(args, name="model1")
+        model2 = get_uncompiled_model(args, name="model2")
 
     # set up optimizer
     optimizer = train_utils.setUp_optimizer(None, args)
