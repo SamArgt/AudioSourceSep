@@ -118,7 +118,7 @@ def mixing_process(args):
             def g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * np.log(10.) / 20., axis=0) - tf.math.log(float(K)))
+                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * tf.math.log(10.) / 20., axis=0) - tf.math.log(float(K)))
                 return mixing
 
             def grad_g(*sources):
