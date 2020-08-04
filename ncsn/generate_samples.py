@@ -182,7 +182,7 @@ if __name__ == '__main__':
                         help='filename for savings')
 
     # Model hyperparameters
-    parser.add_argument("--n_filters", type=int, default=64,
+    parser.add_argument("--n_filters", type=int, default=192,
                         help='number of filters in the Score Network')
     parser.add_argument("--sigma1", type=float, default=1.)
     parser.add_argument("--sigmaL", type=float, default=0.01)
