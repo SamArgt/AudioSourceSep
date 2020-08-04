@@ -169,8 +169,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         mixing = g(x1, x2)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
 
-        x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
-        x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
+        x1 = x1 + eta * (grad_logprob1 + lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
+        x2 = x2 + eta * (grad_logprob2 + lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
 
         if debug:
             print('step : {} / {}'.format(t, T))
