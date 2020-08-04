@@ -23,7 +23,7 @@ def get_uncompiled_model(args, name="ScoreNetwork"):
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
     # outputs
     outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+                                                 args.n_sigmas, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
 
