@@ -12,6 +12,7 @@ import time
 import os
 import sys
 import matplotlib.pyplot as plt
+import soundfile as sf
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -99,6 +100,13 @@ def post_processing_fn(args):
                 x = librosa.power_to_db(x)
         return x
     return post_processing
+
+
+def spectrogram_inversion(melspec, sr, fmin, fmax, use_db=True):
+    if use_db:
+        melspec = librosa.db_to_power(melspec)
+    inv_melspec = librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax)
+    return inv_melspec
 
 
 def mixing_process(args):
@@ -374,7 +382,10 @@ def main(args):
         figure = image_grid(args.n_display, gt1.numpy(), gt2.numpy(), mix_post_process, data_type=args.data_type,
                             separation=False, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
-        tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
+        if args.data_type == "melspec":
+            tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
+            sf.write("ground_truth1.wav", data=raw_audio[1], samplerate=args.sampling_rate)
+            sf.write("ground_truth2.wav", data=raw_audio[2], samplerate=args.sampling_rate)
 
     # build model
     if args.model_type == "glow":
@@ -418,6 +429,14 @@ def main(args):
     x1 = post_processing(x1.numpy())
     x2 = post_processing(x2.numpy())
     np.savez('results', x1=x1, x2=x2, gt1=gt1, gt2=gt2, mixed=mixed)
+
+    # Inverse mel spec
+    if args.data_type == "melspec":
+        x1_audio = spectrogram_inversion(x1, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
+        x2_audio = spectrogram_inversion(x2, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
+        tf.summary.audio("Separate Audio", np.reshape([x1_audio, x2_audio], (2, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=1000)
+        sf.write("sep1.wav", data=x1_audio, samplerate=args.sampling_rate)
+        sf.write("sep2.wav", data=x2_audio, samplerate=args.sampling_rate)
 
     log_file.close()
 
