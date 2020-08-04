@@ -11,7 +11,7 @@ tfk = tf.keras
 
 data_shape = [96, 64, 1]
 num_classes = 10
-n_filters = 92
+n_filters = 192
 
 
 def get_uncompiled_model():
@@ -44,14 +44,11 @@ def restore_checkpoint(ckpt, restore_path, model, optimizer, latest=True):
 
 def main(args):
     abs_restore_path = os.path.abspath(args.RESTORE)
-    # set up optimizer
-    optimizer = tfk.optimizers.Adam()
     # model
     model = get_uncompiled_model()
     # checkpoint
     t0 = time.time()
-    ckpt, _, _ = train_utils.setUp_checkpoint(None, model, optimizer)
-    restore_checkpoint(ckpt, abs_restore_path, model, optimizer, latest=False)
+    model.load_weights(abs_restore_path)
     print("Mode restored in {} seconds".format(round(time.time() - t0, 3)))
 
     t_init = time.time()
