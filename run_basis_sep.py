@@ -435,8 +435,10 @@ def main(args):
 
     # Inverse mel spec
     if args.data_type == "melspec":
-        x1_audio = spectrogram_inversion(x1, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
-        x2_audio = spectrogram_inversion(x2, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
+        x1_concat = np.concatenate(list(x1), axis=-1)
+        x2_concat = np.concatenate(list(x2), axis=-1)
+        x1_audio = spectrogram_inversion(x1_concat, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
+        x2_audio = spectrogram_inversion(x2_concat, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
         sep_audio = np.reshape(np.array([x1_audio, x2_audio]), (2, -1, 1))
         tf.summary.audio("Separated Audio", sep_audio, sample_rate=args.sampling_rate, encoding='wav', step=1000)
         sf.write("sep1.wav", data=x1_audio, samplerate=args.sampling_rate)
