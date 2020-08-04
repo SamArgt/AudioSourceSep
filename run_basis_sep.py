@@ -217,7 +217,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
     g, grad_g = mixing_process(args)
 
     for sigma_idx, sigma in enumerate(sigmas):
-        print("Start sigma number {}: {}".format(sigma_idx, sigma))
+        print("Sigma = {} ({} / {})".format(sigma, sigma_idx + 1, len(sigmas)))
         if args.model_type == 'glow':
             restore_path_1 = args.restore_dict_1[sigma]
             restore_checkpoint(ckpt1, restore_path_1, model1, optimizer)
