@@ -104,12 +104,15 @@ def post_processing_fn(args):
 def mixing_process(args):
     if args.data_type == 'image':
         def g(*sources):
-            sources = np.array(sources)
-            return np.mean(sources, axis=0, dtype=np.float32)
+            sources = tf.stack(sources, axis=0)
+            return tf.reduce_mean(sources, axis=0, dtype=np.float32)
 
         def grad_g(*sources):
-            sources = np.array(sources)
-            return list(np.ones_like(np.array(sources), dtype=np.float32) / len(sources))
+            K = len(sources)
+            sources = tf.stack(sources, axis=0)
+            grad_sources = tf.ones_like(sources, dtype=np.float32) / K
+            return tf.split(grad_sources, K, axis=0)
+
     else:
         if args.scale == 'dB':
             def g(*sources):
@@ -121,18 +124,20 @@ def mixing_process(args):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
                 grad_sources = (20. / tf.math.log(10.)) * tf.math.exp(sources * tf.math.log(10.) / 20.)
-                grad_sources /= tf.reduce_sum(tf.math.exp(sources * tf.math.log(10.) / 20.), axis=0)
+                grad_sources /= tf.reduce_sum(tf.math.exp(sources * tf.math.log(10.) / 20.), axis=0, keep_dims=True)
                 return tf.split(grad_sources, K, axis=0)
 
         else:
             def g(*sources):
-                sources = np.array(sources)
-                return np.mean(np.sqrt(sources), axis=0, dtype=np.float32)**2
+                sources = tf.stack(sources, axis=0)
+                return tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32)**2
 
             def grad_g(*sources):
-                sources = np.array(sources)
-                grad_sources = (1 / (np.sqrt(sources) + 1e-8)) * np.mean(np.sqrt(sources), axis=0, dtype=np.float32) ** 2
-                return grad_sources
+                K = len(sources)
+                sources = tf.stack(sources, axis=0)
+                grad_sources = (1 / (tf.math.sqrt(sources) + 1e-8))
+                grad_sources *= tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32, keep_dims=True) ** 2
+                return tf.split(grad_sources, K, axis=0)
 
     return g, grad_g
 
@@ -172,6 +177,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         if debug:
             print('step : {} / {}'.format(t, T))
             print("x1 shape and x2 shape: {} \t {}".format(x1.shape, x2.shape))
+            print("grad_mixing_x1 shape: {}".format(grad_mixing_x1.shape))
             assert grad_logprob1.shape == x1.shape
             assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
             assert grad_logprob2.shape == x2.shape
