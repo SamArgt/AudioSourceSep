@@ -157,27 +157,21 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         epsilon2 = tf.math.sqrt(2. * eta) * tf.random.normal(full_data_shape, dtype=tf.float32)
 
         if model_type == 'ncsn':
-            t0 = time.time()
             inputs1 = [x1, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
             inputs2 = [x2, tf.ones(shape=(n_mixed,), dtype=tf.int32) * sigma_idx]
             grad_logprob1 = model1(inputs1, training=True)
             grad_logprob2 = model2(inputs2, training=True)
-            print("score computation duration: {} seconds".format(round(time.time() - t0, 3)))
         else:
             inputs1 = x1
             inputs2 = x2
             grad_logprob1 = compute_grad_logprob(inputs1, model1)
             grad_logprob2 = compute_grad_logprob(inputs2, model2)
 
-        t0 = time.time()
         mixing = g(x1, x2)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
-        print("g and grad_g computation duration {}".format(round(time.time() - t0, 3)))
 
         if debug:
             print('step : {} / {}'.format(t, T))
-            print("x1 shape and x2 shape: {} \t {}".format(x1.shape, x2.shape))
-            print("grad_mixing_x1 shape: {}".format(grad_mixing_x1.shape))
             assert grad_logprob1.shape == x1.shape
             assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
             assert grad_logprob2.shape == x2.shape
