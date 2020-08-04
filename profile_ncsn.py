@@ -50,7 +50,7 @@ def main(args):
     model = get_uncompiled_model()
     # checkpoint
     t0 = time.time()
-    ckpt, _, _ = train_utils.setUp_checkpoint(model, optimizer)
+    ckpt, _, _ = train_utils.setUp_checkpoint(None, model, optimizer)
     restore_checkpoint(ckpt, abs_restore_path, model, optimizer, latest=False)
     print("Mode restored in {} seconds".format(round(time.time() - t0, 3)))
 
