@@ -113,18 +113,16 @@ def mixing_process(args):
     else:
         if args.scale == 'dB':
             def g(*sources):
-                sources = np.array(sources)
-                mixing = 20. * np.log10(np.mean(np.exp(sources * np.log(10.) / 20.), axis=0), dtype=np.float32)
-                return mixing.astype(np.float32)
+                sources = tf.stack(sources, axis=0)
+                mixing = (20. / tf.math.log(10.)) * tf.math.log(tf.reduce_mean(tf.math.exp(sources * np.log(10.) / 20.), axis=0))
+                return mixing
 
             def grad_g(*sources):
-                sources = np.array(sources)
-                grad_sources = []
-                for source in sources:
-                    grad = (20. / np.log(10.)) * np.exp(source * np.log(10.) / 20.) / np.sum(np.exp(sources * np.log(10.) / 20.))
-                    grad = grad.astype(np.float32)
-                    grad_sources.append(grad)
-                return grad_sources
+                K = len(sources)
+                sources = tf.stack(sources, axis=0)
+                grad_sources = (20. / tf.math.log(10.)) * tf.math.exp(sources * tf.math.log(10.) / 20.)
+                grad_sources /= tf.reduce_sum(tf.math.exp(sources * tf.math.log(10.) / 20.), axis=0)
+                return tf.split(grad_sources, K, axis=0)
 
         else:
             def g(*sources):
@@ -133,9 +131,7 @@ def mixing_process(args):
 
             def grad_g(*sources):
                 sources = np.array(sources)
-                grad_sources = []
-                for source in sources:
-                    grad_sources.append((1 / (np.sqrt(source) + 1e-8)) * np.mean(np.sqrt(sources), axis=0, dtype=np.float32)**2)
+                grad_sources = (1 / (np.sqrt(sources) + 1e-8)) * np.mean(np.sqrt(sources), axis=0, dtype=np.float32) ** 2
                 return grad_sources
 
     return g, grad_g
@@ -169,10 +165,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             grad_logprob2 = compute_grad_logprob(inputs2, model2)
 
         t0 = time.time()
-        mixing = tf.cast(g(x1, x2), dtype=tf.float32)
+        mixing = g(x1, x2)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
-        grad_mixing_x1 = tf.cast(grad_mixing_x1, dtype=tf.float32)
-        grad_mixing_x2 = tf.cast(grad_mixing_x2, dtype=tf.float32)
         print("g and grad_g computation duration {}".format(round(time.time() - t0, 3)))
 
         if debug:
