@@ -170,6 +170,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         mixing = g(x1, x2)
         grad_mixing_x1, grad_mixing_x2 = grad_g(x1, x2)
 
+        x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
+        x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
+
         if debug:
             print('step : {} / {}'.format(t, T))
             assert grad_logprob1.shape == x1.shape
@@ -185,14 +188,19 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
-        x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
-        x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
-
-        # x1 = tf.clip_by_value(x1, -3., 3.)
-        # x2 = tf.clip_by_value(x2, -3., 3.)
-
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
+            if debug:
+                x1_np = x1.numpy()
+                x2_np = x2.numpy()
+                print("x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x1_np.mean(),
+                                                                                       x1_np.std(),
+                                                                                       x1_np.min(),
+                                                                                       x1_np.max()))
+                print("x2 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x2_np.mean(),
+                                                                                       x2_np.std(),
+                                                                                       x2_np.min(),
+                                                                                       x2_np.max()))
             with train_summary_writer.as_default():
 
                 if n_mixed > 5:
