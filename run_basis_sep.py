@@ -189,7 +189,7 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         t0 = time.time()
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
-        print("Update duration: {}".format(time.time() - t0))
+        print("Update duration: {} seconds".format(time.time() - t0))
 
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
@@ -296,6 +296,7 @@ def main(args):
     train_summary_writer, test_summary_writer = train_utils.setUp_tensorboard()
 
     # get mixture
+    t0 = time.time()
     if args.data_type == "image":
         mixed, x1, x2, gt1, gt2, minibatch = data_loader.get_mixture_toydata(dataset=args.dataset, n_mixed=args.n_mixed,
                                                                              use_logit=args.use_logit, alpha=args.alpha,
@@ -337,7 +338,7 @@ def main(args):
             mixed = mixed * (1. - 2 * args.alpha) + args.alpha
             mixed = tf.math.log(mixed) - tf.math.log(1. - mixed)
 
-    print("Data Loaded")
+    print("Data Loaded in {} seconds".format(round(time.time() - t0, 3)))
 
     # post_processing
     post_processing = post_processing_fn(args)
