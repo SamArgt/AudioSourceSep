@@ -110,7 +110,7 @@ def mixing_process(args):
         def grad_g(*sources):
             K = len(sources)
             sources = tf.stack(sources, axis=0)
-            grad_sources = tf.ones_like(sources, dtype=np.float32) / K
+            grad_sources = tf.ones_like(sources, dtype=np.float32) / float(K)
             return tf.unstack(grad_sources, K, axis=0)
 
     else:
@@ -118,7 +118,7 @@ def mixing_process(args):
             def g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * np.log(10.) / 20., axis=0) - tf.math.log(K))
+                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * np.log(10.) / 20., axis=0) - tf.math.log(float(K)))
                 return mixing
 
             def grad_g(*sources):
