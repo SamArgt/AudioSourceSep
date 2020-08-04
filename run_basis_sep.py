@@ -188,6 +188,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
         x1 = x1 + eta * (grad_logprob1 - lambda_recon * grad_mixing_x1 * (mixed - mixing)) + epsilon1
         x2 = x2 + eta * (grad_logprob2 - lambda_recon * grad_mixing_x2 * (mixed - mixing)) + epsilon2
 
+        x1 = tf.clip_by_value(x1, -3., 3.)
+        x2 = tf.clip_by_value(x2, -3., 3.)
+
         if (train_summary_writer is not None) and (t % (T // 5) == 0):
             print('step : {} / {}'.format(t, T))
             with train_summary_writer.as_default():
