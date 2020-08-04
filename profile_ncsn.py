@@ -57,7 +57,7 @@ def main(args):
     t_init = time.time()
     for sigma in range(10):
         print("Sigma index: {}".format(sigma))
-        x = tf.random.normal([10, 96, 34, 1])
+        x = tf.random.normal([10, 96, 64, 1])
         sigma_idx = tf.ones_like(x, dtype=tf.int32) * sigma
         t0 = time.time()
         scores = model([x, sigma_idx])
