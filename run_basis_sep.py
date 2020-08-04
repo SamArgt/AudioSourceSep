@@ -111,7 +111,7 @@ def mixing_process(args):
             K = len(sources)
             sources = tf.stack(sources, axis=0)
             grad_sources = tf.ones_like(sources, dtype=np.float32) / K
-            return tf.split(grad_sources, K, axis=0)
+            return tf.unstack(grad_sources, K, axis=0)
 
     else:
         if args.scale == 'dB':
@@ -125,7 +125,7 @@ def mixing_process(args):
                 sources = tf.stack(sources, axis=0)
                 grad_sources = (20. / tf.math.log(10.)) * tf.math.exp(sources * tf.math.log(10.) / 20.)
                 grad_sources /= tf.reduce_sum(tf.math.exp(sources * tf.math.log(10.) / 20.), axis=0, keepdims=True)
-                return tf.split(grad_sources, K, axis=0)
+                return tf.unstack(grad_sources, K, axis=0)
 
         else:
             def g(*sources):
@@ -137,7 +137,7 @@ def mixing_process(args):
                 sources = tf.stack(sources, axis=0)
                 grad_sources = (1 / (tf.math.sqrt(sources) + 1e-8))
                 grad_sources *= tf.reduce_mean(tf.math.sqrt(sources), axis=0, dtype=np.float32, keepdims=True) ** 2
-                return tf.split(grad_sources, K, axis=0)
+                return tf.unstack(grad_sources, K, axis=0)
 
     return g, grad_g
 
