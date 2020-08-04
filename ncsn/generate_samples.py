@@ -169,7 +169,7 @@ if __name__ == '__main__':
                         help="Either to return array of every steps or just the last point")
 
     # dataset parameters
-    parser.add_argument('--dataset', type=str, default="mnist",
+    parser.add_argument('--dataset', type=str, default="melspec",
                         help="mnist or cifar10 or directory to tfrecords")
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
