@@ -179,6 +179,9 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
             assert mixing.shape == mixed.shape
             assert grad_mixing_x1.shape == x1.shape
             assert grad_mixing_x2.shape == x2.shape
+            assert bool(tf.math.is_nan(grad_mixing_x1).numpy().any()) is False, (sigma, t)
+            assert bool(tf.math.is_nan(grad_mixing_x2).numpy().any()) is False, (sigma, t)
+            assert bool(tf.math.is_nan(mixing).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(x1).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(x2).numpy().any()) is False, (sigma, t)
 
