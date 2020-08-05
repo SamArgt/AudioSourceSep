@@ -4,26 +4,27 @@ import soundfile as sf
 import argparse
 import time
 import os
+import datetime
 
 
 def complex_array(amplitudes, angles):
     return amplitudes * np.exp(1j * angles)
 
 
-def griffin_inversion_fn(sr=16000, fmin=125, fmax=7600, scale="dB"):
+def griffin_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512, scale="dB"):
     def griffin_inversion(melspec):
         if args.scale == "dB":
             melspec = librosa.db_to_power(melspec)
-        return librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax)
+        return librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length)
     return griffin_inversion
 
 
-def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, scale="dB"):
+def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512, scale="dB"):
     def stft_inversion(inputs):
         melspec, phase = inputs
         if args.scale == "dB":
             melspec = librosa.db_to_power(melspec)
-        mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+        mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length)
         stft_complex = complex_array(mel_stft, phase)
         istft = librosa.istft(stft_complex)
         return istft
@@ -35,6 +36,7 @@ def main(args):
     fmin = 125
     fmax = 7600
     n_fft = 2048
+    hop_length = 512
 
     os.chdir(args.basis_results)
     basis_results = np.load('results.npz')
@@ -60,9 +62,9 @@ def main(args):
         mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
 
     if args.method == 'griffin':
-        inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, scale=args.scale)
+        inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
     elif args.method == 'reuse_phase':
-        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, scale=args.scale)
+        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
         if args.inverse_concat:
             x1 = [x1, mixed_phase]
             x2 = [x2, mixed_phase]
@@ -72,7 +74,6 @@ def main(args):
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
-    print("Start inversing")
     t0 = time.time()
     if args.inverse_concat:
         x1_inv = inversion_fn(x1)
@@ -81,6 +82,7 @@ def main(args):
         x1_inv = []
         x2_inv = []
         for i in range(len(x1)):
+            print("Start inversing Spectrogram {} at {}".format(i, datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
             x1_inv.append(inversion_fn(x1[i]))
             x2_inv.append(inversion_fn(x2[i]))
             print("Done inversing spectrogram {} / {}".format(i + 1, len(x1)))
