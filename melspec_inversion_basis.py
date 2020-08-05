@@ -5,6 +5,7 @@ import argparse
 import time
 import os
 import datetime
+import sys
 
 
 def complex_array(amplitudes, angles):
@@ -41,6 +42,19 @@ def main(args):
     os.chdir(args.basis_results)
     basis_results = np.load('results.npz')
 
+    if args.output is None:
+        args.output = 'inverse' + '_' + args.method
+    if args.inverse_concat:
+        args.output += '_inverse_concat'
+    try:
+        os.mkdir(args.output)
+        os.chdir(args.output)
+    except FileExistsError:
+        os.chdir(args.output)
+    log_file = open('out.log', 'w')
+    if args.debug is False:
+        sys.stdout = log_file
+
     x1 = basis_results['x1']
     x2 = basis_results['x2']
     mixed_phase = basis_results['mixed_phase']
@@ -74,7 +88,7 @@ def main(args):
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
-    t0 = time.time()
+    t_init = time.time()
     if args.inverse_concat:
         x1_inv = inversion_fn(x1)
         x2_inv = inversion_fn(x2)
@@ -91,24 +105,12 @@ def main(args):
             x2_inv_i = inversion_fn(x2[i])
             x2_inv.append(x2_inv_i)
             print("Done melspec 2 in {} seconds".format(round(time.time() - t0, 3)))
-            # x1_inv.append()
-            # x2_inv.append()
         x1_inv = np.concatenate(x1_inv, axis=-1)
         x2_inv = np.concatenate(x2_inv, axis=-1)
     t1 = time.time()
-    duration = round(t1 - t0, 4)
+    duration = round(t1 - t_init, 4)
 
     print("Inversion duration: {} seconds".format(duration))
-
-    if args.output is None:
-        args.output = 'inverse' + '_' + args.method
-        if args.inverse_concat:
-            args.output += '_inverse_concat'
-    try:
-        os.mkdir(args.output)
-        os.chdir(args.output)
-    except FileExistsError:
-        os.chdir(args.output)
 
     if args.save_wav:
         sf.write("sep1.wav", data=x1_inv, samplerate=sr)
@@ -116,10 +118,7 @@ def main(args):
 
     np.savez("inverse_spectrograms", x1_audio=x1_inv, x2_audio=x2_inv)
 
-    with open('out.log', 'w') as log_file:
-        log_file.write(template)
-        log_file.write('\n')
-        log_file.write("Inversion duration: {} seconds".format(duration))
+    log_file.close()
 
 
 if __name__ == "__main__":
@@ -135,6 +134,8 @@ if __name__ == "__main__":
     parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
     parser.add_argument("--scale", type=str, default="dB")
     parser.add_argument('--save_wav', action='store_true')
+
+    parser.add_argument("--debug", action="store_true")
 
     args = parser.parse_args()
 
