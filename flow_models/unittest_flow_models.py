@@ -1,7 +1,7 @@
-from flow_models.flow_tfp_bijectors import *
-from flow_models.flow_glow import *
-from flow_models.flow_real_nvp import *
-from flow_models.flow_tfk_layers import *
+from .flow_tfp_bijectors import *
+from .flow_glow import *
+from .flow_real_nvp import *
+from .flow_tfk_layers import *
 import unittest
 import tensorflow as tf
 import numpy as np

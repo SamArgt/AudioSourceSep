@@ -2,7 +2,7 @@ from .flow_glow import *
 from .flow_tfk_layers import *
 from .flow_tfp_bijectors import *
 from .flow_flowpp import *
-from.flow_real_nvp import *
+from .flow_real_nvp import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras

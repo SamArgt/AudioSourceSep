@@ -6,7 +6,6 @@ from pipeline import data_loader
 import tensorflow_datasets as tfds
 import argparse
 import time
-import datetime
 import os
 import sys
 from train_utils import *
@@ -49,23 +48,159 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
         return x_mod.numpy()
 
 
-class CustomLoss(tfk.losses.Loss):
-    def __init__(self):
-        super(CustomLoss, self).__init__()
+def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
+          train_summary_writer, test_summary_writer, manager, args):
+    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
+    with mirrored_strategy.scope():
+        def compute_train_loss(scores, target, sample_weight):
+            per_example_loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+            per_example_loss *= sample_weight
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
 
-    def __call__(self, scores, target, sample_weight=None):
-        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
-        if sample_weight is not None:
-            return tf.reduce_mean(loss * sample_weight)
+        def compute_test_loss(scores, target, sample_weight):
+            per_example_loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
+            per_example_loss *= sample_weight
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
+
+    def get_noise_conditionned_data(X):
+        local_batch_size = X.shape[-1]
+        sigma_idx = tf.random.uniform(shape=(local_batch_size,), maxval=args.num_classes, dtype=tf.int32)
+        used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
+        used_sigma = tf.reshape(used_sigma, (local_batch_size, 1, 1, 1))
+        perturbed_X = X + tf.random.normal([local_batch_size] + args.data_shape) * used_sigma
+        inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
+        target = -(perturbed_X - X) / (used_sigma ** 2)
+        sample_weight = used_sigma ** 2
+        return inputs, target, sample_weight
+
+    def train_step(X):
+        inputs, target, sample_weight = get_noise_conditionned_data(X)
+        with tf.GradientTape() as tape:
+            tape.watch(model.trainable_variables)
+            scores = model(inputs)
+            loss = compute_train_loss(scores, target, sample_weight)
+        gradients = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(
+            list(zip(gradients, model.trainable_variables)))
+        return loss
+
+    def test_step(X):
+        inputs, target, sample_weight = get_noise_conditionned_data(X)
+        scores = model(inputs)
+        loss = compute_test_loss(scores, target, sample_weight)
+        return loss
+
+    @tf.function
+    def distributed_train_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            train_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    @tf.function
+    def distributed_test_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            test_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    def post_processing(x):
+        if args.use_logit:
+            x = 1. / (1. + np.exp(-x))
+            x = (x - args.alpha) / (1. - 2. * args.alpha)
+        x = x * (args.maxval - args.minval) + args.minval
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
         else:
-            return tf.reduce_mean(loss)
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
+        return x
 
+    test_loss = tfk.metrics.Mean(name='test_loss')
+    history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
+    epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
+    is_nan_loss = False
+    loss_per_epoch = 5
+    count_step = optimizer.iterations.numpy()
+    for epoch in range(args.n_epochs):
+        epoch_loss_avg.reset_states()
+
+        if is_nan_loss:
+            break
+
+        for batch in distr_train_dataset:
+
+            loss = distributed_train_step(batch)
+            history_loss_avg.update_state(loss)
+            epoch_loss_avg.update_state(loss)
+            count_step += 1
+
+            # every loss_per_epoch iterations
+            if count_step % (args.n_train // (args.batch_size * loss_per_epoch)) == 0:
+                # check nan loss
+                if (tf.math.is_nan(loss)) or (tf.math.is_inf(loss)):
+                    print('Nan or Inf Loss: {}'.format(loss))
+                    is_nan_loss = True
+                    break
+
+                # Save history and monitor it on tensorboard
+                curr_loss_history = history_loss_avg.result()
+                with train_summary_writer.as_default():
+                    step_int = int(10 * count_step * args.batch_size / args.n_train)
+                    tf.summary.scalar(
+                        'loss', curr_loss_history, step=step_int)
+
+                history_loss_avg.reset_states()
+
+        # Every 10 epochs: Compute validation loss
+        if (epoch % 10) == 0:
+            test_loss.reset_states()
+
+            for elt in distr_eval_dataset:
+                test_loss.update_state(distributed_test_step(elt))
+
+            step_int = int(10 * count_step * args.batch_size / args.n_train)
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss.result(), step=step_int)
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
+                epoch, epoch_loss_avg.result(), test_loss.result()))
+
+        # Every 20 epochs: Generate Samples
+        if (epoch % 20) == 0:
+            x_mod = tf.random.uniform([32] + args.data_shape)
+            if args.use_logit:
+                x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
+                x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
+            if mirrored_strategy is not None:
+                with mirrored_strategy.scope():
+                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
+                                                           32, sigmas_np, return_arr=True)
+
+            gen_samples = post_processing(gen_samples)
+            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
+            try:
+                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.data_type,
+                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+                with train_summary_writer.as_default():
+                    tf.summary.image("32 generated samples", plot_to_image(figure),
+                                     max_outputs=50, step=epoch)
+            except IndexError:
+                with train_summary_writer.as_default():
+                    tf.summary.text(name="display error",
+                                    data="Impossible to display spectrograms because of NaN values",
+                                    step=epoch)
+
+        # 10 times during training: Save model
+        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
+            save_path = manager.save()
+            print("Model Saved at {}".format(save_path))
+
+    save_path = manager.save()
+    print("Model Saved at {}".format(save_path))
 
 def main(args):
 
     sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
-    # sigmas_np = np.linspace(args.sigma1, args.sigmaL, num=args.num_classes)
-    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
@@ -99,6 +234,8 @@ def main(args):
         if args.restore is not None:
             output_dirname += '_ctd'
 
+        # output_dirname += '_custom_loop'
+
         output_dirpath = os.path.join(args.output, output_dirname)
     else:
         output_dirpath = args.output
@@ -119,14 +256,10 @@ def main(args):
     print("Eager execution: {}".format(tf.executing_eagerly()))
 
     # Distributed Strategy
-    if args.mirrored_strategy:
-        mirrored_strategy = tf.distribute.MirroredStrategy()
-        print("Number of devices: {}".format(
-            mirrored_strategy.num_replicas_in_sync))
-        args.local_batch_size = args.batch_size // mirrored_strategy.num_replicas_in_sync
-    else:
-        mirrored_strategy = None
-        args.local_batch_size = args.batch_size
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+    print("Number of devices: {}".format(
+        mirrored_strategy.num_replicas_in_sync))
+    args.local_batch_size = args.batch_size // mirrored_strategy.num_replicas_in_sync
 
     # Load and Preprocess Dataset
     if (args.dataset == "mnist") or (args.dataset == "cifar10"):
@@ -143,7 +276,7 @@ def main(args):
 
     else:
         ds_train, ds_test, _, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
-                                                                            reshuffle=True, batch_size=None, mirrored_strategy=None)
+                                                                            shuffle=True, batch_size=None, mirrored_strategy=None)
         args.fmin = 125
         args.fmax = 7600
         args.sampling_rate = 16000
@@ -161,31 +294,30 @@ def main(args):
     BUFFER_SIZE = 10000
     BATCH_SIZE = args.batch_size
 
-    def preprocess(X):
-        sigma_idx = tf.random.uniform(shape=(), maxval=args.num_classes, dtype=tf.int32)
-        used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
+    def map_fn(X):
         if args.data_type == 'image':
             X = tf.cast(X['image'], tf.float32)
             if args.dataset == 'mnist':
                 X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
-            X = X + tf.random.uniform(args.data_shape)
         X = (X - args.minval) / (args.maxval - args.minval)
         if args.use_logit:
             X = X * (1. - 2 * args.alpha) + args.alpha
             X = tf.math.log(X) - tf.math.log(1. - X)
-        perturbed_X = X + tf.random.normal(args.data_shape) * used_sigma
-        inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
-        target = -(perturbed_X - X) / (used_sigma ** 2)
-        sample_weight = used_sigma ** 2
-        return inputs, target, sample_weight
+        return X
 
-    train_dataset = ds_train.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
+    train_dataset = ds_train.map(map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
     train_dataset = train_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
     train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    eval_dataset = ds_test.map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
+    distr_train_dataset = mirrored_strategy.experimental_distribute_dataset(train_dataset)
+    eval_dataset = ds_test.map(map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
     eval_dataset = eval_dataset.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
     eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    distr_eval_dataset = mirrored_strategy.experimental_distribute_dataset(eval_dataset)
 
+    # Set up tensorboard
+    train_summary_writer, test_summary_writer = setUp_tensorboard()
+
+    # Display original images
     def post_processing(x):
         if args.use_logit:
             x = 1. / (1. + np.exp(-x))
@@ -199,98 +331,35 @@ def main(args):
             if args.scale == "power":
                 x = librosa.power_to_db(x)
         return x
-
-    # Display original images
-    # Clear any logs from previous runs
-    try:
-        shutil.rmtree('logs')
-    except FileNotFoundError:
-        pass
-    logdir = os.path.join("logs", "samples") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    file_writer = tf.summary.create_file_writer(logdir)
-    with file_writer.as_default():
-        inputs, _, _ = list(train_dataset.take(1).as_numpy_iterator())[0]
-        sample = inputs["perturbed_X"]
-        sample = post_processing(sample)
-        sample = sample[:32]
+    with train_summary_writer.as_default():
+        sample = post_processing(list(train_dataset.take(1).as_numpy_iterator())[0])
         figure = image_grid(sample, args.data_shape, args.data_type,
                             sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-        tf.summary.image("perturbed images", plot_to_image(
-            figure), max_outputs=1, step=0)
+        tf.summary.image("original images", plot_to_image(figure), max_outputs=1, step=0)
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Build ScoreNet
-    if mirrored_strategy is not None:
-        with mirrored_strategy.scope():
-            model = get_uncompiled_model(args)
-    else:
+    with mirrored_strategy.scope():
         model = get_uncompiled_model(args)
 
-    # model.compile(optimizer=optimizer, loss=tfk.losses.MeanSquaredError())
-    loss_obj = CustomLoss()
-    model.compile(optimizer=optimizer, loss=loss_obj)
+    # Set up checkpoint
+    ckpt, manager, manager_issues = setUp_checkpoint(
+        mirrored_strategy, model, optimizer, max_to_keep=10)
 
     # restore
     if args.restore is not None:
-        if mirrored_strategy is not None:
-            with mirrored_strategy.scope():
-                model.load_weights(abs_restore_path)
-                print("Model Weights loaded from {}".format(abs_restore_path))
-                assert optimizer.iterations > 0
-        else:
-            model.load_weights(abs_restore_path)
-            print("Model Weights loaded from {}".format(abs_restore_path))
-            assert optimizer.iterations > 0
-
-    # Set up callbacks
-    logdir = os.path.join("logs", "scalars") + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = tfk.callbacks.TensorBoard(log_dir=logdir, write_graph=True, update_freq="epoch",
-                                                     profile_batch='500,520', embeddings_freq=0, histogram_freq=0)
-
-    def generate_samples(epoch, logs):
-        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
-            x_mod = tf.random.uniform([32] + args.data_shape)
-            if args.use_logit:
-                x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
-                x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
-            if mirrored_strategy is not None:
-                with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np, return_arr=True)
+        with mirrored_strategy.scope():
+            if args.latest:
+                checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
+                assert checkpoint_restore_path is not None, abs_restore_path
             else:
-                gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model, 32, sigmas_np, return_arr=True)
-
-            gen_samples = post_processing(gen_samples)
-            try:
-                figure = image_grid(gen_samples[-1, :, :, :], args.data_shape, args.data_type,
-                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
-                sample_image = plot_to_image(figure)
-                with file_writer.as_default():
-                    tf.summary.image("Generated Samples", sample_image, step=epoch)
-
-            except IndexError:
-                with train_summary_writer.as_default():
-                    tf.summary.text(name="display error",
-                                    data="Impossible to display spectrograms because of NaN values",
-                                    step=epoch)
-            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
-
-        else:
-            pass
-
-    gen_samples_callback = tfk.callbacks.LambdaCallback(on_epoch_end=generate_samples)
-    # earlystopping_callback = tfk.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10)
-
-    callbacks = [
-        tensorboard_callback,
-        tfk.callbacks.ModelCheckpoint(filepath="tf_ckpts/ckpt.{epoch:02d}",
-                                      save_weights_only=True,
-                                      monitor="loss",
-                                      save_freq=int(round(args.n_train / args.batch_size, 0)) * args.n_epochs // 10),
-        tfk.callbacks.TerminateOnNaN(),
-        gen_samples_callback
-    ]
+                checkpoint_restore_path = abs_restore_path
+            status = ckpt.restore(checkpoint_restore_path)
+            status.assert_existing_objects_matched()
+            assert optimizer.iterations > 0
+            print("Model Restored from {}".format(abs_restore_path))
 
     # Display parameters
     params_dict = vars(args)
@@ -299,21 +368,15 @@ def main(args):
         template += '{} = {} \n\t '.format(k, v)
     print(template)
 
-    with file_writer.as_default():
+    with train_summary_writer.as_default():
         tf.summary.text(name='Parameters',
                         data=tf.constant(template), step=0)
 
     # Train
-    initial_epoch = optimizer.iterations * args.batch_size // args.n_train
-    t0 = time.time()
-    model.fit(train_dataset, epochs=args.n_epochs + initial_epoch, validation_data=eval_dataset,
-              callbacks=callbacks, verbose=2, validation_freq=10, initial_epoch=initial_epoch)
-
-    model.save_weights("save_weights")
-
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
-
+    train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
+          train_summary_writer, test_summary_writer, manager, args)
     print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
 
     log_file.close()
@@ -327,8 +390,6 @@ if __name__ == '__main__':
                         help="mnist or cifar10 or directory to tfrecords")
     parser.add_argument("--use_logit", action="store_true")
     parser.add_argument("--alpha", type=float, default=1e-6)
-
-    parser.add_argument('--mirrored_strategy', action="store_false")
 
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
