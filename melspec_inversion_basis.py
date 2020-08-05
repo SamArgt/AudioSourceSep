@@ -83,8 +83,16 @@ def main(args):
         x2_inv = []
         for i in range(len(x1)):
             print("Start inversing Spectrogram {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
-            x1_inv.append(inversion_fn(x1[i]))
-            x2_inv.append(inversion_fn(x2[i]))
+            x_inv_i = librosa.db_to_power(x1[i])
+            x_inv_i = librosa.feature.inverse.mel_to_audio(x_inv_i, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length)
+            x1_inv.append(x_inv_i)
+            print("Done spec 1")
+            x_inv_i = librosa.db_to_power(x2[i])
+            x_inv_i = librosa.feature.inverse.mel_to_audio(x_inv_i, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length)
+            x1_inv.append(x_inv_i)
+            print("Done spec 2")
+            # x1_inv.append(inversion_fn(x1[i]))
+            # x2_inv.append(inversion_fn(x2[i]))
         x1_inv = np.concatenate(x1_inv, axis=-1)
         x2_inv = np.concatenate(x2_inv, axis=-1)
     t1 = time.time()
