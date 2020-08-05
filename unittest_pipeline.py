@@ -1,4 +1,4 @@
-from .preprocessing import *
+from pipeline.preprocessing import *
 import unittest
 import tensorflow as tf
 import shutil

@@ -1,7 +1,7 @@
-from .flow_tfp_bijectors import *
-from .flow_glow import *
-from .flow_real_nvp import *
-from .flow_tfk_layers import *
+from flow_models.flow_tfp_bijectors import *
+from flow_models.flow_glow import *
+from flow_models.flow_real_nvp import *
+from flow_models.flow_tfk_layers import *
 import unittest
 import tensorflow as tf
 import numpy as np
@@ -95,18 +95,6 @@ affine_coupling_layer_split_args = {"event_shape": EVENT_SHAPE_2,
                                     "shift_and_log_scale_layer": shift_and_log_scale_layer_toy,
                                     'n_hidden_units': 2}
 
-real_nvp_step_checkboard_args = {'event_shape': EVENT_SHAPE,
-                                 'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
-                                 'n_hidden_units': 2, 'masking': 'checkboard'}
-
-real_nvp_block_args = {'event_shape': EVENT_SHAPE,
-                       'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
-                       'n_filters': 2}
-
-real_nvp_bijector_args = {'input_shape': EVENT_SHAPE_1,
-                          'shift_and_log_scale_layer': shift_and_log_scale_layer_toy,
-                          'n_filters_base': 2}
-
 act_norm_args = {'event_shape': EVENT_SHAPE,
                  'minibatch': MINIBATCH}
 
@@ -158,29 +146,6 @@ class TestAffineCouplingLayerSplit(make_test_case_bijector(AffineCouplingLayerSp
     pass
 
 
-# 3 affine layers stacked: input dim = (2, 2, 1) -> expected log det = 3 * (2 * log2)
-class TestRealNVPStepCheckboard(make_test_case_bijector(RealNVPStep, INPUTS,
-                                                        expected_log_det=6 * EXPECTED_LOG_DET,
-                                                        **real_nvp_step_checkboard_args)):
-    pass
-
-
-# 2 Real NVP Steps stacked: input dim = (2, 2, 1)) -> expected log det = 6 * (2 * log(2))
-class TestRealNVPBlock(make_test_case_bijector(RealNVPBlock, INPUTS,
-                                               expected_log_det=12 * EXPECTED_LOG_DET,
-                                               **real_nvp_block_args)):
-    pass
-
-
-# 2 Real NVP Blocks stacked with multi-scale architecture: input_dim = (4, 4, 1)
-# input dim of the second block : (2, 2, 2)
-#  -> expected log det = 6 * 8 * log(2) + 6 * 4 * log(2)
-class TestRealNVPBijector(make_test_case_bijector(RealNVPBijector, INPUTS_1,
-                                                  expected_log_det=72 * EXPECTED_LOG_DET,
-                                                  **real_nvp_bijector_args)):
-    pass
-
-
 # ActNorm layer: minibatch built such that scale_init = 2
 # input_dim (2, 2, 1) -> expected_log_det = 2 * 2 *(1 * log(2))
 class TestActNorm(make_test_case_bijector(ActNorm, INPUTS,
@@ -221,11 +186,11 @@ class TestGlowBijector_3Blocks(make_test_case_bijector(GlowBijector_3blocks, INP
     pass
 
 
-class TestPreprocessing(make_test_case_bijector(Preprocessing, INPUTS_1,
+class TestPreprocessing(make_test_case_bijector(ImgPreprocessing, INPUTS_1,
                                                 expected_log_det=None,
                                                 **preprocessing_args)):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
