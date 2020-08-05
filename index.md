@@ -1,41 +1,30 @@
-## Welcome to GitHub Pages
+## Noise Conditionned Score Results
 
-You can use the [editor on GitHub](https://github.com/SamArgt/AudioSourceSep/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### Piano
 
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+![Spectrograms](https://github.com/SamArgt/AudioSourceSep/blob/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/ckpt10_generated_samples.png)
 
 <audio controls>
 <source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_1.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_2.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_3.wav" type="audio/wav">
 </audio>
 
-```markdown
-Syntax highlighted code block
+### Violin
 
-# Header 1
-## Header 2
-### Header 3
+![Spectrograms](https://github.com/SamArgt/AudioSourceSep/blob/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/ckpt10_generated_samples.png)
 
-- Bulleted
-- List
+<audio controls>
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_1.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_2.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_3.wav" type="audio/wav">
+</audio>
 
-1. Numbered
-2. List
+## BASIS Separation
 
-**Bold** and _Italic_ and `Code` text
+### Originals Sources
 
-[Link](url) and ![Image](src)
-```
+### Mixture
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/SamArgt/AudioSourceSep/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+### Separation
