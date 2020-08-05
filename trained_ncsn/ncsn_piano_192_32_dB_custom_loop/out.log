@@ -1,0 +1,85 @@
+TensorFlow version: 2.2.0
+Eager execution: True
+Number of devices: 4
+dataset = /home/samuel/melSpecData_96_64_dB/piano 
+	 use_logit = False 
+	 alpha = 1e-06 
+	 height = 96 
+	 width = 64 
+	 scale = dB 
+	 output = trained_ncsn 
+	 restore = None 
+	 debug = False 
+	 n_filters = 192 
+	 sigma1 = 1.0 
+	 sigmaL = 0.01 
+	 num_classes = 10 
+	 n_epochs = 400 
+	 optimizer = adam 
+	 batch_size = 32 
+	 learning_rate = 0.001 
+	 clipvalue = None 
+	 clipnorm = None 
+	 data_shape = [96, 64, 1] 
+	 data_type = melspec 
+	 instrument = piano 
+	 local_batch_size = 8 
+	 fmin = 125 
+	 fmax = 7600 
+	 sampling_rate = 16000 
+	 maxval = 20.0 
+	 minval = -100.0 
+	 n_train = 4863 
+	 n_test = 1209 
+	 
+Total Trainable Variables:  67464769
+Epoch 000: Train Loss: 1782.892 Val Loss: 1262.377319
+Model Saved at ./tf_ckpts/ckpt-1
+Epoch 010: Train Loss: 549.913 Val Loss: 515.415344
+Epoch 020: Train Loss: 476.166 Val Loss: 530.082581
+Epoch 030: Train Loss: 419.668 Val Loss: 487.477692
+Epoch 040: Train Loss: 472.313 Val Loss: 531.747925
+Model Saved at ./tf_ckpts/ckpt-2
+Epoch 050: Train Loss: 417.596 Val Loss: 452.483551
+Epoch 060: Train Loss: 399.017 Val Loss: 406.388733
+Epoch 070: Train Loss: 408.143 Val Loss: 391.445923
+Epoch 080: Train Loss: 384.625 Val Loss: 411.125244
+Model Saved at ./tf_ckpts/ckpt-3
+Epoch 090: Train Loss: 390.868 Val Loss: 394.397736
+Epoch 100: Train Loss: 379.968 Val Loss: 454.052521
+Epoch 110: Train Loss: 357.960 Val Loss: 445.226624
+Epoch 120: Train Loss: 332.879 Val Loss: 444.469269
+Model Saved at ./tf_ckpts/ckpt-4
+Epoch 130: Train Loss: 395.340 Val Loss: 386.320190
+Epoch 140: Train Loss: 339.600 Val Loss: 450.805511
+Epoch 150: Train Loss: 358.592 Val Loss: 343.951874
+Epoch 160: Train Loss: 342.123 Val Loss: 412.539001
+Model Saved at ./tf_ckpts/ckpt-5
+Epoch 170: Train Loss: 336.812 Val Loss: 401.328827
+Epoch 180: Train Loss: 329.675 Val Loss: 457.103210
+Epoch 190: Train Loss: 322.444 Val Loss: 429.537842
+Epoch 200: Train Loss: 346.598 Val Loss: 426.229767
+Model Saved at ./tf_ckpts/ckpt-6
+Epoch 210: Train Loss: 322.272 Val Loss: 362.189423
+Epoch 220: Train Loss: 317.729 Val Loss: 404.109467
+Epoch 230: Train Loss: 319.166 Val Loss: 397.915039
+Epoch 240: Train Loss: 282.978 Val Loss: 411.428040
+Model Saved at ./tf_ckpts/ckpt-7
+Epoch 250: Train Loss: 308.248 Val Loss: 433.008789
+Epoch 260: Train Loss: 290.841 Val Loss: 427.125092
+Epoch 270: Train Loss: 308.964 Val Loss: 376.453613
+Epoch 280: Train Loss: 310.414 Val Loss: 464.223877
+Model Saved at ./tf_ckpts/ckpt-8
+Epoch 290: Train Loss: 292.879 Val Loss: 407.412354
+Epoch 300: Train Loss: 280.779 Val Loss: 392.004425
+Epoch 310: Train Loss: 296.472 Val Loss: 467.921509
+Epoch 320: Train Loss: 301.203 Val Loss: 412.136108
+Model Saved at ./tf_ckpts/ckpt-9
+Epoch 330: Train Loss: 274.247 Val Loss: 414.842133
+Epoch 340: Train Loss: 289.998 Val Loss: 431.521027
+Epoch 350: Train Loss: 304.901 Val Loss: 369.746002
+Epoch 360: Train Loss: 286.523 Val Loss: 418.007050
+Model Saved at ./tf_ckpts/ckpt-10
+Epoch 370: Train Loss: 263.714 Val Loss: 423.394165
+Epoch 380: Train Loss: 284.149 Val Loss: 378.362274
+Epoch 390: Train Loss: 253.413 Val Loss: 395.260681
