@@ -68,9 +68,9 @@ def main(args):
         for i in range(len(x1)):
             x1_inv.append(inversion_fn(x1[i]))
             x2_inv.append(inversion_fn(x2[i]))
+            print("Done inversing spectrogram {} / {}".format(i, len(x1)))
         x1_inv = np.concatenate(x1_inv, axis=-1)
         x2_inv = np.concatenate(x2_inv, axis=-1)
-        print("Done inversing spectrogram {} / {}".format(i, len(x1)))
     t1 = time.time()
     duration = round(t1 - t0, 4)
 
