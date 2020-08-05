@@ -67,10 +67,10 @@ Beethoven Sonata 1: 1st minute
 ### Originals Sources
 
 <audio controls preload="auto">
-<source src=https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/ground_truth1.wav type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/ground_truth1.wav" type="audio/wav">
 </audio>
 <audio controls preload="auto">
-<source src=https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/ground_truth2.wav type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/ground_truth2.wav" type="audio/wav">
 </audio>
 
 ### Mixture
@@ -78,8 +78,8 @@ Beethoven Sonata 1: 1st minute
 ### Separation
 
 <audio controls preload="auto">
-<source src=https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/sep1.wav type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/sep1.wav" type="audio/wav">
 </audio>
 <audio controls preload="auto">
-<source src=https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/sep2.wav type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/sep2.wav" type="audio/wav">
 </audio>
