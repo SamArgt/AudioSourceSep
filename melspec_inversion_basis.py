@@ -90,10 +90,6 @@ def main(args):
 
     print("Inversion duration: {} seconds".format(duration))
 
-    if args.save_wav:
-        sf.write("sep1.wav", data=x1_inv, samplerate=sr)
-        sf.write("sep2.wav", data=x2_inv, samplerate=sr)
-
     if args.output is None:
         args.output = 'inverse' + '_' + args.method
         if args.inverse_concat:
@@ -103,6 +99,10 @@ def main(args):
         os.chdir(args.output)
     except FileExistsError:
         os.chdir(args.output)
+
+    if args.save_wav:
+        sf.write("sep1.wav", data=x1_inv, samplerate=sr)
+        sf.write("sep2.wav", data=x2_inv, samplerate=sr)
 
     np.savez("inverse_spectrograms", x1_audio=x1_inv, x2_audio=x2_inv)
 

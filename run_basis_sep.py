@@ -387,6 +387,7 @@ def main(args):
             tf.summary.audio("Original Audio", np.reshape(raw_audio, (3, -1, 1)), sample_rate=args.sampling_rate, encoding='wav', step=0)
             sf.write("ground_truth1.wav", data=raw_audio[1], samplerate=args.sampling_rate)
             sf.write("ground_truth2.wav", data=raw_audio[2], samplerate=args.sampling_rate)
+            sf.write("mix.wav", data=raw_audio[0], samplerate=args.sampling_rate)
 
     # build model
     if args.model_type == "glow":

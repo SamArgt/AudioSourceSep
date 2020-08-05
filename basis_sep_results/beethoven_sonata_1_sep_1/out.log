@@ -1,0 +1,124 @@
+Data Loaded in 167.703 seconds
+Model 1 restore from /home/samuel/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/tf_ckpts/ckpt-10
+Model 2 restored from /home/samuel/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/tf_ckpts/ckpt-10
+BASIS Separation 
+	 RESTORE1 = trained_ncsn/ncsn_piano_192_32_dB_custom_loop/tf_ckpts/ckpt-10 
+	 RESTORE2 = trained_ncsn/ncsn_violin_192_32_dB_custom_loop/tf_ckpts/ckpt-10 
+	 output = beethoven_sonata_1_sep_1_min_bis/ 
+	 debug = False 
+	 dataset = melspec 
+	 song_dir = beethoven_sonata_1/ 
+	 height = 96 
+	 width = 64 
+	 scale = dB 
+	 T = 100 
+	 n_mixed = 30 
+	 sigma1 = 1.0 
+	 sigmaL = 0.01 
+	 n_sigmas = 10 
+	 model_type = ncsn 
+	 n_filters = 192 
+	 L = 3 
+	 K = 32 
+	 l2_reg = None 
+	 learntop = False 
+	 optimizer = adamax 
+	 batch_size = 256 
+	 learning_rate = 0.001 
+	 clipvalue = None 
+	 clipnorm = None 
+	 use_logit = False 
+	 alpha = 1e-06 
+	 restore_dict_1 = None 
+	 restore_dict_2 = None 
+	 data_shape = [96, 64, 1] 
+	 data_type = melspec 
+	 fmin = 125 
+	 fmax = 7600 
+	 sampling_rate = 16000 
+	 maxval = 20.0 
+	 minval = -100.0 
+	 use_dB = True 
+	 n_display = 5 
+	 
+Sigma = 1.0 (1 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.599484250318941 (2 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.3593813663804628 (3 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.21544346900318845 (4 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.12915496650148844 (5 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.07742636826811274 (6 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.04641588833612782 (7 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.02782559402207126 (8 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.0166810053720006 (9 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Sigma = 0.01000000000000001 (10 / 10)
+step : 0 / 100
+step : 20 / 100
+step : 40 / 100
+step : 60 / 100
+step : 80 / 100
+inner loop done
+____________________________________________________________________________________________________
+Duration: 1411.517 seconds
