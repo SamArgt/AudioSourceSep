@@ -15,6 +15,8 @@ Syntax highlighted code block
 ## Header 2
 ### Header 3
 
+<audio ref='gen_samples' src="https://github.com/SamArgt/AudioSourceSep/blob/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_1.wav"></audio>
+
 - Bulleted
 - List
 
