@@ -80,7 +80,9 @@ def main(args):
         sf.write("sep2.wav", data=x2_inv, samplerate=sr)
 
     if args.output is None:
-        args.output = 'inverse' + '_' + args.method + '_' + args.inverse_concat
+        args.output = 'inverse' + '_' + args.method
+        if args.inverse_concat:
+            args.output += '_inverse_concat'
     try:
         os.mkdir(args.output)
         os.chdir(args.output)
