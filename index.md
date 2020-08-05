@@ -8,7 +8,9 @@ Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://j
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
-<audio src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_1.wav"></audio>
+<audio controls>
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_1.wav" type="audio/wav">
+</audio>
 
 ```markdown
 Syntax highlighted code block
