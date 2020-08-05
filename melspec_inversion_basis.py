@@ -82,10 +82,9 @@ def main(args):
         x1_inv = []
         x2_inv = []
         for i in range(len(x1)):
-            print("Start inversing Spectrogram {} at {}".format(i + 1, datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
+            print("Start inversing Spectrogram {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
             x1_inv.append(inversion_fn(x1[i]))
             x2_inv.append(inversion_fn(x2[i]))
-            print("Done inversing spectrogram {} / {}".format(i + 1, len(x1)))
         x1_inv = np.concatenate(x1_inv, axis=-1)
         x2_inv = np.concatenate(x2_inv, axis=-1)
     t1 = time.time()
