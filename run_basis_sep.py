@@ -349,7 +349,8 @@ def main(args):
                        'fmax': 7600, 'use_dB': args.use_dB, 'n_fft': 2048,
                        'hop_length': 512, 'n_mels': 96, 'sr': 16000}
         duration = 2.04 * args.n_mixed
-        mel_spec, raw_audio = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
+
+        mel_spec, raw_audio, mixed_phase = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
         # preprocessing mixture
@@ -431,18 +432,19 @@ def main(args):
     mixed = post_processing(mixed.numpy().squeeze())
     gt1 = gt1.numpy().squeeze()
     gt2 = gt2.numpy().squeeze()
-    np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed)
+    np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed, mixed_phase=mixed_phase)
 
     # Inverse mel spec
-    if args.data_type == "melspec":
+    if args.data_type == "melspec" and args.inverse:
         x1_concat = np.concatenate(list(x1), axis=-1)
         x2_concat = np.concatenate(list(x2), axis=-1)
         x1_audio = spectrogram_inversion(x1_concat, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
         x2_audio = spectrogram_inversion(x2_concat, sr=args.sampling_rate, fmin=args.fmin, fmax=args.fmax, use_db=args.use_dB)
         sep_audio = np.reshape(np.array([x1_audio, x2_audio]), (2, -1, 1))
-        tf.summary.audio("Separated Audio", sep_audio, sample_rate=args.sampling_rate, encoding='wav', step=1000)
         sf.write("sep1.wav", data=x1_audio, samplerate=args.sampling_rate)
         sf.write("sep2.wav", data=x2_audio, samplerate=args.sampling_rate)
+        with train_summary_writer.as_default():
+            tf.summary.audio("Separated Audio", sep_audio, sample_rate=args.sampling_rate, encoding='wav', step=1000)
 
     log_file.close()
 
@@ -514,6 +516,8 @@ if __name__ == "__main__":
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
+
+    parser.add_argument("--inverse", action="store_true", help="Inverse spectrograms")
 
     args = parser.parse_args()
 
