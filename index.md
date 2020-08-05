@@ -14,6 +14,21 @@
 <audio controls preload="auto">
 <source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_3.wav" type="audio/wav">
 </audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_4.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_5.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_6.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_7.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_piano_192_32_dB_custom_loop/generated_samples/inv_gen_sample_8.wav" type="audio/wav">
+</audio>
 
 ### Violin
 
@@ -28,6 +43,22 @@
 <audio controls preload="auto">
 <source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_3.wav" type="audio/wav">
 </audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_4.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_5.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_6.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_7.wav" type="audio/wav">
+</audio>
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/trained_ncsn/ncsn_violin_192_32_dB_custom_loop/generated_samples/inv_gen_sample_8.wav" type="audio/wav">
+</audio>
+
 
 ## BASIS Separation
 
