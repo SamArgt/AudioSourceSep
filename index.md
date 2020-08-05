@@ -1,5 +1,6 @@
-## Noise Conditionned Score Results
+# MSc Statistics Project - Audio Source Separation
 
+## NCSN Results
 
 ### Piano
 
