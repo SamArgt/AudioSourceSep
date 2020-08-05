@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--method", type=str, default="griffin")
     parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
-    parser.add_argument("--scale", typ=str, default="dB")
+    parser.add_argument("--scale", type=str, default="dB")
     parser.add_argument('--save_wav', action='store_true')
 
     args = parser.parse_args()
