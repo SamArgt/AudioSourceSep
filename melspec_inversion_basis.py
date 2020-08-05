@@ -60,9 +60,9 @@ def main(args):
         mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
 
     if args.method == 'griffin':
-        inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax)
+        inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, scale=args.scale)
     elif args.method == 'reuse_phase':
-        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, scale=args.scale)
         if args.inverse_concat:
             x1 = [x1, mixed_phase]
             x2 = [x2, mixed_phase]
