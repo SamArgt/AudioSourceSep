@@ -10,14 +10,19 @@ def complex_array(amplitudes, angles):
     return amplitudes * np.exp(1j * angles)
 
 
-def griffin_inversion_fn(sr=16000, fmin=125, fmax=7600):
+def griffin_inversion_fn(sr=16000, fmin=125, fmax=7600, scale="dB"):
     def griffin_inversion(melspec):
+        if args.scale == "dB":
+            melspec = librosa.db_to_power(melspec)
         return librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax)
     return griffin_inversion
 
 
-def stft_inversion_fn(phase, sr=16000, fmin=125, fmax=7600, n_fft=2048):
-    def stft_inversion(melspec):
+def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, scale="dB"):
+    def stft_inversion(inputs):
+        melspec, phase = inputs
+        if args.scale == "dB":
+            melspec = librosa.db_to_power(melspec)
         mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
         stft_complex = complex_array(mel_stft, phase)
         istft = librosa.istft(stft_complex)
@@ -39,6 +44,9 @@ def main(args):
     mixed_phase = basis_results['mixed_phase']
 
     assert len(x1.shape) == len(x2.shape) == len(mixed_phase.shape) == 3, (x1.shape, x2.shape, mixed_phase.shape)
+    if (args.scale != 'dB') and (args.scale != 'power'):
+        raise ValueError('scale should be dB or power')
+
     args.shape = x1.shape
     params_dict = vars(args)
     template = 'Spectrograms \n\t '
@@ -48,13 +56,19 @@ def main(args):
 
     if args.inverse_concat:
         x1 = np.concatenate(list(x1), axis=-1)
-        x2 = np.conatenate(list(x2), axis=-1)
+        x2 = np.concatenate(list(x2), axis=-1)
         mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
 
     if args.method == 'griffin':
         inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax)
     elif args.method == 'reuse_phase':
-        inversion_fn = stft_inversion_fn(mixed_phase, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+        if args.inverse_concat:
+            x1 = [x1, mixed_phase]
+            x2 = [x2, mixed_phase]
+        else:
+            x1 = [[x1[i], mixed_phase[i]] for i in range(len(x1))]
+            x2 = [[x2[i], mixed_phase[i]] for i in range(len(x1))]
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
@@ -109,6 +123,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--method", type=str, default="griffin")
     parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
+    parser.add_argument("--scale", typ=str, default="dB")
     parser.add_argument('--save_wav', action='store_true')
 
     args = parser.parse_args()
