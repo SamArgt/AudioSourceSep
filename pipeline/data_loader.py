@@ -146,10 +146,10 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
         stft_mix = librosa.stft(mix_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                 window='hann', center=True, dtype=None, pad_mode='reflect')
         mixed_phase.append(np.angle(stft_mix))
-        stft_violin = librosa.stft(piano_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
-                                   window='hann', center=True, dtype=None, pad_mode='reflect')
-        stft_piano = librosa.stft(violin_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
+        stft_piano = librosa.stft(piano_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                   window='hann', center=True, dtype=None, pad_mode='reflect')
+        stft_violin = librosa.stft(violin_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
+                                   window='hann', center=True, dtype=None, pad_mode='reflect')
 
         mel_mix_extract = librosa.feature.melspectrogram(S=np.abs(stft_mix)**2, sr=sr, fmin=fmin, fmax=fmax,
                                                          n_mels=n_mels, power=2.0)
@@ -170,8 +170,8 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
             mel_violin_extract = np.clip(mel_violin_extract, powermin, powermax)
 
         mel_mix.append(mel_mix_extract)
-        mel_violin.append(mel_violin_extract)
         mel_piano.append(mel_piano_extract)
+        mel_violin.append(mel_violin_extract)
 
     mel_spec = [tf.cast(tf.expand_dims(mel_mix, axis=-1), tf.float32),
                 tf.cast(tf.expand_dims(mel_piano, axis=-1), tf.float32),
