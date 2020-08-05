@@ -26,10 +26,10 @@ def stft_inversion_fn(phase, sr=16000, fmin=125, fmax=7600, n_fft=2048):
 
 def main(args):
 
-    args.sr = 16000
-    args.fmin = 125
-    args.fmax = 7600
-    args.n_fft = 2048
+    sr = 16000
+    fmin = 125
+    fmax = 7600
+    n_fft = 2048
 
     os.chdir(args.basis_results)
     basis_results = np.load('results.npz')
@@ -52,9 +52,9 @@ def main(args):
         mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
 
     if args.method == 'griffin':
-        inversion_fn = griffin_inversion_fn(sr=args.sr, fmin=args.fmin, fmax=args.fmax)
+        inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax)
     elif args.method == 'reuse_phase':
-        inversion_fn = stft_inversion_fn(mixed_phase, sr=args.sr, fmin=args.fmin, fmax=args.fmax, n_fft=args.n_fft)
+        inversion_fn = stft_inversion_fn(mixed_phase, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
@@ -68,12 +68,16 @@ def main(args):
         for i in range(len(x1)):
             x1_inv.append(inversion_fn(x1[i]))
             x2_inv.append(inversion_fn(x2[i]))
-        x1_inv = np.array(x1_inv)
-        x2_inv = np.array(x2_inv)
+        x1_inv = np.concatenate(x1_inv, axis=-1)
+        x2_inv = np.concatenate(x2_inv, axis=-1)
     t1 = time.time()
     duration = round(t1 - t0, 4)
 
     print("Inversion duration: {} seconds".format(duration))
+
+    if args.save_wav:
+        sf.write("sep1.wav", data=x1_inv, samplerate=sr)
+        sf.write("sep2.wav", data=x2_inv, samplerate=sr)
 
     if args.output is None:
         args.output = 'inverse' + '_' + args.method + '_' + args.inverse_concat
@@ -102,6 +106,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--method", type=str, default="griffin")
     parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
+    parser.add_argument('--save_wav', action='store_true')
 
     args = parser.parse_args()
 
