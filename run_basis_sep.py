@@ -182,13 +182,8 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
 
         if debug:
             print('step : {} / {}'.format(t, T))
-            assert grad_logprob1.shape == x1.shape
             assert bool(tf.math.is_nan(grad_logprob1).numpy().any()) is False, (sigma, t)
-            assert grad_logprob2.shape == x2.shape
             assert bool(tf.math.is_nan(grad_logprob2).numpy().any()) is False, (sigma, t)
-            assert mixing.shape == mixed.shape
-            assert grad_mixing_x1.shape == x1.shape
-            assert grad_mixing_x2.shape == x2.shape
             assert bool(tf.math.is_nan(grad_mixing_x1).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(grad_mixing_x2).numpy().any()) is False, (sigma, t)
             assert bool(tf.math.is_nan(mixing).numpy().any()) is False, (sigma, t)
@@ -202,22 +197,12 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                 x2_np = x2.numpy()
                 grad_mixing_x1_np = grad_mixing_x1.numpy()
                 grad_mixing_x2_np = grad_mixing_x2.numpy()
-                print("x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x1_np.mean(),
-                                                                                       x1_np.std(),
-                                                                                       x1_np.min(),
-                                                                                       x1_np.max()))
-                print("x2 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x2_np.mean(),
-                                                                                       x2_np.std(),
-                                                                                       x2_np.min(),
-                                                                                       x2_np.max()))
-                print("grad_mixing_x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(grad_mixing_x1_np.mean(),
-                                                                                                   grad_mixing_x1_np.std(),
-                                                                                                   grad_mixing_x1_np.min(),
-                                                                                                   grad_mixing_x1_np.max()))
-                print("grad_mixing_x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(grad_mixing_x2_np.mean(),
-                                                                                                   grad_mixing_x2_np.std(),
-                                                                                                   grad_mixing_x2_np.min(),
-                                                                                                   grad_mixing_x2_np.max()))
+                print("x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x1_np.mean(), x1_np.std(), x1_np.min(), x1_np.max()))
+                print("x2 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(x2_np.mean(), x2_np.std(), x2_np.min(), x2_np.max()))
+                print("grad_mixing_x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(grad_mixing_x1_np.mean(), grad_mixing_x1_np.std(),
+                                                                                                   grad_mixing_x1_np.min(), grad_mixing_x1_np.max()))
+                print("grad_mixing_x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(grad_mixing_x2_np.mean(), grad_mixing_x2_np.std(),
+                                                                                                   grad_mixing_x2_np.min(), grad_mixing_x2_np.max()))
             with train_summary_writer.as_default():
 
                 if n_mixed > 5:

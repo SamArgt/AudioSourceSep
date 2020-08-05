@@ -72,6 +72,7 @@ def main(args):
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
+    print("Start inversing")
     t0 = time.time()
     if args.inverse_concat:
         x1_inv = inversion_fn(x1)
