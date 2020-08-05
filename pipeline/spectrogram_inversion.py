@@ -31,7 +31,8 @@ def main(args):
     args.fmax = 7600
     args.n_fft = 2048
 
-    basis_results = np.load(args.basis_results)
+    os.chdir(args.basis_results)
+    basis_results = np.load('results.npz')
 
     x1 = basis_results['x1']
     x2 = basis_results['x2']
@@ -74,6 +75,8 @@ def main(args):
 
     print("Inversion duration: {} seconds".format(duration))
 
+    if args.output is None:
+        args.output = 'inverse' + '_' + args.method + '_' + args.inverse_concat
     try:
         os.mkdir(args.output)
         os.chdir(args.output)
@@ -94,11 +97,11 @@ if __name__ == "__main__":
     parser.add_argument('basis_results', type=str, default=None,
                         help='directory of basis_results')
 
-    parser.add_argument('--output', type=str, default='basis_sep',
+    parser.add_argument('--output', type=str, default=None,
                         help='output dirpath for savings')
 
     parser.add_argument("--method", type=str, default="griffin")
-    parser.add_argument('--')
+    parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
 
     args = parser.parse_args()
 
