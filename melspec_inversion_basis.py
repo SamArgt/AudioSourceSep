@@ -26,8 +26,8 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
         if args.scale == "dB":
             melspec = librosa.db_to_power(melspec)
         mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
-        stft_complex = complex_array(mel_stft, phase, hop_length=hop_length)
-        istft = librosa.istft(stft_complex)
+        stft_complex = complex_array(mel_stft, phase)
+        istft = librosa.istft(stft_complex, hop_length=hop_length)
         return istft
     return stft_inversion
 
