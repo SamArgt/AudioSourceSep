@@ -76,6 +76,10 @@ Beethoven Sonata 1: 1st minute
 
 ### Mixture
 
+<audio controls preload="auto">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/mix.wav" type="audio/wav">
+</audio>
+
 ### Separation
 
 <audio controls preload="auto">
