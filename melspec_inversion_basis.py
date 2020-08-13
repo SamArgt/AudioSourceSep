@@ -110,7 +110,7 @@ def main(args):
     else:
         inv_spec = {'x1': [], 'x2': [], 'gt1': [], 'gt2': [], 'mix': []}
         for i in range(len(x1)):
-            spec_to_invert = {'sep1': x1[i], 'sep2': x2[i], 'gt1': gt1[i], 'gt2': gt2[i], 'mix': mix[i]}
+            spec_to_invert = {'x1': x1[i], 'x2': x2[i], 'gt1': gt1[i], 'gt2': gt2[i], 'mix': mix[i]}
             print("Start inversing Spectrograms {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
             for n, spec in spec_to_invert.items():
                 t0 = time.time()
