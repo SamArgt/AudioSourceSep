@@ -57,6 +57,9 @@ def main(args):
 
     x1 = basis_results['x1']
     x2 = basis_results['x2']
+    gt1 = basis_results['gt1']
+    gt2 = basis_results['gt2']
+    mix = basis_results['mixed']
     mixed_phase = basis_results['mixed_phase']
 
     assert len(x1.shape) == len(x2.shape) == len(mixed_phase.shape) == 3, (x1.shape, x2.shape, mixed_phase.shape)
@@ -73,6 +76,9 @@ def main(args):
     if args.inverse_concat:
         x1 = np.concatenate(list(x1), axis=-1)
         x2 = np.concatenate(list(x2), axis=-1)
+        mix = np.concatenate(list(mix), axis=-1)
+        gt1 = np.concatenate(list(gt1), axis=-1)
+        gt2 = np.concatenate(list(gt2), axis=-1)
         mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
 
     if args.method == 'griffin':
@@ -82,9 +88,15 @@ def main(args):
         if args.inverse_concat:
             x1 = [x1, mixed_phase]
             x2 = [x2, mixed_phase]
+            gt1 = [gt1, mixed_phase]
+            gt2 = [gt2, mixed_phase]
+            mix = [mix, mixed_phase]
         else:
             x1 = [[x1[i], mixed_phase[i]] for i in range(len(x1))]
-            x2 = [[x2[i], mixed_phase[i]] for i in range(len(x1))]
+            x2 = [[x2[i], mixed_phase[i]] for i in range(len(x2))]
+            gt1 = [[gt1[i], mixed_phase[i]] for i in range(len(gt1))]
+            gt2 = [[gt2[i], mixed_phase[i]] for i in range(len(gt2))]
+            mix = [[mix[i], mixed_phase[i]] for i in range(len(mix))]
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
@@ -92,21 +104,26 @@ def main(args):
     if args.inverse_concat:
         x1_inv = inversion_fn(x1)
         x2_inv = inversion_fn(x2)
+        gt1_inv = inversion_fn(gt1)
+        gt2_inv = inversion_fn(gt2)
+        mix_inv = inversion_fn(mix)
     else:
-        x1_inv = []
-        x2_inv = []
+        inv_spec = {'x1': [], 'x2': [], 'gt1': [], 'gt2': [], 'mix': []}
         for i in range(len(x1)):
-            print("Start inversing Spectrogram {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
-            t0 = time.time()
-            x1_inv_i = inversion_fn(x1[i])
-            x1_inv.append(x1_inv_i)
-            print("Done melspec 1 in {} seconds".format(round(time.time() - t0, 3)))
-            t0 = time.time()
-            x2_inv_i = inversion_fn(x2[i])
-            x2_inv.append(x2_inv_i)
-            print("Done melspec 2 in {} seconds".format(round(time.time() - t0, 3)))
-        x1_inv = np.concatenate(x1_inv, axis=-1)
-        x2_inv = np.concatenate(x2_inv, axis=-1)
+            spec_to_invert = {'sep1': x1[i], 'sep2': x2[i], 'gt1': gt1[i], 'gt2': gt2[i], 'mix': mix[i]}
+            print("Start inversing Spectrograms {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
+            for n, spec in spec_to_invert.items():
+                t0 = time.time()
+                spec_inv_i = inversion_fn(spec)
+                inv_spec[n].append(spec_inv_i)
+                print("Done melspec {} in {} seconds".format(n, round(time.time() - t0, 3)))
+
+        x1_inv = np.concatenate(inv_spec['x1'], axis=-1)
+        x2_inv = np.concatenate(inv_spec['x2'], axis=-1)
+        gt1_inv = np.concatenate(inv_spec['gt1'], axis=-1)
+        gt2_inv = np.concatenate(inv_spec['gt2'], axis=-1)
+        mix_inv = np.concatenate(inv_spec['mix'], axis=-1)
+
     t1 = time.time()
     duration = round(t1 - t_init, 4)
 
@@ -115,8 +132,11 @@ def main(args):
     if args.save_wav:
         sf.write("sep1.wav", data=x1_inv, samplerate=sr)
         sf.write("sep2.wav", data=x2_inv, samplerate=sr)
+        sf.write("gt1.wav", data=gt1_inv, samplerate=sr)
+        sf.write("gt2.wav", data=gt2_inv, samplerate=sr)
+        sf.write("mix.wav", data=mix_inv, samplerate=sr)
 
-    np.savez("inverse_spectrograms", x1_audio=x1_inv, x2_audio=x2_inv)
+    np.savez("inverse_spectrograms", x1_audio=x1_inv, x2_audio=x2_inv, gt1_audio=gt1_inv, gt2_audio=gt2_inv, mix_audio=mix_inv)
 
     log_file.close()
 
