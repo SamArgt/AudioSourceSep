@@ -280,7 +280,11 @@ def main(args):
     abs_restore_path = os.path.abspath(args.RESTORE)
 
     if args.output == 'noise_conditioned_flows':
-        output_dirname = 'glow_' + args.dataset + '_' + str(args.L) + '_' + \
+        if args.dataset != 'mnist' and args.dataset != 'cifar10':
+            dataset = args.instrument
+        else:
+            dataset = args.dataset
+        output_dirname = 'glow_' + dataset + '_' + str(args.L) + '_' + \
             str(args.K) + '_' + str(args.n_filters) + \
             '_' + str(args.batch_size)
         output_dirpath = os.path.join(args.output, output_dirname)
