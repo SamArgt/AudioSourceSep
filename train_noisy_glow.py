@@ -13,6 +13,7 @@ import sys
 import io
 import librosa
 import matplotlib.pyplot as plt
+from librosa.display import specshow
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -240,15 +241,22 @@ def plot_to_image(figure):
     return image
 
 
-def image_grid(sample, dataset):
+def image_grid(sample, data_shape, data_type="image", **kwargs):
     # Create a figure to contain the plot.
     f, axes = plt.subplots(4, 8, figsize=(12, 6))
     axes = axes.flatten()
-    if dataset == 'mnist':
-        sample = sample[:, :, :, 0]
+    if data_shape[-1] == 1:
+        sample = np.squeeze(sample, axis=-1)
     for i, ax in enumerate(axes):
-        ax.imshow(np.clip(sample[i] + 0.5, 0., 1.))
-        ax.set_axis_off()
+        if i > (len(sample) - 1):
+            return f
+        if data_type == "image":
+            ax.imshow(sample[i])
+            ax.set_axis_off()
+        elif data_type == "melspec":
+            specshow(sample[i], sr=kwargs["sampling_rate"],
+                     ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
+
     return f
 
 
@@ -433,6 +441,11 @@ if __name__ == '__main__':
     parser.add_argument('--sigmaL', type=float, default=0.01)
     parser.add_argument('--n_sigmas', type=int, default=10)
 
+    # Spectrograms Parameters
+    parser.add_argument("--height", type=int, default=96)
+    parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--scale", type=str, default="dB", help="power or dB")
+
     # Model hyperparameters
     parser.add_argument('--L', default=3, type=int,
                         help='Depth level')
@@ -462,8 +475,6 @@ if __name__ == '__main__':
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
-    parser.add_argument('--noise', type=float, default=None,
-                        help='noise level for BASIS separation')
 
     args = parser.parse_args()
 
