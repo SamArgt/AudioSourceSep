@@ -1,4 +1,4 @@
-import train_flow
+import time
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -11,10 +11,174 @@ import shutil
 import datetime
 import sys
 import io
+import librosa
 import matplotlib.pyplot as plt
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
+
+
+def train(noise, mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
+          manager, manager_issues, train_summary_writer, test_summary_writer):
+    # Custom Training Step
+    # Adding the tf.function makes it about 10 times faster!!!
+
+    with mirrored_strategy.scope():
+        def compute_train_loss(X):
+            X = X + tf.random.normal(X.shape) * noise
+            per_example_loss = -flow.log_prob(X)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.batch_size)
+
+        def compute_test_loss(X):
+            X = X + tf.random.normal(X.shape) * noise
+            per_example_loss = -flow.log_prob(X)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=args.test_batch_size)
+
+    def train_step(inputs):
+        with tf.GradientTape() as tape:
+            tape.watch(flow.trainable_variables)
+            loss = compute_train_loss(inputs)
+        gradients = tape.gradient(loss, flow.trainable_variables)
+        optimizer.apply_gradients(
+            list(zip(gradients, flow.trainable_variables)))
+        return loss
+
+    def test_step(inputs):
+        loss = compute_test_loss(inputs)
+        return loss
+
+    @tf.function
+    def distributed_train_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            train_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    @tf.function
+    def distributed_test_step(dataset_inputs):
+        per_replica_losses = mirrored_strategy.run(
+            test_step, args=(dataset_inputs,))
+        return mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+
+    def post_processing(x):
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
+        return x
+
+    # Display first generated samples
+    with mirrored_strategy.scope():
+        samples = flow.sample(32)
+    samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
+    try:
+        figure = image_grid(samples, args.data_shape, args.data_type,
+                            sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+        with train_summary_writer.as_default():
+            tf.summary.image("32 generated samples", plot_to_image(figure), max_outputs=50, step=0)
+    except IndexError:
+        with train_summary_writer.as_default():
+            tf.summary.text(name="display error",
+                            data="Impossible to display spectrograms because of NaN values", step=0)
+
+    N_EPOCHS = args.n_epochs
+    batch_size = args.batch_size
+    t0 = time.time()
+    count_step = optimizer.iterations.numpy()
+    min_val_loss = 1e6
+    prev_history_loss_avg = None
+    loss_per_epoch = 10  # number of losses per epoch to save
+    is_nan_loss = False
+    test_loss = tfk.metrics.Mean(name='test_loss')
+    history_loss_avg = tf.keras.metrics.Mean(name="tensorboard_loss")
+    epoch_loss_avg = tf.keras.metrics.Mean(name="epoch_loss")
+    n_train = args.n_train
+    print("Start Training on {} epochs".format(N_EPOCHS))
+    # Custom Training Loop
+    for epoch in range(1, N_EPOCHS + 1):
+        epoch_loss_avg.reset_states()
+
+        if is_nan_loss:
+            break
+
+        for batch in ds_dist:
+            loss = distributed_train_step(batch)
+            history_loss_avg.update_state(loss)
+            epoch_loss_avg.update_state(loss)
+            count_step += 1
+
+            # every loss_per_epoch train step
+            if count_step % (n_train // (batch_size * loss_per_epoch)) == 0:
+                # check nan loss
+                if (tf.math.is_nan(loss)) or (tf.math.is_inf(loss)):
+                    print('Nan or Inf Loss: {}'.format(loss))
+                    is_nan_loss = True
+                    break
+
+                # Save history and monitor it on tensorboard
+                curr_loss_history = history_loss_avg.result()
+                with train_summary_writer.as_default():
+                    step_int = int(10 * count_step * batch_size / n_train)
+                    tf.summary.scalar(
+                        'loss', curr_loss_history, step=step_int)
+
+                if manager_issues is not None:
+                    # look for huge jump in the loss
+                    if prev_history_loss_avg is None:
+                        prev_history_loss_avg = curr_loss_history
+                    elif curr_loss_history - prev_history_loss_avg > 10**6:
+                        print("Huge gap in the loss")
+                        save_path = manager_issues.save()
+                        print("Model weights saved at {}".format(save_path))
+                        with train_summary_writer.as_default():
+                            tf.summary.text(name='Loss Jump',
+                                            data=tf.constant(
+                                                "Huge jump in the loss. Model weights saved at {}".format(save_path)),
+                                            step=step_int)
+                        prev_history_loss_avg = curr_loss_history
+
+                history_loss_avg.reset_states()
+
+        if (N_EPOCHS < 100) or (epoch % (N_EPOCHS // 100) == 0):
+            # Compute validation loss and monitor it on tensorboard
+            test_loss.reset_states()
+            for elt in ds_val_dist:
+                test_loss.update_state(distributed_test_step(elt))
+            step_int = int(10 * count_step * batch_size / n_train)
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss.result(), step=step_int)
+            print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
+                epoch, epoch_loss_avg.result(), test_loss.result()))
+            # Generate some samples and visualize them on tensorboard
+            with mirrored_strategy.scope():
+                samples = flow.sample(32)
+            samples = post_processing(samples.numpy().reshape([32] + args.data_shape))
+            np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), samples)
+            try:
+                figure = image_grid(samples, args.data_shape, args.data_type,
+                                    sampling_rate=args.sampling_rate, fmin=args.fmin, fmax=args.fmax)
+                with train_summary_writer.as_default():
+                    tf.summary.image("32 generated samples", plot_to_image(figure),
+                                     max_outputs=50, step=epoch)
+            except IndexError:
+                with train_summary_writer.as_default():
+                    tf.summary.text(name="display error",
+                                    data="Impossible to display spectrograms because of NaN values",
+                                    step=epoch)
+
+            # If minimum validation loss is reached, save model
+            curr_val_loss = test_loss.result()
+            if curr_val_loss < min_val_loss:
+                save_path = manager.save()
+                print("Model Saved at {}".format(save_path))
+                min_val_loss = curr_val_loss
+
+    save_path = manager.save()
+    print("Model Saved at {}".format(save_path))
+    training_time = time.time() - t0
+    return training_time, save_path
 
 
 def setUp_optimizer(mirrored_strategy, args):
@@ -89,6 +253,20 @@ def image_grid(sample, dataset):
 
 
 def main(args):
+
+    # miscellaneous paramaters
+    if args.dataset == 'mnist':
+        args.data_shape = [32, 32, 1]
+        args.data_type = "image"
+    elif args.dataset == 'cifar10':
+        args.data_shape = [32, 32, 3]
+        args.data_type = "image"
+    else:
+        args.data_shape = [args.height, args.width, 1]
+        args.dataset = os.path.abspath(args.dataset)
+        args.data_type = "melspec"
+        args.instrument = os.path.split(args.dataset)[-1]
+
     # Fine tune model serially from sigmaL to sigma1
     sigmas = np.logspace(np.log(args.sigmaL) / np.log(10), np.log(args.sigma1) / np.log(10), num=args.n_sigmas)
     abs_restore_path = os.path.abspath(args.RESTORE)
@@ -121,13 +299,53 @@ def main(args):
         mirrored_strategy.num_replicas_in_sync))
 
     # Load Dataset
-    ds, _, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                   use_logit=args.use_logit, alpha=args.alpha,
-                                                                   noise=args.noise, mirrored_strategy=mirrored_strategy)
+    if args.data_type == "image":
+        ds, ds_val, ds_dist, ds_val_dist, minibatch = data_loader.load_toydata(dataset=args.dataset, batch_size=args.batch_size,
+                                                                               mirrored_strategy=mirrored_strategy)
+        args.test_batch_size = 5000
+        if args.dataset == "mnist":
+            args.n_train = 60000
+        else:
+            args.n_train = 50000
+        args.n_test = 10000
+
+    else:
+        ds, ds_val, ds_dist, ds_val_dist, minibatch, n_train, n_test = data_loader.load_melspec_ds(args.dataset + '/train',
+                                                                                                   args.dataset + '/test',
+                                                                                                   batch_size=args.batch_size,
+                                                                                                   shuffle=True,
+                                                                                                   mirrored_strategy=mirrored_strategy)
+        args.test_batch_size = args.batch_size
+        args.n_train = n_train
+        args.n_test = n_test
+        if args.scale == 'power':
+            args.minval = 1e-10
+            args.maxval = 100.
+        elif args.scale == 'dB':
+            args.minval = -100.
+            args.maxval = 20.
+        else:
+            raise ValueError("scale should be 'power' or 'dB'")
+        args.fmin = 125
+        args.fmax = 7600
+        args.sampling_rate = 16000
+
+    # post processing
+    def post_processing(x):
+        if args.data_type == 'image':
+            x = np.clip(x, 0., 255.)
+            x = np.round(x, decimals=0).astype(int)
+        else:
+            x = np.clip(x, args.minval, args.maxval)
+            if args.scale == "power":
+                x = librosa.power_to_db(x)
+        return x
 
     # Build Flow and Set up optimizer
-    flow = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
-                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop)
+    flow = flow_builder.build_glow(minibatch, args.data_shape, L=args.L, K=args.K, n_filters=args.n_filters,
+                                   l2_reg=args.l2_reg, mirrored_strategy=mirrored_strategy, learntop=args.learntop,
+                                   data_type=args.data_type, minval=args.minval, maxval=args.maxval,
+                                   use_logit=args.use_logit, alpha=args.alpha)
 
     params_dict = vars(args)
     template = 'Glow Flow \n\t '
@@ -170,12 +388,6 @@ def main(args):
 
         # Set up optimizer
         # optimizer = setUp_optimizer(mirrored_strategy, args)
-
-        # load noisy data
-        args.noise = sigma
-        ds, _, ds_dist, ds_val_dist, minibatch = data_loader.load_data(dataset=args.dataset, batch_size=args.batch_size,
-                                                                       use_logit=args.use_logit, alpha=args.alpha,
-                                                                       noise=args.noise, mirrored_strategy=mirrored_strategy)
         with train_summary_writer.as_default():
             sample = list(ds.take(1).as_numpy_iterator())[0]
             sample = sample[:32]
@@ -193,8 +405,8 @@ def main(args):
                             data=tf.constant(str(total_trainable_variables)), step=0)
 
         # Train
-        training_time, save_path = train_flow.train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
-                                                    manager, None, train_summary_writer, test_summary_writer)
+        training_time, save_path = train(sigma, mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
+                                         manager, None, train_summary_writer, test_summary_writer)
         print("Training time: ", np.round(training_time, 2), ' seconds')
 
         # Fine tune model serially
@@ -211,7 +423,7 @@ if __name__ == '__main__':
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights (optional)')
     parser.add_argument('--dataset', type=str, default="mnist",
-                        help="mnist or cifar10")
+                        help="mnist or cifar10 or directory to melspec")
     parser.add_argument('--output', type=str, default='noise_conditioned_flows',
                         help='output dirpath for savings')
     parser.add_argument('--debug', action="store_true")
