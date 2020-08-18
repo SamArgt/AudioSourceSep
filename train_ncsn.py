@@ -394,7 +394,7 @@ if __name__ == '__main__':
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
-    parser.add_argument("--scale", type=str, default="power", help="power or dB")
+    parser.add_argument("--scale", type=str, default="dB", help="power or dB")
 
     # Output and Restore Directory
     parser.add_argument('--output', type=str, default='trained_ncsn',
