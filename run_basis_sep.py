@@ -226,6 +226,8 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
     post_processing = post_processing_fn(args)
     g, grad_g = mixing_process(args)
 
+    x_arr = {'x1': [x1.numpy()], 'x2': [x2.numpy()]}
+
     for sigma_idx, sigma in enumerate(sigmas):
         print("Sigma = {} ({} / {})".format(sigma, sigma_idx + 1, len(sigmas)))
         if args.model_type == 'glow':
@@ -243,6 +245,9 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
                                   train_summary_writer=train_summary_writer, step=step * args.T,
                                   data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
 
+        x_arr['x1'].append(x1.numpy())
+        x_arr['x2'].append(x2.numpy())
+
         step += 1
         with train_summary_writer.as_default():
 
@@ -257,7 +262,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
         print("inner loop done")
         print("_" * 100)
 
-    return x1, x2
+    return x1, x2, x_arr
 
 
 def main(args):
@@ -406,8 +411,8 @@ def main(args):
                         data=tf.constant(template), step=0)
     # run BASIS separation
     t0 = time.time()
-    x1, x2 = basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
-                              ckpt1, ckpt2, args, train_summary_writer)
+    x1, x2, x_arr = basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
+                                     ckpt1, ckpt2, args, train_summary_writer)
 
     t1 = time.time()
     print("Duration: {} seconds".format(round(t1 - t0, 3)))
@@ -418,7 +423,10 @@ def main(args):
     mixed = post_processing(mixed.numpy().squeeze())
     gt1 = gt1.numpy().squeeze()
     gt2 = gt2.numpy().squeeze()
+    x_arr['x1'] = post_processing(np.array(x_arr['x1']))
+    x_arr['x2'] = post_processing(np.array(x_arr['x2']))
     np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed, mixed_phase=mixed_phase)
+    np.savez('results_convergence', x1=x_arr['x1'], x2=x_arr['x2'])
 
     # Inverse mel spec
     if args.data_type == "melspec" and args.inverse:
