@@ -62,7 +62,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train Flow model')
+        description='Train Real NVP')
 
     parser.add_argument("--n_epochs", type=int, default=100)
     args = parser.parse_args()
