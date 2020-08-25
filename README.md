@@ -57,7 +57,7 @@ This work is inspired by 3 main articles: the Glow model, the NCSN model and the
 }
 ```
 
-###The NCSN paper
+### The NCSN paper
 ```bib
 @inproceedings{song2019generative,
   title={Generative Modeling by Estimating Gradients of the Data Distribution},
