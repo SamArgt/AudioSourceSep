@@ -259,3 +259,92 @@ def MWF(mixture, sources):
         estimates[i, :] = target_estimate
 
     return estimates
+
+
+def IBM_melspec(mixture, sources, theta=0.5):
+    """Ideal Binary Mask:
+    processing all channels inpependently with the ideal binary mask.
+
+    the mix is send to some source if the spectrogram of that source over that
+    of the mix is greater than theta, when the spectrograms are take as
+    magnitude of STFT raised to the power alpha. Typical parameters involve a
+    ratio of magnitudes (alpha=1) and a majority vote (theta = 0.5)
+
+    Parameters
+    ----
+    mixture: np.ndarray, shape=(nsample, f, t)
+        matrix containing melspectrograms of the mixture
+
+    sources: np.ndarray, shape=(nsrc, nsample, f, t)
+        metrix containing melspectograms if the true sources
+
+    theta: majority vote
+
+
+    Returns
+    ----
+    estimates: np.ndarray, shape=(nsrc, f, t)
+        matric containing estimated sources
+    """
+
+    # small epsilon to avoid dividing by zero
+    eps = np.finfo(np.float).eps
+
+    # perform separation
+    estimates = np.zeros_like(sources)
+    for i, source in enumerate(list(sources)):
+
+        # Create Binary Mask
+        Mask = np.divide(source, (eps + mixture))
+        Mask[np.where(Mask >= theta)] = 1
+        Mask[np.where(Mask < theta)] = 0
+
+        # multiply mask
+        target_estimate = np.multiply(mixture, Mask)
+
+        # set this as the source estimate
+        estimates[i, :] = target_estimate
+
+    return estimates
+
+
+def IRM_melspec(mixture, sources, alpha=2):
+    """Ideal Ratio Mask:
+    processing all channels inpependently with the ideal ratio mask.
+    this is the ratio of spectrograms, where alpha is the exponent to take for
+    spectrograms. usual values are 1 (magnitude) and 2 (power)
+
+    Parameters
+    ----
+    mixture: np.ndarray, shape=(nsample, f, t)
+        matrix containing melspectrograms of the mixture
+
+    sources: np.ndarray, shape=(nsrc, nsample, f, t)
+        metrix containing melspectograms if the true sources
+
+    theta: majority vote
+
+
+    Returns
+    ----
+    estimates: np.ndarray, shape=(nsrc, f, t)
+        matric containing estimated sources
+    """
+    # small epsilon to avoid dividing by zero
+    eps = np.finfo(np.float).eps
+
+    # compute model as the sum of spectrograms
+    model = np.sum(sources, axis=0) + eps
+
+    # now performs separation
+    estimates = np.zeros_like(sources)
+    for i, source in enumerate(list(sources)):
+        # compute soft mask as the ratio between source spectrogram and total
+        Mask = np.divide(source, model)
+
+        # multiply the mix by the mask
+        target_estimate = np.multiply(mixture, Mask)
+
+        estimates[i, :] = target_estimate
+
+    return estimates
