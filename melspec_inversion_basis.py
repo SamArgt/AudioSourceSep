@@ -156,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, default=None,
                         help='output dirpath for savings')
 
-    parser.add_argument("--method", type=str, default="griffin or reuse_phase")
+    parser.add_argument("--method", type=str, default="griffin", help="griffin or reuse_phase")
     parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
     parser.add_argument("--scale", type=str, default="dB")
     parser.add_argument('--save_wav', action='store_true')
