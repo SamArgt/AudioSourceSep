@@ -14,6 +14,11 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+"""
+Script for training a RealNVP Model on MNIST
+"""
+
+
 def main(args):
     event_shape = [28, 28, 1]
     flow = flow_builder.build_realnvp(event_shape, n_filters=32, n_blocks=4, learntop=True, mirrored_strategy=None)

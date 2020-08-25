@@ -19,6 +19,11 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+"""
+Script for fine-tuning a Glow model at different noise level
+"""
+
+
 def train(noise, mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
           manager, manager_issues, train_summary_writer, test_summary_writer):
     # Custom Training Step

@@ -12,6 +12,11 @@ from train_utils import *
 tfk = tf.keras
 
 
+"""
+Script for training a NCSN model on MNIST, CIFAR-10 or custom MelSpectrograms Dataset
+"""
+
+
 def get_uncompiled_model(args):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")

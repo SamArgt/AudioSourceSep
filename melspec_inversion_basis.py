@@ -8,6 +8,12 @@ import datetime
 import sys
 
 
+"""
+Script for inversing estimated melspectograms from BASIS results
+
+"""
+
+
 def complex_array(amplitudes, angles):
     return amplitudes * np.exp(1j * angles)
 

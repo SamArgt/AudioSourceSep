@@ -13,6 +13,11 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+"""
+Miscelleneaous functions for training
+"""
+
+
 def setUp_optimizer(mirrored_strategy, args):
     lr = args.learning_rate
     if mirrored_strategy is not None:

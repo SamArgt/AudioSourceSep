@@ -15,6 +15,11 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+"""
+Script for training a Glow model on MNIST, CIFAR-10 or custom MelSpectrograms Dataset
+"""
+
+
 def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
           manager, manager_issues, train_summary_writer, test_summary_writer):
     # Custom Training Step

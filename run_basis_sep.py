@@ -18,6 +18,12 @@ tfb = tfp.bijectors
 tfk = tf.keras
 
 
+"""
+Script for running the BASIS algorithm with pre-trained Glow or NCSN model
+
+"""
+
+
 def get_uncompiled_model(args, name="ScoreNetwork"):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
