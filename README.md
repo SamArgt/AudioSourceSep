@@ -4,7 +4,6 @@ Statistics MSc Project (2020): Audio Source Separation
 github page: https://samargt.github.io/AudioSourceSep/
 
 STATUS: WORK IN PROGRESS...
-The README file might not be up to date. The references are missing...
 
 ## train_ncsn.py
 Script to train NCSN model 
@@ -42,6 +41,42 @@ Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.
 
 ## ncsn module
 Implement the Score Network and the Langevin Dynamics to generate samples
+
+# References
+This work is inspired by 3 main articles: the Glow model, the NCSN model and the BASIS algorithm
+
+
+### The Glow paper
+```bib
+@inproceedings{kingma2018glow,
+  title={Glow: Generative flow with invertible 1x1 convolutions},
+  author={Kingma, Durk P and Dhariwal, Prafulla},
+  booktitle={Advances in neural information processing systems},
+  pages={10215--10224},
+  year={2018}
+}
+```
+
+###The NCSN paper
+```bib
+@inproceedings{song2019generative,
+  title={Generative Modeling by Estimating Gradients of the Data Distribution},
+  author={Song, Yang and Ermon, Stefano},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={11895--11907},
+  year={2019}
+}
+```
+
+### The BASIS paper
+```bib
+@article{jayaram2020source,
+  title={Source Separation with Deep Generative Priors},
+  author={Jayaram, Vivek and Thickstun, John},
+  journal={arXiv preprint arXiv:2002.07942},
+  year={2020}
+}
+```
 
 
 
