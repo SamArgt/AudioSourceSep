@@ -7,37 +7,27 @@ STATUS: WORK IN PROGRESS...
 The README file might not be up to date. The references are missing...
 
 ## train_ncsn.py
-Train NCSN model using high level Tensorflow API
+Script to train NCSN model 
 
-## train_ncsn_custom_loop.py
-Train NCSN model using custom loop
+## train_glow.py
+Script to train Glow model
 
-### train_flow.py
-
-```bash
-python train_flow.py
-Train Flow model on MNIST or CIFAR10 dataset or MelSpectrograms Data
-
-The script uses Tensorboard to visualize the loss and samples during training. To launch tensorboard:
-```bash
-cd OUTPUT
-tensorboard --logdir tensorboard_logs
-```
 ## train_noisy_glow.py
-
-```bash
-python noise_conditioned_models.py
-```
-Train glow noise conditioned models for the BASIS Separation Algorithm
+Script to fine-tune trained glow model at different noise levels the BASIS Separation Algorithm
 
 ## run_basis_sep.py
-Run the BASIS Separation algorithm on the MNIST or CIFAR10 dataset
+Script to run the BASIS Separation algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
 
 ## pipeline module
+### preprocessing.py
 Set of functions to:
 - load wav files and spectrograms into tensorflow dataset
 - Compute and Save spectrograms from raw audio
 - Save dataset as TFRecords and Load TFRecords as dataset
+
+### dataloader.py
+
+### wav_to_spec.py
 
 ## flow_models module
 Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.bijector.Bijector
@@ -49,6 +39,9 @@ Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.
 - **flow_tfk_layers.py** contains tf.keras.layers.Layer used for the affine coupling layers. Contains also bijectors implemented with keras (used to compare performances with the tfp implementation)
 - **utils.py** : functions such as print_summary to print the trainable variables of the flow models implemented above.
 - flow_tfk_models.py (deprecated) contains a keras Model class used to build a bijector from the bijectors implemented in flow_tfk_layers.py
+
+## ncsn module
+Implement the Score Network and the Langevin Dynamics to generate samples
 
 
 
