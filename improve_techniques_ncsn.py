@@ -12,14 +12,8 @@ def main(args):
     args.fmin = 125
     args.fmax = 7600
     args.sampling_rate = 16000
-    if args.scale == 'power':
-        args.maxval = 100.
-        args.minval = 1e-10
-    elif args.scale == 'dB':
-        args.maxval = 20.
-        args.minval = -100.
-    else:
-        raise ValueError("scale should be 'power' or 'dB'")
+    args.maxval = 20.
+    args.minval = -100.
 
     def map_fn(X):
         X = (X - args.minval) / (args.maxval - args.minval)
