@@ -8,8 +8,11 @@ STATUS: WORK IN PROGRESS...
 ## Data
 
 We used mixture of Piano and Violin.
+
 The wav files can be downloaded from: ...
+
 To Transform the wav files into melspectrograms, use  wav_to_spec.py from the pipeline module. You will need to put the melspectrograms into a folder with sub-folders train/ and test/  in order to train the Generative Models.
+
 You can directly download the melspectrograms from: ...
 
 ## Scripts
