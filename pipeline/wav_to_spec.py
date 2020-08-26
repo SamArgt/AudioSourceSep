@@ -9,7 +9,7 @@ def main(args):
     """
     Walk the input folder
     For each wav file:
-            Save spectrograms as .npy files into output directory
+            Save spectrograms as tfrecords files into output directory
 
     """
     t0 = time.time()
