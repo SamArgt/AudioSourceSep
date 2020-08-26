@@ -37,7 +37,8 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 
 - **train_realnvp.py**: Script to train the Real NVP model on MNIST
 - **train_utils.py**: Utility functions for training
-- **oracle_systems.py**: Oracle Systems for Source Separation (IBM, IRM, MWF)
+- **oracle_systems.py**: Oracle Systems for Source Separation (IBM, IRM, MWF). The Code is taken from https://github.com/sigsep/sigsep-mus-oracle
+- **bss_eval_v4.py**: Evaluation of the Separation. Code Taken from https://github.com/sigsep/bsseval
 - **unittest_flow_models.py**: Test the normalizing flows implementation
 - **unittest_pipeline.py**: Test the pipeline module
 
