@@ -299,8 +299,7 @@ def main(args):
     optimizer = setUp_optimizer(mirrored_strategy, args)
 
     # Set up checkpoint
-    ckpt, manager, manager_issues = setUp_checkpoint(
-        mirrored_strategy, flow, optimizer)
+    ckpt, manager = setUp_checkpoint(mirrored_strategy, flow, optimizer)
 
     # restore
     if args.restore is not None:

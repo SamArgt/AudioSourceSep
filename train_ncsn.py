@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from ncsn import score_network
+from ncsn import score_network, score_network_v2
 from flow_models import utils
 from pipeline import data_loader
 import tensorflow_datasets as tfds
@@ -24,6 +24,20 @@ def get_uncompiled_model(args):
     # outputs
     outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                  args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+    # model
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+
+    return model
+
+
+def get_uncompiled_model_v2(args, **kwargs):
+    sigmas = kwargs['sigmas']
+    # inputs
+    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
+    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
+    # outputs
+    outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
+                                                sigmas, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 
@@ -54,7 +68,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
 
 
 def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, manager, args):
+          train_summary_writer, test_summary_writer, manager, args, **kwargs):
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
     with mirrored_strategy.scope():
         def compute_train_loss(scores, target, sample_weight):
@@ -138,6 +152,10 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             loss = distributed_train_step(batch)
             history_loss_avg.update_state(loss)
             epoch_loss_avg.update_state(loss)
+
+            if args.ema:
+                ema.apply(model.variables)
+
             count_step += 1
 
             # every loss_per_epoch iterations
@@ -176,10 +194,17 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             if args.use_logit:
                 x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
                 x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
+
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
-                                                           32, sigmas_np, return_arr=True)
+                    if args.ema:
+                        ema_manager.save(ema.variables_to_restore())
+                        ema_ckpt.restore(tf.train.latest_checkpoint('./ema_ckpts'))
+                        gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, ema_model,
+                                                               32, sigmas_np, return_arr=True)
+                    else:
+                        gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
+                                                               32, sigmas_np, return_arr=True)
 
             gen_samples = post_processing(gen_samples)
             np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
@@ -206,6 +231,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 def main(args):
 
     sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
+    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
@@ -347,11 +373,24 @@ def main(args):
 
     # Build ScoreNet
     with mirrored_strategy.scope():
-        model = get_uncompiled_model(args)
+        if args.version == 'v2':
+            model = get_uncompiled_model_v2(args, sigmas=sigmas_tf)
+        elif args.version == 'v1':
+            model = get_uncompiled_model(args)
+        else:
+            raise ValueError('version should be "v1" or "v2"')
 
     # Set up checkpoint
-    ckpt, manager, manager_issues = setUp_checkpoint(
-        mirrored_strategy, model, optimizer, max_to_keep=10)
+    ckpt, manager = setUp_checkpoint(mirrored_strategy, model, optimizer, max_to_keep=10)
+
+    # Exponential Moving Average
+    if args.ema:
+        with mirrored_strategy.scope():
+            ema_model = tfk.models.clone_model(model)
+        ema = tf.train.ExponentialMovingAverage(decay=0.999)
+        ema_ckpt, ema_manager, _ = setUp_checkpoint(mirrored_strategy, ema_model, optimizer, path='./ema_ckpts')
+    else:
+        ema, ema_ckpt, ema_manager, ema_model = None, None, None, None
 
     # restore
     if args.restore is not None:
@@ -381,7 +420,8 @@ def main(args):
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, manager, args)
+          train_summary_writer, test_summary_writer, manager, args,
+          ema=ema, ema_ckpt=ema_ckpt, ema_manager=ema_manager, ema_model=ema_model)
     print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
 
     log_file.close()
@@ -395,6 +435,8 @@ if __name__ == '__main__':
                         help="mnist or cifar10 or directory to tfrecords")
     parser.add_argument("--use_logit", action="store_true")
     parser.add_argument("--alpha", type=float, default=1e-6)
+
+    parser.add_argument('--ema', action='store_true', help="Use Exponential Moving Average")
 
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)

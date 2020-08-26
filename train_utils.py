@@ -57,32 +57,20 @@ def setUp_tensorboard():
     return train_summary_writer, test_summary_writer
 
 
-def setUp_checkpoint(mirrored_strategy, model, optimizer, max_to_keep=5, debug=False):
+def setUp_checkpoint(mirrored_strategy, model, optimizer, max_to_keep=5, path='./tf_ckpts'):
 
     # Checkpoint object
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
             ckpt = tf.train.Checkpoint(
                 variables=model.variables, optimizer=optimizer)
-            manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=max_to_keep)
-            # Debugging: if huge jump in the loss, save weights here
-            if debug:
-                manager_issues = tf.train.CheckpointManager(
-                    ckpt, './tf_ckpts_issues', max_to_keep=3)
-            else:
-                manager_issues = None
+            manager = tf.train.CheckpointManager(ckpt, path, max_to_keep=max_to_keep)
     else:
         ckpt = tf.train.Checkpoint(
             variables=model.variables, optimizer=optimizer)
-        manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=max_to_keep)
-        # Debugging: if huge jump in the loss, save weights here
-        if debug:
-            manager_issues = tf.train.CheckpointManager(
-                ckpt, './tf_ckpts_issues', max_to_keep=3)
-        else:
-            manager_issues = None
+        manager = tf.train.CheckpointManager(ckpt, path, max_to_keep=max_to_keep)
 
-    return ckpt, manager, manager_issues
+    return ckpt, manager
 
 
 def plot_to_image(figure):
