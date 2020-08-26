@@ -99,7 +99,11 @@ def load_melspec_ds(train_dirpath, test_dirpath, batch_size=256, shuffle=True, m
         ds_train = ds_train.batch(batch_size, drop_remainder=True)
         ds_test = ds_test.batch(batch_size, drop_remainder=True)
 
-    minibatch = list(ds_train.take(1).as_numpy_iterator())[0]
+    try:
+        minibatch = list(ds_train.take(1).as_numpy_iterator())[0]
+    except IndexError:
+        print("n_train = {}".format(n_train))
+        print(list(ds_train.take(1).as_numpy_iterator()))
 
     if mirrored_strategy is not None:
         ds_train_dist = mirrored_strategy.experimental_distribute_dataset(ds_train)
