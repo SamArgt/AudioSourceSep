@@ -19,6 +19,17 @@ Script to fine-tune trained glow model at different noise levels the BASIS Separ
 ### run_basis_sep.py
 Script to run the BASIS Separation algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
 
+### melspec_inversion_basis.py
+Script to inverse the MelSpectrograms from BASIS back to the time domain
+
+## Miscellaneous
+
+- **train_realnvp.py**: Script to train the Real NVP model on MNIST
+- **train_utils.py**: Utility functions for training
+- **oracle_systems.py**: Oracle Systems for Source Separation (IBM, IRM, MWF)
+- **unittest_flow_models.py**: Test the normalizing flows implementation
+- **unittest_pipeline.py**: Test the pipeline module
+
 ## Modules
 
 ### pipeline module
