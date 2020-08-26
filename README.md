@@ -5,6 +5,13 @@ github page: https://samargt.github.io/AudioSourceSep/
 
 STATUS: WORK IN PROGRESS...
 
+## Data
+
+We used mixture of Piano and Violin.
+The wav files can be downloaded from: ...
+To Transform the wav files into melspectrograms, use  wav_to_spec.py from the pipeline module. You will need to put the melspectrograms into a folder with sub-folders train/ and test/  in order to train the Generative Models.
+You can directly download the melspectrograms from: ...
+
 ## Scripts
 
 ### train_ncsn.py
@@ -20,7 +27,7 @@ Script to fine-tune trained glow model at different noise levels the BASIS Separ
 Script to run the BASIS Separation algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
 
 ### melspec_inversion_basis.py
-Script to inverse the MelSpectrograms from BASIS back to the time domain
+Script to inverse the MelSpectrograms from BASIS back to the time domain. 
 
 ## Miscellaneous
 
@@ -57,7 +64,7 @@ Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.
 ### ncsn module
 implementation of the Score Network and the Langevin Dynamics to generate samples
 
-# References
+## References
 This work is inspired by 3 main articles: the Glow model, the NCSN model and the BASIS algorithm
 
 
