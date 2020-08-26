@@ -7,6 +7,7 @@ def main(args):
 
     ds_train, _, _, _, _ = data_loader.load_melspec_ds(args.dataset + '/train', args.dataset + '/test',
                                                        shuffle=True, batch_size=None, mirrored_strategy=None)
+    print("Data Loaded")
 
     args.fmin = 125
     args.fmax = 7600
@@ -52,3 +53,5 @@ if __name__ == '__main__':
         description='Compute Sigma1 for NCSNv2')
 
     parser.add_argument('dataset', type=str, help='dirpath of the dataset')
+
+    main(args)
