@@ -54,4 +54,6 @@ if __name__ == '__main__':
 
     parser.add_argument('dataset', type=str, help='dirpath of the dataset')
 
+    args = parser.parse_args()
+
     main(args)
