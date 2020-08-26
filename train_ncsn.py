@@ -198,7 +198,8 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
                     if args.ema:
-                        ema_manager.save(ema.variables_to_restore())
+                        ema_savepath = ema_manager.save(ema.variables_to_restore())
+                        print("EMA model saved at {}".format(ema_savepath))
                         ema_ckpt.restore(tf.train.latest_checkpoint('./ema_ckpts'))
                         gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, ema_model,
                                                                32, sigmas_np, return_arr=True)

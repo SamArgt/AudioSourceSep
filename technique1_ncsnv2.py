@@ -27,10 +27,9 @@ def main(args):
     max_euclidean_distances = 0.
     for i in range(len(train_list)):
         for j in range(i + 1, len(train_list)):
-            if i != j:
-                euclidean_distance = tf.norm(train_list[i] - train_list[j], ord='euclidean')
-                if euclidean_distance > max_euclidean_distances:
-                    max_euclidean_distances = euclidean_distance
+            euclidean_distance = tf.norm(train_list[i] - train_list[j], ord='euclidean')
+            if euclidean_distance > max_euclidean_distances:
+                max_euclidean_distances = euclidean_distance
 
         if i % (len(train_list) // 10) == 0:
             print("Finish Step {}. Current max: {}".format(i, max_euclidean_distances))
