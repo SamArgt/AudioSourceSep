@@ -1,6 +1,7 @@
 import tensorflow as tf
 import argparse
 from pipeline import data_loader
+import os
 
 def main(args):
 
@@ -38,6 +39,11 @@ def main(args):
 
         if i % (len(train_list) // 10) == 0:
             print("Finish Step {}. Current max: {}".format(i, max_euclidean_distances))
+
+    print("Max Euclidean Distance: {}".format(max_euclidean_distances))
+
+    with open(os.path.join(args.dataset, 'max_norm.txt'), 'w') as f:
+        f.write("Max Euclidean Distance between all pairs of samples in the training set = {}".format(max_euclidean_distances))
 
 
 if __name__ == '__main__':
