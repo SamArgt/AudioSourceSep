@@ -9,6 +9,7 @@ import time
 import os
 import sys
 from train_utils import *
+import tensorflow_addons as tfa
 tfk = tf.keras
 
 
@@ -44,7 +45,7 @@ def get_uncompiled_model_v2(args, **kwargs):
     return model
 
 
-def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
+def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=5, step_lr=7.87e-7, return_arr=False):
     """
     Anneal Langevin dynamics
     """
@@ -68,14 +69,8 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
 
 
 def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, manager, args, **kwargs):
+          train_summary_writer, test_summary_writer, manager, args):
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
-
-    if args.ema:
-        ema = kwargs['ema']
-        ema_ckpt = kwargs['ema_ckpt']
-        ema_manager = kwargs['ema_manager']
-        ema_model = kwargs['ema_model']
 
     with mirrored_strategy.scope():
         def compute_train_loss(scores, target, sample_weight):
@@ -209,15 +204,9 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
             if mirrored_strategy is not None:
                 with mirrored_strategy.scope():
-                    if args.ema:
-                        ema_savepath = ema_manager.save(ema.variables_to_restore())
-                        print("EMA model saved at {}".format(ema_savepath))
-                        ema_ckpt.restore(tf.train.latest_checkpoint('./ema_ckpts'))
-                        gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, ema_model,
-                                                               32, sigmas_np, return_arr=True)
-                    else:
-                        gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
-                                                               32, sigmas_np, return_arr=True)
+                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
+                                                           32, sigmas_np, n_steps_each=args.T, step_lr=args.step_lr,
+                                                           return_arr=True)
 
             gen_samples = post_processing(gen_samples)
             np.save(os.path.join("generated_samples", "generated_samples_{}".format(epoch)), gen_samples)
@@ -383,6 +372,8 @@ def main(args):
 
     # Set up optimizer
     optimizer = setUp_optimizer(mirrored_strategy, args)
+    if args.ema:
+        optimizer = tfa.optimizers.MovingAverage(optimizer, average_decay=0.999)
 
     # Build ScoreNet
     with mirrored_strategy.scope():
@@ -395,15 +386,6 @@ def main(args):
 
     # Set up checkpoint
     ckpt, manager = setUp_checkpoint(mirrored_strategy, model, optimizer, max_to_keep=10)
-
-    # Exponential Moving Average
-    if args.ema:
-        with mirrored_strategy.scope():
-            ema_model = get_uncompiled_model_v2(args, sigmas=sigmas_tf)
-        ema = tf.train.ExponentialMovingAverage(decay=0.999)
-        ema_ckpt, ema_manager = setUp_checkpoint(mirrored_strategy, ema_model, optimizer, path='./ema_ckpts')
-    else:
-        ema, ema_ckpt, ema_manager, ema_model = None, None, None, None
 
     # restore
     if args.restore is not None:
@@ -433,8 +415,7 @@ def main(args):
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
-          train_summary_writer, test_summary_writer, manager, args,
-          ema=ema, ema_ckpt=ema_ckpt, ema_manager=ema_manager, ema_model=ema_model)
+          train_summary_writer, test_summary_writer, manager, args)
     print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
 
     log_file.close()
@@ -471,6 +452,10 @@ if __name__ == '__main__':
     parser.add_argument("--sigma1", type=float, default=55.)
     parser.add_argument("--sigmaL", type=float, default=0.01)
     parser.add_argument("--num_classes", type=int, default=323)
+
+    # Langevin Dynamics parameters
+    parser.add_argument('--T', type=int, default=5)
+    parser.add_argument('--step_lr', type=float, default=7.87e-6)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=400,
