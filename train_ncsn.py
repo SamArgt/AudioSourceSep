@@ -162,13 +162,6 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
             count_step += 1
 
-            if args.debug:
-                x_mod = tf.random.uniform([32] + args.data_shape)
-                with mirrored_strategy.scope():
-                    gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
-                                                           32, sigmas_np, n_steps_each=args.T, step_lr=args.step_lr,
-                                                           return_arr=True)
-
             # every loss_per_epoch iterations
             if count_step % (args.n_train // (args.batch_size * loss_per_epoch)) == 0:
                 # check nan loss
