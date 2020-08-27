@@ -49,6 +49,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
     """
     Anneal Langevin dynamics
     """
+    print('Sample with Anneal Langevin Dynamics')
     if return_arr:
         x_arr = tf.expand_dims(x_mod, axis=0).numpy()
     for i, sigma in enumerate(sigmas):
@@ -59,7 +60,11 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
             grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
-                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
+                try:
+                    x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
+                except ValueError:
+                    print('x_arr shape ', x_arr.shape)
+                    print('x_mod shape', tf.expand_dims(x_mod, axis=0).numpy().shape)
 
     if return_arr:
         return x_arr
@@ -155,6 +160,11 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             epoch_loss_avg.update_state(loss)
 
             count_step += 1
+
+            with mirrored_strategy.scope():
+                gen_samples = anneal_langevin_dynamics(x_mod, args.data_shape, model,
+                                                       32, sigmas_np, n_steps_each=args.T, step_lr=args.step_lr,
+                                                       return_arr=True)
 
             # every loss_per_epoch iterations
             if count_step % (args.n_train // (args.batch_size * loss_per_epoch)) == 0:
