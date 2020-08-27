@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats, optimize
 import argparse
-from pipeline import data_loader
+from ..pipeline import data_loader
 
 def technique2(D, sigma1, sigmaL):
 
