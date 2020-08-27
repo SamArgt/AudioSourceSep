@@ -189,7 +189,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                 epoch, epoch_loss_avg.result(), test_loss.result()))
 
         # Every 20 epochs: Generate Samples
-        if (epoch % 20) == 0:
+        if (epoch % 20) == 0 and epoch > 0:
             x_mod = tf.random.uniform([32] + args.data_shape)
             if args.use_logit:
                 x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
