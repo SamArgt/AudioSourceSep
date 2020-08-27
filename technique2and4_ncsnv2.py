@@ -46,6 +46,13 @@ def technique4(T, sigmaL, gamma):
 def main(args):
 
     assert args.sigma1 > args.sigmaL
+    try:
+        D = args.D.split(',')
+        D = [int(i) for i in D]
+        D = np.prod(D)
+    except (ValueError, TypeError):
+        print('ERROR: D should be in the form: H,W,C')
+        return 1
 
     # Display parameters
     params_dict = vars(args)
@@ -54,7 +61,6 @@ def main(args):
         template += '{} = {} \n'.format(k, v)
     print(template)
 
-    D = np.prod(args.D)
     gamma = technique2(D, args.sigma1, args.sigmaL)
     technique4(args.T, args.sigmaL, gamma)
 
@@ -64,7 +70,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Compute num_classes and epsilon for NCSNv2')
 
-    parser.add_argument('--D', type=list, help='dimension of the data (list of 3 int)', default=[96, 64, 1])
+    parser.add_argument('--D', type=str, help='Dimensions: H,W,C', default=[96, 64, 1])
     parser.add_argument('--T', type=float, help='number of step at each iteration in the Langevin Dynamics', default=5.)
     parser.add_argument('--sigma1', type=float, default=55.)
     parser.add_argument('--sigmaL', type=float, default=0.01)
