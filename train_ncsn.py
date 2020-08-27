@@ -59,8 +59,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
             grad = model([x_mod, labels], training=True)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
-                if ((s + 1) % (n_steps_each // 10) == 0):
-                    x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
+                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
 
     if return_arr:
         return x_arr
