@@ -1,6 +1,6 @@
 import tensorflow as tf
 import argparse
-from ..pipeline import data_loader
+from  pipeline import data_loader
 import os
 
 def main(args):
