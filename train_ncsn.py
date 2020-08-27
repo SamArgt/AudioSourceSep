@@ -256,7 +256,7 @@ def main(args):
         else:
             dataset = args.dataset
 
-        output_dirname = 'ncsn' + '_' + dataset + '_' + \
+        output_dirname = 'ncsn' + args.version + '_' + dataset + '_' + \
             str(args.n_filters) + '_' + str(args.batch_size)
 
         if args.use_logit:
@@ -437,6 +437,8 @@ if __name__ == '__main__':
     parser.add_argument("--use_logit", action="store_true")
     parser.add_argument("--alpha", type=float, default=1e-6)
 
+    # NCSN V2
+    parser.add_argument('--version', type=str, help='Version of NCSN', default='v2')
     parser.add_argument('--ema', action='store_true', help="Use Exponential Moving Average")
 
     # Spectrograms Parameters
