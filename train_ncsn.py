@@ -389,7 +389,7 @@ def main(args):
         with mirrored_strategy.scope():
             ema_model = get_uncompiled_model_v2(args, sigmas=sigmas_tf)
         ema = tf.train.ExponentialMovingAverage(decay=0.999)
-        ema_ckpt, ema_manager, _ = setUp_checkpoint(mirrored_strategy, ema_model, optimizer, path='./ema_ckpts')
+        ema_ckpt, ema_manager = setUp_checkpoint(mirrored_strategy, ema_model, optimizer, path='./ema_ckpts')
     else:
         ema, ema_ckpt, ema_manager, ema_model = None, None, None, None
 
