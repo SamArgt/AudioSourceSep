@@ -155,14 +155,6 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             history_loss_avg.update_state(loss)
             epoch_loss_avg.update_state(loss)
 
-            if args.ema:
-                var_list = model.variables
-                try:
-                    ema.apply(var_list)
-                except TypeError:
-                    print(type(var_list))
-                    print(var_list[0])
-
             count_step += 1
 
             # every loss_per_epoch iterations
