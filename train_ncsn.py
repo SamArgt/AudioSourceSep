@@ -58,6 +58,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
         for s in range(n_steps_each):
             noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
             grad = model([x_mod, labels], training=True)
+            print('score shape: ', grad.shape)
             x_mod = x_mod + step_size * grad + noise
             if return_arr:
                 try:

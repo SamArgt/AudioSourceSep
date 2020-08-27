@@ -366,7 +366,7 @@ class RefineNetDilatedDeeper(tfk.layers.Layer):
         output = self.end_conv(output)
 
         used_sigmas = tf.gather(self.sigmas, y)
-        output = output / used_sigmas
+        output = output / tf.reshape(used_sigmas, shape=(-1, 1, 1, 1))
 
         return output
 
