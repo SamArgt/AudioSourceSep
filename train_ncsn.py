@@ -387,7 +387,7 @@ def main(args):
     # Exponential Moving Average
     if args.ema:
         with mirrored_strategy.scope():
-            ema_model = tfk.models.clone_model(model)
+            ema_model = get_uncompiled_model_v2(args, sigmas=sigmas_tf)
         ema = tf.train.ExponentialMovingAverage(decay=0.999)
         ema_ckpt, ema_manager, _ = setUp_checkpoint(mirrored_strategy, ema_model, optimizer, path='./ema_ckpts')
     else:
