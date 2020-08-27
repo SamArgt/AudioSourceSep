@@ -70,6 +70,13 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
 def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
           train_summary_writer, test_summary_writer, manager, args, **kwargs):
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
+
+    if args.ema:
+        ema = kwargs['ema']
+        ema_ckpt = kwargs['ema_ckpt']
+        ema_manager = kwargs['ema_manager']
+        ema_model = kwargs['ema_model']
+
     with mirrored_strategy.scope():
         def compute_train_loss(scores, target, sample_weight):
             per_example_loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
