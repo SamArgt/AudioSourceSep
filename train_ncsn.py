@@ -225,7 +225,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
 def main(args):
 
-    sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.num_classes)
+    sigmas_np = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
