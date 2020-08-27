@@ -88,9 +88,10 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
         sigma_idx = tf.random.uniform(shape=(local_batch_size,), maxval=args.num_classes, dtype=tf.int32)
         used_sigma = tf.gather(params=sigmas_tf, indices=sigma_idx)
         used_sigma = tf.reshape(used_sigma, (local_batch_size, 1, 1, 1))
-        perturbed_X = X + tf.random.normal([local_batch_size] + args.data_shape) * used_sigma
+        noise = tf.random.normal([local_batch_size] + args.data_shape) * used_sigma
+        perturbed_X = X + noise
         inputs = {'perturbed_X': perturbed_X, 'sigma_idx': sigma_idx}
-        target = -(perturbed_X - X) / (used_sigma ** 2)
+        target = - 1 / (used_sigma ** 2) * noise
         sample_weight = used_sigma ** 2
         return inputs, target, sample_weight
 
