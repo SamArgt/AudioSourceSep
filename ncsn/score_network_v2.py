@@ -177,9 +177,9 @@ class InstanceNorm2dPlus(tfk.layers.Layer):
         self.num_features = num_features
         self.bias = bias
         self.instance_norm = tfa.layers.InstanceNormalization()
-        self.alpha = tf.Variable(initial_value=tf.random_normal(
+        self.alpha = tf.Variable(initial_value=tf.random.normal(
             (num_features,), mean=0., stddev=0.02), dtype=tf.float32)
-        self.gamma = tf.Variable(initial_value=tf.random_normal(
+        self.gamma = tf.Variable(initial_value=tf.random.normal(
             (num_features,), mean=0., stddev=0.02), dtype=tf.float32)
         if bias:
             self.beta = tf.Variable(initial_value=tf.zeros(

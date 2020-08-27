@@ -454,18 +454,18 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
-    parser.add_argument("--n_filters", type=int, default=64,
+    parser.add_argument("--n_filters", type=int, default=192,
                         help='number of filters in the Score Network')
-    parser.add_argument("--sigma1", type=float, default=1.)
+    parser.add_argument("--sigma1", type=float, default=55.)
     parser.add_argument("--sigmaL", type=float, default=0.01)
-    parser.add_argument("--num_classes", type=int, default=10)
+    parser.add_argument("--num_classes", type=int, default=323)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=400,
                         help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adam", help="adam or adamax")
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--clipvalue', type=float, default=None,
                         help="Clip value for Adam optimizer")
