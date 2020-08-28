@@ -144,6 +144,7 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
     is_nan_loss = False
     loss_per_epoch = 5
     count_step = optimizer.iterations.numpy()
+    min_test_loss = 1e6
     for epoch in range(args.n_epochs):
         epoch_loss_avg.reset_states()
 
@@ -188,6 +189,12 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
             print("Epoch {:03d}: Train Loss: {:.3f} Val Loss: {:03f}".format(
                 epoch, epoch_loss_avg.result(), test_loss.result()))
 
+            # If minimum validation loss: save model
+            if test_loss.result() < min_test_loss:
+                min_test_loss = test_loss
+                save_path = manager.save()
+                print("Model Saved at {}".format(save_path))
+
         # Every 20 epochs: Generate Samples
         if (epoch % 20) == 0 and epoch > 0:
             x_mod = tf.random.uniform([32] + args.data_shape)
@@ -214,11 +221,6 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                     tf.summary.text(name="display error",
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
-
-        # 10 times during training: Save model
-        if (args.n_epochs < 10) or (epoch % (args.n_epochs // 10) == 0):
-            save_path = manager.save()
-            print("Model Saved at {}".format(save_path))
 
     save_path = manager.save()
     print("Model Saved at {}".format(save_path))
