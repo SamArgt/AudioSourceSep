@@ -195,8 +195,8 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                 save_path = manager.save()
                 print("Model Saved at {}".format(save_path))
 
-        # Every 20 epochs: Generate Samples
-        if (epoch % 20) == 0 and epoch > 0:
+        # Every 100 epochs: Generate Samples
+        if (epoch % 100) == 0 and epoch > 0:
             x_mod = tf.random.uniform([32] + args.data_shape)
             if args.use_logit:
                 x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
@@ -446,11 +446,11 @@ if __name__ == '__main__':
                         help='number of filters in the Score Network')
     parser.add_argument("--sigma1", type=float, default=55.)
     parser.add_argument("--sigmaL", type=float, default=0.01)
-    parser.add_argument("--num_classes", type=int, default=323)
+    parser.add_argument("--num_classes", type=int, default=325)
 
     # Langevin Dynamics parameters
     parser.add_argument('--T', type=int, default=5)
-    parser.add_argument('--step_lr', type=float, default=7.87e-6)
+    parser.add_argument('--step_lr', type=float, default=5.5e-6)
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=400,
