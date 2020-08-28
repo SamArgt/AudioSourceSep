@@ -190,7 +190,8 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                 epoch, epoch_loss_avg.result(), test_loss.result()))
 
             # If minimum validation loss: save model
-            if test_loss.result() < min_test_loss:
+            cur_test_loss = test_loss.result()
+            if cur_test_loss < min_test_loss:
                 min_test_loss = test_loss
                 save_path = manager.save()
                 print("Model Saved at {}".format(save_path))
