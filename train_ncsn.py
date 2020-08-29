@@ -362,8 +362,8 @@ def main(args):
                         data=tf.constant(template), step=0)
 
     # Train
-    total_trainable_variables = total_trainable_variables(model)
-    print("Total Trainable Variables: ", total_trainable_variables)
+    tot_trainable_variables = total_trainable_variables(model)
+    print("Total Trainable Variables: ", tot_trainable_variables)
     t0 = time.time()
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
           train_summary_writer, test_summary_writer, manager, args)
