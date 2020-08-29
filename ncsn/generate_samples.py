@@ -22,6 +22,13 @@ def setUp_optimizer(args):
 
 def main(args):
 
+    if args.config is not None:
+        new_args = get_config(args.config)
+        new_args.dataset = args.dataset
+        new_args.filename = args.filename
+        new_args.RESTORE = args.RESTORE
+        args = new_args
+
     # Print parameters
     print("SAMPLING PARAMETERS")
     params_dict = vars(args)
@@ -31,18 +38,8 @@ def main(args):
     print(template)
     print("_" * 100)
 
-    sigmas_np = np.exp(np.linspace(np.log(args.sigma1),
-                                   np.log(args.sigmaL),
-                                   num=args.num_classes))
-
+    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, num_classes)
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
-
-    if args.config is not None:
-        new_args = get_config(args.config)
-        new_args.dataset = args.dataset
-        new_args.filename = args.filename
-        new_args.RESTORE = args.RESTORE
-        args = new_args
 
     # data paramaters
     if args.dataset == 'mnist':

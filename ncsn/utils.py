@@ -5,6 +5,14 @@ from . import score_network_v2
 tfk = tf.keras
 
 
+def get_sigmas(sigma1, sigmaL, num_classes):
+
+    sigmas = np.exp(np.linspace(sigma1,
+                                sigmaL,
+                                num=num_classes))
+    return sigmas
+
+
 def get_uncompiled_model(args):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
@@ -18,8 +26,7 @@ def get_uncompiled_model(args):
     return model
 
 
-def get_uncompiled_model_v2(args, **kwargs):
-    sigmas = kwargs['sigmas']
+def get_uncompiled_model_v2(args, sigmas):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")

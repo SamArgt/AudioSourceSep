@@ -277,7 +277,6 @@ def main(args):
     # noise conditionned models
     abs_restore_path_1 = os.path.abspath(args.RESTORE1)
     abs_restore_path_2 = os.path.abspath(args.RESTORE2)
-    sigmas = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
 
     if args.config is not None:
         new_args = get_config(args.config)
@@ -286,6 +285,8 @@ def main(args):
         new_args.output = args.output
         new_args.song_dir = args.song_dir
         args = new_args
+
+    sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
 
     if args.model_type == "glow":
         args.restore_dict_1 = {sigma: os.path.join(abs_restore_path_1, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}

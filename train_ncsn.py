@@ -178,9 +178,6 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
 
 def main(args):
 
-    sigmas_np = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
-    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
-
     if args.config is not None:
         new_args = get_config(args.config)
         new_args.dataset = args.dataset
@@ -188,6 +185,9 @@ def main(args):
         new_args.debug = args.debug
         new_args.restore = args.restore
         args = new_args
+
+    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
+    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
     if args.dataset == 'mnist':
