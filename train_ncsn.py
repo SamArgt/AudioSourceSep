@@ -2,8 +2,6 @@ import numpy as np
 import tensorflow as tf
 from ncsn.utils import *
 from flow_models.utils import *
-from ncsn.score_network import get_uncompiled_model
-from ncsn.score_network_v2 import get_uncompiled_model_v2
 from datasets import data_loader
 import tensorflow_datasets as tfds
 import argparse
