@@ -7,7 +7,7 @@ tfk = tf.keras
 
 def get_sigmas(sigma1, sigmaL, num_classes):
 
-    sigmas = np.exp(np.linspace(sigma1, sigmaL, num=num_classes))
+    sigmas = np.exp(np.linspace(np.log(sigma1), np.log(sigmaL), num=num_classes))
     return sigmas
 
 
