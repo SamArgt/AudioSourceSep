@@ -253,9 +253,6 @@ class RefineNetDilated(tfk.layers.Layer):
     def call(self, inputs, training=True):
         x, y = inputs[0], inputs[1]
 
-        if not self.logit_transform:
-            x = 2. * x - 1.
-
         res_input = self.begin_conv(x)
 
         layer1 = self._compute_cond_module(self.res1, res_input, training=training)
