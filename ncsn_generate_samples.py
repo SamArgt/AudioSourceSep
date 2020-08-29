@@ -130,6 +130,9 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="melspec",
                         help="mnist or cifar10 or directory to tfrecords")
 
+    parser.add_argument("--n_samples", type=int, default=32,
+                        help="Number of samples to generate")
+
     # config
     parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
 
@@ -138,8 +141,6 @@ if __name__ == '__main__':
     parser.add_argument('--ema', action='store_true', help="Use Exponential Moving Average")
 
     # Sampling parameters
-    parser.add_argument("--n_samples", type=int, default=32,
-                        help="Number of samples to generate")
     parser.add_argument("--T", type=int, default=100,
                         help="Number of step for each sigma in the Langevin Dynamics")
     parser.add_argument("--step_lr", type=float, default=2e-5,
