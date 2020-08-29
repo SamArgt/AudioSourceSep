@@ -97,7 +97,7 @@ def main(args):
         x_mod = (1. - 2 * args.alpha) * x_mod + args.alpha
         x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
     x_arr = anneal_langevin_dynamics(x_mod, args.data_shape, model, args.n_samples, sigmas_np,
-                                     n_steps_each=args.n_steps_each, step_lr=args.step_lr,
+                                     n_steps_each=args.T, step_lr=args.step_lr,
                                      return_arr=args.return_last_point)
     x_arr = post_processing(x_arr)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     # Sampling parameters
     parser.add_argument("--n_samples", type=int, default=32,
                         help="Number of samples to generate")
-    parser.add_argument("--n_steps_each", type=int, default=100,
+    parser.add_argument("--T", type=int, default=100,
                         help="Number of step for each sigma in the Langevin Dynamics")
     parser.add_argument("--step_lr", type=float, default=2e-5,
                         help="learning rate in the lengevin dynamics")
