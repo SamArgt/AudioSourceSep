@@ -1,9 +1,11 @@
 import numpy as np
 import tensorflow as tf
 import score_network
+import score_network_v2
 import argparse
 import time
 import os
+import tensorflow_addons as tfa
 tfk = tf.keras
 
 
@@ -14,6 +16,20 @@ def get_uncompiled_model(args):
     # outputs
     outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                  args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
+    # model
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+
+    return model
+
+
+def get_uncompiled_model_v2(args, **kwargs):
+    sigmas = kwargs['sigmas']
+    # inputs
+    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
+    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
+    # outputs
+    outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
+                                                sigmas, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 
@@ -80,9 +96,9 @@ def main(args):
     print(template)
     print("_" * 100)
 
-    sigmas_np = np.logspace(np.log(args.sigma1) / np.log(10),
-                            np.log(args.sigmaL) / np.log(10),
-                            num=args.num_classes)
+    sigmas_np = np.exp(np.linspace(np.log(args.sigma1),
+                                   np.log(args.sigmaL),
+                                   num=args.num_classes))
 
     # data paramaters
     if args.dataset == 'mnist':
@@ -121,8 +137,13 @@ def main(args):
 
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
-    model = get_uncompiled_model(args)
+    if args.version == 'v2':
+        model = get_uncompiled_model_v2(args)
+    else:
+        model = get_uncompiled_model(args)
     optimizer = setUp_optimizer(args)
+    if args.ema:
+        optimizer = tfa.optimizers.MovingAverage(optimizer, average_decay=0.999)
     ckpt = tf.train.Checkpoint(variables=model.variables, optimizer=optimizer)
     status = ckpt.restore(abs_restore_path)
     status.assert_existing_objects_matched()
@@ -157,6 +178,10 @@ if __name__ == '__main__':
 
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights')
+
+    # NCSNv2
+    parser.add_argument('--version', type=str, help='Version of NCSN', default='v2')
+    parser.add_argument('--ema', action='store_true', help="Use Exponential Moving Average")
 
     # Sampling parameters
     parser.add_argument("--n_samples", type=int, default=32,
