@@ -5,7 +5,7 @@ version: "v1"
 ema: False
 
 height: 96
-width: 94
+width: 64
 scale: "dB"
 
 n_filters: 192
