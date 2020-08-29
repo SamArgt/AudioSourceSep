@@ -37,6 +37,13 @@ def main(args):
 
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
+    if args.config is not None:
+        new_args = get_config(args.config)
+        new_args.dataset = args.dataset
+        new_args.filename = args.filename
+        new_args.RESTORE = args.RESTORE
+        args = new_args
+
     # data paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
@@ -117,6 +124,17 @@ if __name__ == '__main__':
     parser.add_argument('RESTORE', type=str, default=None,
                         help='directory of saved weights')
 
+    # Output and Restore Directory
+    parser.add_argument('--filename', type=str, default=None,
+                        help='filename for savings')
+
+    # dataset parameters
+    parser.add_argument('--dataset', type=str, default="melspec",
+                        help="mnist or cifar10 or directory to tfrecords")
+
+    # config
+    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
+
     # NCSNv2
     parser.add_argument('--version', type=str, help='Version of NCSN', default='v2')
     parser.add_argument('--ema', action='store_true', help="Use Exponential Moving Average")
@@ -131,18 +149,11 @@ if __name__ == '__main__':
     parser.add_argument("--return_last_point", action="store_false",
                         help="Either to return array of every steps or just the last point")
 
-    # dataset parameters
-    parser.add_argument('--dataset', type=str, default="melspec",
-                        help="mnist or cifar10 or directory to tfrecords")
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--scale", type=str, default='dB',
                         help="power or dB")
-
-    # Output and Restore Directory
-    parser.add_argument('--filename', type=str, default=None,
-                        help='filename for savings')
 
     # Model hyperparameters
     parser.add_argument("--n_filters", type=int, default=192,

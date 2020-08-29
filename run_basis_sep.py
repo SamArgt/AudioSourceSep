@@ -13,6 +13,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import soundfile as sf
+from train_utils import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -278,6 +279,14 @@ def main(args):
     abs_restore_path_2 = os.path.abspath(args.RESTORE2)
     sigmas = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
 
+    if args.config is not None:
+        new_args = get_config(args.config)
+        new_args.dataset = args.dataset
+        new_args.debug = args.debug
+        new_args.output = args.output
+        new_args.song_dir = args.song_dir
+        args = new_args
+
     if args.model_type == "glow":
         args.restore_dict_1 = {sigma: os.path.join(abs_restore_path_1, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
         args.restore_dict_2 = {sigma: os.path.join(abs_restore_path_2, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
@@ -469,6 +478,9 @@ if __name__ == "__main__":
     parser.add_argument("--song_dir", type=str, default=None,
                         help="song directory path to separate: should contain\
                         3 songs: mix.wav, piano.wav and violin.wav")
+
+    # config
+    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
 
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
