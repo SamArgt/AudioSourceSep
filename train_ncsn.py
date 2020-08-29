@@ -454,7 +454,7 @@ if __name__ == '__main__':
     parser.add_argument('--step_lr', type=float, default=5.5e-6)
 
     # Optimization parameters
-    parser.add_argument('--n_epochs', type=int, default=400,
+    parser.add_argument('--n_epochs', type=int, default=300,
                         help='number of epochs to train')
     parser.add_argument("--optimizer", type=str,
                         default="adam", help="adam or adamax")
