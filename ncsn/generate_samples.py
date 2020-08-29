@@ -100,6 +100,8 @@ def main(args):
                                    np.log(args.sigmaL),
                                    num=args.num_classes))
 
+    sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
+
     # data paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
@@ -138,7 +140,7 @@ def main(args):
     # Restore Model
     abs_restore_path = os.path.abspath(args.RESTORE)
     if args.version == 'v2':
-        model = get_uncompiled_model_v2(args)
+        model = get_uncompiled_model_v2(args, sigmas=sigmas_tf)
     else:
         model = get_uncompiled_model(args)
     optimizer = setUp_optimizer(args)
