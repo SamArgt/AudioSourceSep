@@ -1,74 +1,11 @@
 import numpy as np
 import tensorflow as tf
-import score_network
-import score_network_v2
+from .utils import *
 import argparse
 import time
 import os
 import tensorflow_addons as tfa
 tfk = tf.keras
-
-
-def get_uncompiled_model(args):
-    # inputs
-    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-    # outputs
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
-    # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
-
-    return model
-
-
-def get_uncompiled_model_v2(args, **kwargs):
-    sigmas = kwargs['sigmas']
-    # inputs
-    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-    # outputs
-    outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
-                                                sigmas, args.use_logit)([perturbed_X, sigma_idx])
-    # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
-
-    return model
-
-
-class CustomLoss(tfk.losses.Loss):
-    def __init__(self):
-        super(CustomLoss, self).__init__()
-
-    def __call__(self, scores, target, sample_weight=None):
-        loss = (1 / 2.) * tf.reduce_sum(tf.square(scores - target), axis=[1, 2, 3])
-        if sample_weight is not None:
-            return tf.reduce_mean(loss * sample_weight)
-        else:
-            return tf.reduce_mean(loss)
-
-
-def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):
-    """
-    Anneal Langevin dynamics
-    """
-    if return_arr:
-        x_arr = tf.expand_dims(x_mod, axis=0).numpy()
-    for i, sigma in enumerate(sigmas):
-        print("Sigma = {} ({} / {})".format(sigma, i + 1, len(sigmas)))
-        labels = tf.ones(n_samples, dtype=tf.int32) * i
-        step_size = tf.constant(step_lr * (sigma / sigmas[-1]) ** 2, dtype=tf.float32)
-        for s in range(n_steps_each):
-            noise = tf.random.normal([n_samples] + list(data_shape)) * tf.math.sqrt(step_size * 2)
-            grad = model([x_mod, labels], training=True)
-            x_mod = x_mod + step_size * grad + noise
-            if return_arr:
-                x_arr = np.concatenate((x_arr, tf.expand_dims(x_mod, axis=0).numpy()), axis=0)
-
-    if return_arr:
-        return x_arr
-    else:
-        return x_mod.numpy()
 
 
 def setUp_optimizer(args):
