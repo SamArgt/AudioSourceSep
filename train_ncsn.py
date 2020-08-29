@@ -231,6 +231,14 @@ def main(args):
     sigmas_np = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
+    if args.config is not None:
+        new_args = get_config(args.config)
+        new_args.dataset = args.dataset
+        new_args.output = args.output
+        new_args.debug = args.debug
+        new_args.restore = args.restore
+        args = new_args
+
     # miscellaneous paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
@@ -423,6 +431,17 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
+
+    # Output and Restore Directory
+    parser.add_argument('--output', type=str, default='trained_ncsn',
+                        help='output dirpath for savings')
+    parser.add_argument('--restore', type=str, default=None,
+                        help='directory of saved weights (optional)')
+    parser.add_argument('--debug', action="store_true")
+
+    # config
+    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
+
     parser.add_argument("--use_logit", action="store_true")
     parser.add_argument("--alpha", type=float, default=1e-6)
 
@@ -434,13 +453,6 @@ if __name__ == '__main__':
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--scale", type=str, default="dB", help="power or dB")
-
-    # Output and Restore Directory
-    parser.add_argument('--output', type=str, default='trained_ncsn',
-                        help='output dirpath for savings')
-    parser.add_argument('--restore', type=str, default=None,
-                        help='directory of saved weights (optional)')
-    parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
     parser.add_argument("--n_filters", type=int, default=192,
@@ -460,10 +472,6 @@ if __name__ == '__main__':
                         default="adam", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--clipvalue', type=float, default=None,
-                        help="Clip value for Adam optimizer")
-    parser.add_argument('--clipnorm', type=float, default=None,
-                        help='Clip norm for Adam optimize')
 
     args = parser.parse_args()
 

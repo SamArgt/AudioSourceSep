@@ -30,7 +30,7 @@ def get_uncompiled_model(args, name="ScoreNetwork"):
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
     # outputs
     outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.n_sigmas, args.use_logit)([perturbed_X, sigma_idx])
+                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
 
@@ -276,7 +276,7 @@ def main(args):
     # noise conditionned models
     abs_restore_path_1 = os.path.abspath(args.RESTORE1)
     abs_restore_path_2 = os.path.abspath(args.RESTORE2)
-    sigmas = np.logspace(np.log(args.sigma1) / np.log(10), np.log(args.sigmaL) / np.log(10), num=args.n_sigmas)
+    sigmas = np.exp(np.linspace(np.log(args.sigma1), np.log(args.sigmaL), num=args.num_classes))
 
     if args.model_type == "glow":
         args.restore_dict_1 = {sigma: os.path.join(abs_restore_path_1, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
@@ -482,7 +482,7 @@ if __name__ == "__main__":
                         help="number of mixture to separate")
     parser.add_argument('--sigma1', type=float, default=1.0)
     parser.add_argument('--sigmaL', type=float, default=0.01)
-    parser.add_argument('--n_sigmas', type=float, default=10)
+    parser.add_argument('--num_classes', type=float, default=10)
 
     # Model type
     parser.add_argument("--model_type", type=str, default="ncsn")
@@ -506,10 +506,6 @@ if __name__ == "__main__":
                         default="adamax", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--clipvalue', type=float, default=None,
-                        help="Clip value for Adam optimizer")
-    parser.add_argument('--clipnorm', type=float, default=None,
-                        help='Clip norm for Adam optimize')
 
     # preprocessing parameters
     parser.add_argument('--use_logit', action="store_true",

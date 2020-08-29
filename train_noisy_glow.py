@@ -281,7 +281,7 @@ def main(args):
         args.instrument = os.path.split(args.dataset)[-1]
 
     # Fine tune model serially from sigmaL to sigma1
-    sigmas = np.logspace(np.log(args.sigmaL) / np.log(10), np.log(args.sigma1) / np.log(10), num=args.n_sigmas)
+    sigmas = np.exp(np.linspace(np.log(args.sigmaL), np.log(args.sigma1), num=args.num_classes))
     abs_restore_path = os.path.abspath(args.RESTORE)
 
     if args.output == 'noise_conditioned_flows':
@@ -448,7 +448,7 @@ if __name__ == '__main__':
     # Noise parameters
     parser.add_argument('--sigma1', type=float, default=1.0)
     parser.add_argument('--sigmaL', type=float, default=0.01)
-    parser.add_argument('--n_sigmas', type=int, default=10)
+    parser.add_argument('--num_classes', type=int, default=10)
 
     # Spectrograms Parameters
     parser.add_argument("--height", type=int, default=96)
@@ -474,10 +474,6 @@ if __name__ == '__main__':
                         default="adamax", help="adam or adamax")
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--clipvalue', type=float, default=None,
-                        help="Clip value for Adam optimizer")
-    parser.add_argument('--clipnorm', type=float, default=None,
-                        help='Clip norm for Adam optimize')
 
     # preprocessing parameters
     parser.add_argument('--use_logit', action="store_true",

@@ -1,0 +1,22 @@
+use_logit: False
+alpha: False
+
+version: "v1"
+ema: False
+
+height: 96
+width: 94
+scale: "dB"
+
+n_filters: 192
+sigma1: 1.
+sigmaL: 0.01
+num_classes: 10
+
+T: 100
+step_lr: 0.00002
+
+n_epochs: 400
+optimizer: "adam"
+batch_size: 32
+learning_rate: 0.001

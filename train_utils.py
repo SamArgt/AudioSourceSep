@@ -8,6 +8,8 @@ import io
 import os
 import librosa
 from librosa.display import specshow
+import argparse
+import yaml
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -23,14 +25,14 @@ def setUp_optimizer(mirrored_strategy, args):
     if mirrored_strategy is not None:
         with mirrored_strategy.scope():
             if args.optimizer == 'adam':
-                optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+                optimizer = tfk.optimizers.Adam(lr=lr)
             elif args.optimizer == 'adamax':
                 optimizer = tfk.optimizers.Adamax(lr=lr)
             else:
                 raise ValueError("optimizer argument should be adam or adamax")
     else:
         if args.optimizer == 'adam':
-            optimizer = tfk.optimizers.Adam(lr=lr, clipvalue=args.clipvalue, clipnorm=args.clipnorm)
+            optimizer = tfk.optimizers.Adam(lr=lr)
         elif args.optimizer == 'adamax':
             optimizer = tfk.optimizers.Adamax(lr=lr)
         else:
@@ -107,3 +109,23 @@ def image_grid(sample, data_shape, data_type="image", **kwargs):
                      ax=ax, x_axis='off', y_axis='off', fmin=kwargs["fmin"], fmax=kwargs["fmax"])
 
     return f
+
+
+def get_config(config_path):
+
+    with open(config_path, 'r') as f:
+        config = yaml.load(f)
+    new_config = dict2namespace(config)
+
+    return new_config
+
+
+def dict2namespace(config):
+    namespace = argparse.Namespace()
+    for key, value in config.items():
+        if isinstance(value, dict):
+            new_value = dict2namespace(value)
+        else:
+            new_value = value
+        setattr(namespace, key, new_value)
+    return namespace
