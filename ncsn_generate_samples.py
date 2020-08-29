@@ -39,7 +39,7 @@ def main(args):
     print(template)
     print("_" * 100)
 
-    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, num_classes)
+    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # data paramaters
