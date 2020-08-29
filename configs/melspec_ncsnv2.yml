@@ -14,7 +14,7 @@ sigmaL: 0.01
 num_classes: 323
 
 T: 5
-step_lr: 0.0000055
+step_lr: 0.0000079
 
 n_epochs: 300
 optimizer: "adam"

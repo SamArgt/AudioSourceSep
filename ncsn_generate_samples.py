@@ -100,7 +100,7 @@ def main(args):
         x_mod = tf.math.log(x_mod) - tf.math.log(1. - x_mod)
     x_arr = anneal_langevin_dynamics(x_mod, args.data_shape, model, args.n_samples, sigmas_np,
                                      n_steps_each=args.T, step_lr=args.step_lr,
-                                     return_arr=False)
+                                     return_arr=True)
     x_arr = post_processing(x_arr)
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
