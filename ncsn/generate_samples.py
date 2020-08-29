@@ -162,8 +162,9 @@ def main(args):
     print("Done. Duration: {} seconds".format(round(time.time() - t0, 2)))
     print("Shape: {}".format(x_arr.shape))
     if args.filename is None:
-        args.filename = os.path.split(abs_restore_path)[0]
-        args.filename = os.path.join(args.filename, "generated_samples")
+        args.filename, ckpt_name = os.path.split(abs_restore_path)
+
+        args.filename = os.path.join(args.filename, "generated_samples" + '_' + ckpt_name)
     try:
         np.save(args.filename, x_arr)
         print("Generated Samples saved at {}".format(args.filename + ".npy"))
