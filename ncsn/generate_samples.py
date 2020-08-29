@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from .utils import *
+from utils import *
 import argparse
 import time
 import os
