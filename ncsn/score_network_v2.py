@@ -4,7 +4,7 @@ tfk = tf.keras
 
 
 class CRPBlock(tfk.layers.Layer):
-    def __init__(self, features, n_stages, act=tf.nn.relu, name='CRPBlock'):
+    def __init__(self, features, n_stages, act=tf.nn.elu, name='CRPBlock'):
         super(CRPBlock, self).__init__(name=name)
         self.convs = []
         for i in range(n_stages):
@@ -26,7 +26,7 @@ class CRPBlock(tfk.layers.Layer):
 
 
 class RCUBlock(tfk.layers.Layer):
-    def __init__(self, features, n_blocks, n_stages, act=tf.nn.relu, name="RCUBlock"):
+    def __init__(self, features, n_blocks, n_stages, act=tf.nn.elu, name="RCUBlock"):
         super(RCUBlock, self).__init__(name=name)
         self.convs = []
         for i in range(n_blocks):
@@ -70,7 +70,7 @@ class MSFBlock(tfk.layers.Layer):
 
 
 class RefineBlock(tfk.layers.Layer):
-    def __init__(self, in_planes, features, act=tf.nn.relu, start=False, end=False, name="RefineBlock"):
+    def __init__(self, in_planes, features, act=tf.nn.elu, start=False, end=False, name="RefineBlock"):
         super(RefineBlock, self).__init__(name=name)
         assert isinstance(in_planes, tuple) or isinstance(in_planes, list)
         self.n_blocks = n_blocks = len(in_planes)
