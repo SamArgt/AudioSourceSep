@@ -28,6 +28,7 @@ def main(args):
         new_args.dataset = args.dataset
         new_args.filename = args.filename
         new_args.RESTORE = args.RESTORE
+        new_args.n_samples = args.n_samples
         args = new_args
 
     # Print parameters
