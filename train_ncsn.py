@@ -364,6 +364,7 @@ def main(args):
     # Train
     total_trainable_variables = utils.total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
+    t0 = time.time()
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
           train_summary_writer, test_summary_writer, manager, args)
     print("Training time: ", np.round(time.time() - t0, 2), ' seconds')
