@@ -44,7 +44,7 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 
 ## Modules
 
-### pipeline module
+### Datasets module
 #### preprocessing.py
 Set of functions to:
 - load wav files and spectrograms into tensorflow dataset

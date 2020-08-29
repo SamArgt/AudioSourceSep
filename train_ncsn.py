@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from ncsn.utils import *
 from flow_models import utils
-from pipeline import data_loader
+from datasets import data_loader
 import tensorflow_datasets as tfds
 import argparse
 import time

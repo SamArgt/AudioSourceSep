@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from flow_models import flow_builder
 from ncsn import score_network
-from pipeline import data_loader
+from datasets import data_loader
 from librosa.display import specshow
 import librosa
 import train_utils

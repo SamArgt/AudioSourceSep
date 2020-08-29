@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import stats, optimize
 import argparse
+import data_loader
 
 def technique2(D, sigma1, sigmaL):
 
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Compute num_classes and epsilon for NCSNv2')
 
-    parser.add_argument('--D', type=str, help='Dimensions: H,W,C', default=[96, 64, 1])
+    parser.add_argument('--D', type=str, help='Dimensions: H,W,C', default="96,64,1")
     parser.add_argument('--T', type=float, help='number of step at each iteration in the Langevin Dynamics', default=5.)
     parser.add_argument('--sigma1', type=float, default=55.)
     parser.add_argument('--sigmaL', type=float, default=0.01)

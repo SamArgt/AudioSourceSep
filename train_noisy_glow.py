@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from flow_models import utils
 from flow_models import flow_builder
-from pipeline import data_loader
+from datasets import data_loader
 import argparse
 import os
 import shutil
