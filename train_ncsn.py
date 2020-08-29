@@ -282,10 +282,6 @@ def main(args):
     BATCH_SIZE = args.batch_size
 
     def map_fn(X):
-        if args.data_type == 'image':
-            X = tf.cast(X['image'], tf.float32)
-            if args.dataset == 'mnist':
-                X = tf.pad(X, tf.constant([[2, 2], [2, 2], [0, 0]]))
         X = (X - args.minval) / (args.maxval - args.minval)
         if args.use_logit:
             X = X * (1. - 2 * args.alpha) + args.alpha
