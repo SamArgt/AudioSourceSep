@@ -17,6 +17,7 @@ tfk = tf.keras
 Script for training a NCSN model on MNIST, CIFAR-10 or custom MelSpectrograms Dataset
 """
 
+
 def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
           train_summary_writer, test_summary_writer, manager, args):
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
