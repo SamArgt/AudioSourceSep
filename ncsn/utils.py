@@ -1,7 +1,5 @@
 import tensorflow as tf
 import numpy as np
-from . import score_network
-from . import score_network_v2
 tfk = tf.keras
 
 
@@ -9,32 +7,6 @@ def get_sigmas(sigma1, sigmaL, num_classes):
 
     sigmas = np.exp(np.linspace(np.log(sigma1), np.log(sigmaL), num=num_classes))
     return sigmas
-
-
-def get_uncompiled_model(args):
-    # inputs
-    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-    # outputs
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
-    # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
-
-    return model
-
-
-def get_uncompiled_model_v2(args, sigmas):
-    # inputs
-    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-    # outputs
-    outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
-                                                sigmas, args.use_logit)([perturbed_X, sigma_idx])
-    # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
-
-    return model
 
 
 def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False):

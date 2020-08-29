@@ -1,7 +1,9 @@
 import numpy as np
 import tensorflow as tf
 from ncsn.utils import *
-from flow_models import utils
+from flow_models.utils import *
+from ncsn.score_network import get_uncompiled_model
+from ncsn.score_network_v2 import get_uncompiled_model_v2
 from datasets import data_loader
 import tensorflow_datasets as tfds
 import argparse
@@ -362,7 +364,7 @@ def main(args):
                         data=tf.constant(template), step=0)
 
     # Train
-    total_trainable_variables = utils.total_trainable_variables(model)
+    total_trainable_variables = total_trainable_variables(model)
     print("Total Trainable Variables: ", total_trainable_variables)
     t0 = time.time()
     train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, distr_eval_dataset,
