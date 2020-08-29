@@ -37,8 +37,8 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 
 - **train_realnvp.py**: Script to train the Real NVP model on MNIST
 - **train_utils.py**: Utility functions for training
-- **oracle_systems.py**: Oracle Systems for Source Separation (IBM, IRM, MWF). The Code is taken from https://github.com/sigsep/sigsep-mus-oracle
-- **bss_eval_v4.py**: Evaluation of the Separation. Code Taken from https://github.com/sigsep/bsseval
+- **oracle_systems.py**: Oracle Systems for Source Separation (IBM, IRM, MWF). The Code is taken from https://github.com/sigsep/sigsep-mus-oracle and adapted to fit our use.
+- **bss_eval_v4.py**: Evaluation of the Separation. Code Taken from https://github.com/sigsep/bsseval and adapted to fit our use.
 - **unittest_flow_models.py**: Test the normalizing flows implementation
 - **unittest_pipeline.py**: Test the pipeline module
 
@@ -67,7 +67,8 @@ Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.
 - flow_tfk_models.py (deprecated) contains a keras Model class used to build a bijector from the bijectors implemented in flow_tfk_layers.py
 
 ### ncsn module
-implementation of the Score Network and the Langevin Dynamics to generate samples
+implementation of the Score Network and the Langevin Dynamics to generate samples.
+Code taken from https://github.com/ermongroup/ncsn and https://github.com/ermongroup/ncsnv2 and adapted to Tensorflow 2
 
 ## References
 This work is inspired by 3 main articles: the Glow model, the NCSN model and the BASIS algorithm
