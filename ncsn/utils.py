@@ -51,8 +51,8 @@ def get_uncompiled_model_v2(args, sigmas):
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
     # outputs
-    outputs = score_network_v2.RefineNetDilatedDeeper(args.data_shape, args.n_filters,
-                                                      sigmas, args.use_logit)([perturbed_X, sigma_idx])
+    outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
+                                                sigmas, args.use_logit)([perturbed_X, sigma_idx])
     # model
     model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
 

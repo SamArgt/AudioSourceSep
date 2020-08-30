@@ -8,7 +8,7 @@ height: 96
 width: 64
 scale: "dB"
 
-n_filters: 128
+n_filters: 96
 sigma1: 55.
 sigmaL: 0.01
 num_classes: 323
