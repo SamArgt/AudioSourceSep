@@ -139,13 +139,13 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
     raw_audio = [mix_raw_concat, piano_raw_concat, violin_raw_concat]
 
     mel_mix, mel_piano, mel_violin = [], [], []
-    mixed_phase = []
+    stft_mixture = []
     for k in range(n_extract):
         mix_extract, piano_extract, violin_extract = mix_raw[k], piano_raw[k], violin_raw[k]
 
         stft_mix = librosa.stft(mix_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                 window='hann', center=True, dtype=None, pad_mode='reflect')
-        mixed_phase.append(np.angle(stft_mix))
+        stft_mixture.append(np.angle(stft_mix))
         stft_piano = librosa.stft(piano_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                   window='hann', center=True, dtype=None, pad_mode='reflect')
         stft_violin = librosa.stft(violin_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
@@ -177,4 +177,4 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
                 tf.cast(tf.expand_dims(mel_piano, axis=-1), tf.float32),
                 tf.cast(tf.expand_dims(mel_violin, axis=-1), tf.float32)]
 
-    return mel_spec, raw_audio, np.array(mixed_phase)
+    return mel_spec, raw_audio, stft_mixture

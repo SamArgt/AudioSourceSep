@@ -19,23 +19,77 @@ def complex_array(amplitudes, angles):
 
 
 def griffin_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512, scale="dB"):
-    def griffin_inversion(melspec):
-        if args.scale == "dB":
-            melspec = librosa.db_to_power(melspec)
-        return librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length)
+    def griffin_inversion(melspecs):
+        """
+        Inverse melspectrograms with griffin algorithm
+
+        Parameters:
+            melspecs: list of ndarray
+
+        Returns:
+            i_melspecs: list of ndarray
+        """
+
+        i_melspecs = []
+        for melspec in melspecs:
+            if args.scale == "dB":
+                melspec = librosa.db_to_power(melspec)
+            i_melspecs.append(librosa.feature.inverse.mel_to_audio(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length))
+        return i_melspecs
     return griffin_inversion
 
 
-def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512, scale="dB"):
+def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512, scale="dB", wiener_filter=False):
     def stft_inversion(inputs):
-        melspec, phase = inputs
-        if args.scale == "dB":
-            melspec = librosa.db_to_power(melspec)
-        mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
-        stft_complex = complex_array(mel_stft, phase)
-        istft = librosa.istft(stft_complex, hop_length=hop_length)
-        return istft
+        """
+        Inverse melspectrograms by reusing the phase
+
+        Parameters:
+            inputs: tuple
+                (melspecs, stft_mixture)
+                melspecs: list of ndarray
+                    MelSpectrograms to invert
+                stft_mixture: ndarray
+                    STFT of the mixture to separate
+
+        Returns:
+            i_melspecs: list of ndarray
+        """
+        melspecs, stft_mixture = inputs
+        i_melspecs = []
+        for melspec in melspecs:
+            if args.scale == "dB":
+                melspec = librosa.db_to_power(melspec)
+            mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+            if wiener_filter and len(melspecs) > 1:
+                stft_complex = single_channel_wiener_filter(mel_stft, stft_mixture)
+            else:
+                stft_complex = complex_array(mel_stft, np.angle(stft_mixture))
+            istft = librosa.istft(stft_complex, hop_length=hop_length)
+            i_melspecs.append(istft)
+        return i_melspecs
     return stft_inversion
+
+
+def single_channel_wiener_filter(psd_sources, stft_mixture):
+    """
+    Perform Single Channel Wiener Filtering
+
+    Parameters:
+        psd_sources: list of ndarray
+            power spectrograms of the estimated sources
+        stft_mixture: nd.array, complex
+            stft of the mixture
+
+    Return:
+        ndarray
+            stft of the estimated sources
+    """
+    psd_sources = np.array(psd_sources)
+    assert len(psd_sources.shape) == 4
+    assert psd_sources.shape[0] > 1
+    return (psd_sources / np.mean(psd_sources, axis=0)) * stft_mixture
+
 
 def main(args):
 
@@ -49,9 +103,7 @@ def main(args):
     basis_results = np.load('results.npz')
 
     if args.output is None:
-        args.output = 'inverse' + '_' + args.method
-    if args.inverse_concat:
-        args.output += '_inverse_concat'
+        args.output = 'inverse' + '_' + args.algorithm + '_' + args.method
     try:
         os.mkdir(args.output)
         os.chdir(args.output)
@@ -66,9 +118,9 @@ def main(args):
     gt1 = basis_results['gt1']
     gt2 = basis_results['gt2']
     mix = basis_results['mixed']
-    mixed_phase = basis_results['mixed_phase']
+    stft_mixture = basis_results['stft_mixture']
 
-    assert len(x1.shape) == len(x2.shape) == len(mixed_phase.shape) == 3, (x1.shape, x2.shape, mixed_phase.shape)
+    assert len(x1.shape) == len(x2.shape) == len(stft_mixture.shape) == 3, (x1.shape, x2.shape, stft_mixture.shape)
     if (args.scale != 'dB') and (args.scale != 'power'):
         raise ValueError('scale should be dB or power')
 
@@ -79,44 +131,42 @@ def main(args):
         template += '{} = {} \n\t '.format(k, v)
     print(template)
 
-    if args.inverse_concat:
+    if args.method == 'whole':
         x1 = np.concatenate(list(x1), axis=-1)
         x2 = np.concatenate(list(x2), axis=-1)
         mix = np.concatenate(list(mix), axis=-1)
         gt1 = np.concatenate(list(gt1), axis=-1)
         gt2 = np.concatenate(list(gt2), axis=-1)
-        mixed_phase = np.concatenate(list(mixed_phase), axis=-1)
+        stft_mixture = np.concatenate(list(stft_mixture), axis=-1)
 
-    if args.method == 'griffin':
+    if args.algorithm == 'griffin':
         inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
-    elif args.method == 'reuse_phase':
+    elif args.algorithm == 'reuse_phase':
         inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
-        if args.inverse_concat:
-            x1 = [x1, mixed_phase]
-            x2 = [x2, mixed_phase]
-            gt1 = [gt1, mixed_phase]
-            gt2 = [gt2, mixed_phase]
-            mix = [mix, mixed_phase]
+        if args.method == 'whole':
+            x1 = [x1, stft_mixture]
+            x2 = [x2, stft_mixture]
+            gt1 = [gt1, stft_mixture]
+            gt2 = [gt2, stft_mixture]
+            mix = [mix, stft_mixture]
         else:
-            x1 = [[x1[i], mixed_phase[i]] for i in range(len(x1))]
-            x2 = [[x2[i], mixed_phase[i]] for i in range(len(x2))]
-            gt1 = [[gt1[i], mixed_phase[i]] for i in range(len(gt1))]
-            gt2 = [[gt2[i], mixed_phase[i]] for i in range(len(gt2))]
-            mix = [[mix[i], mixed_phase[i]] for i in range(len(mix))]
+            x1 = [[x1[i], stft_mixture[i]] for i in range(len(x1))]
+            x2 = [[x2[i], stft_mixture[i]] for i in range(len(x2))]
+            gt1 = [[gt1[i], stft_mixture[i]] for i in range(len(gt1))]
+            gt2 = [[gt2[i], stft_mixture[i]] for i in range(len(gt2))]
+            mix = [[mix[i], stft_mixture[i]] for i in range(len(mix))]
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
     t_init = time.time()
-    if args.inverse_concat:
-        x1_inv = inversion_fn(x1)
-        x2_inv = inversion_fn(x2)
-        gt1_inv = inversion_fn(gt1)
-        gt2_inv = inversion_fn(gt2)
-        mix_inv = inversion_fn(mix)
+    if args.method == 'whole':
+        x1_inv, x2_inv = inversion_fn([x1, x2])
+        gt1_inv, gt2_inv = inversion_fn([gt1, gt2])
+        mix_inv = inversion_fn([mix])[0]
     else:
-        inv_spec = {'x1': [], 'x2': [], 'gt1': [], 'gt2': [], 'mix': []}
+        inv_spec = {'sources': [], 'ground_truth': [], 'mix': []}
         for i in range(len(x1)):
-            spec_to_invert = {'x1': x1[i], 'x2': x2[i], 'gt1': gt1[i], 'gt2': gt2[i], 'mix': mix[i]}
+            spec_to_invert = {'sources': [x1[i], x2[i]], 'ground_truth': [gt1[i], gt2[i]], 'mix': [mix[i]]}
             print("Start inversing Spectrograms {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
             for n, spec in spec_to_invert.items():
                 t0 = time.time()
@@ -124,23 +174,22 @@ def main(args):
                 inv_spec[n].append(spec_inv_i)
                 print("Done melspec {} in {} seconds".format(n, round(time.time() - t0, 3)))
 
-        x1_inv = np.concatenate(inv_spec['x1'], axis=-1)
-        x2_inv = np.concatenate(inv_spec['x2'], axis=-1)
-        gt1_inv = np.concatenate(inv_spec['gt1'], axis=-1)
-        gt2_inv = np.concatenate(inv_spec['gt2'], axis=-1)
-        mix_inv = np.concatenate(inv_spec['mix'], axis=-1)
+        x1_inv = np.concatenate(np.array(inv_spec['sources'])[:, 0], axis=-1)
+        x2_inv = np.concatenate(np.array(inv_spec['sources'])[:, 1], axis=-1)
+        gt1_inv = np.concatenate(np.array(inv_spec['ground_truth'])[:, 0], axis=-1)
+        gt2_inv = np.concatenate(np.array(inv_spec['ground_truth'])[:, 1], axis=-1)
+        mix_inv = np.concatenate(np.array(inv_spec['mix'])[:, 0], axis=-1)
 
     t1 = time.time()
     duration = round(t1 - t_init, 4)
 
     print("Inversion duration: {} seconds".format(duration))
 
-    if args.save_wav:
-        sf.write("sep1.wav", data=x1_inv, samplerate=sr)
-        sf.write("sep2.wav", data=x2_inv, samplerate=sr)
-        sf.write("gt1.wav", data=gt1_inv, samplerate=sr)
-        sf.write("gt2.wav", data=gt2_inv, samplerate=sr)
-        sf.write("mix.wav", data=mix_inv, samplerate=sr)
+    sf.write("sep1.wav", data=x1_inv, samplerate=sr)
+    sf.write("sep2.wav", data=x2_inv, samplerate=sr)
+    sf.write("gt1.wav", data=gt1_inv, samplerate=sr)
+    sf.write("gt2.wav", data=gt2_inv, samplerate=sr)
+    sf.write("mix.wav", data=mix_inv, samplerate=sr)
 
     np.savez("inverse_spectrograms", x1_audio=x1_inv, x2_audio=x2_inv, gt1_audio=gt1_inv, gt2_audio=gt2_inv, mix_audio=mix_inv)
 
@@ -156,10 +205,10 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, default=None,
                         help='output dirpath for savings')
 
-    parser.add_argument("--method", type=str, default="griffin", help="griffin or reuse_phase")
-    parser.add_argument('--inverse_concat', action="store_true", help="Inverse the concatenation of the Spectrograms")
+    parser.add_argument("--algorithm", type=str, default="griffin", help="griffin or reuse_phase")
+    parser.add_argument('--method', type=str, help="frame or whole", default="frame")
     parser.add_argument("--scale", type=str, default="dB")
-    parser.add_argument('--save_wav', action='store_true')
+    parser.add_argument('--wiener_filter', action="store_true", help="Use Single Channel Wiener Filter as post-processing")
 
     parser.add_argument("--debug", action="store_true")
 

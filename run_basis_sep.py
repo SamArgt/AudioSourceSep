@@ -132,13 +132,19 @@ def mixing_process(args):
             def g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * tf.math.log(10.) / 20., axis=0) - tf.math.log(float(K)))
+                # if sum in amplitude:
+                # mixing = (20. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * tf.math.log(10.) / 20., axis=0) - tf.math.log(float(K)))
+                # if sum in power:
+                mixing = (10. / tf.math.log(10.)) * (tf.math.reduce_logsumexp(sources * tf.math.log(10.) / 10., axis=0) - tf.math.log(float(K)))
                 return mixing
 
             def grad_g(*sources):
                 K = len(sources)
                 sources = tf.stack(sources, axis=0)
-                grad_sources = tf.nn.softmax(sources * tf.math.log(10.) / 20., axis=0)
+                # if sum in amplitude:
+                # grad_sources = tf.nn.softmax(sources * tf.math.log(10.) / 20., axis=0)
+                # if sum in power:
+                grad_sources = tf.nn.softmax(sources * tf.math.log(10.) / 10., axis=0)
                 return tf.unstack(grad_sources, K, axis=0)
 
     return g, grad_g
@@ -272,6 +278,7 @@ def main(args):
         new_args.debug = args.debug
         new_args.output = args.output
         new_args.song_dir = args.song_dir
+        new_args.inverse = args.inverse
         args = new_args
 
     sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
@@ -344,7 +351,7 @@ def main(args):
                        'hop_length': 512, 'n_mels': 96, 'sr': 16000}
         duration = 2.04 * args.n_mixed
 
-        mel_spec, raw_audio, mixed_phase = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
+        mel_spec, raw_audio, stft_mixture = data_loader.get_song_extract(mix_path, piano_path, violin_path, duration, **spec_params)
 
         mixed, gt1, gt2 = mel_spec[0], mel_spec[1], mel_spec[2]
         # preprocessing mixture
@@ -433,7 +440,7 @@ def main(args):
     gt2 = gt2.numpy().squeeze()
     x_arr['x1'] = post_processing(np.array(x_arr['x1']))
     x_arr['x2'] = post_processing(np.array(x_arr['x2']))
-    np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed, mixed_phase=mixed_phase)
+    np.savez('results', x1=x1, x2=x2, gt1=gt1.squeeze(), gt2=gt2.squeeze(), mixed=mixed, stft_mixture=stft_mixture)
     np.savez('results_convergence', x1=x_arr['x1'], x2=x_arr['x2'])
 
     # Inverse mel spec
@@ -471,6 +478,8 @@ if __name__ == "__main__":
     parser.add_argument("--song_dir", type=str, default=None,
                         help="song directory path to separate: should contain\
                         3 songs: mix.wav, piano.wav and violin.wav")
+
+    parser.add_argument("--inverse", action="store_true", help="Inverse spectrograms")
 
     # config
     parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
@@ -517,8 +526,6 @@ if __name__ == "__main__":
                         help="Either to use logit function to preprocess the data")
     parser.add_argument('--alpha', type=float, default=10**(-6),
                         help='preprocessing parameter: x = logit(alpha + (1 - alpha) * z / 256.). Only if use logit')
-
-    parser.add_argument("--inverse", action="store_true", help="Inverse spectrograms")
 
     args = parser.parse_args()
 
