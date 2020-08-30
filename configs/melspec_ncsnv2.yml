@@ -16,7 +16,7 @@ num_classes: 325
 T: 5
 step_lr: 0.000005
 
-n_epochs: 300
+n_epochs: 500
 optimizer: "adam"
 batch_size: 32
-learning_rate: 0.00008
+learning_rate: 0.00006

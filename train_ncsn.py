@@ -146,8 +146,8 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                 save_path = manager.save()
                 print("Model Saved at {}".format(save_path))
 
-        # Every 50 epochs: Generate Samples
-        if ((epoch % 50) == 0 and epoch > 0) or (epoch == args.n_epochs - 1):
+        # Every 100 epochs: Generate Samples
+        if ((epoch % 100) == 0 and epoch > 0) or (epoch == args.n_epochs - 1):
             x_mod = tf.random.uniform([32] + args.data_shape)
             if args.use_logit:
                 x_mod = (1. - 2. * args.alpha) * x_mod + args.alpha
