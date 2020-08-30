@@ -33,7 +33,7 @@ def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_step
         return x_mod.numpy()
 
 
-def get_uncompiled_model(args):
+def get_uncompiled_model(args, name="ScoreNetwork"):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
@@ -41,12 +41,12 @@ def get_uncompiled_model(args):
     outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
                                                  args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
     # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
 
     return model
 
 
-def get_uncompiled_model_v2(args, sigmas):
+def get_uncompiled_model_v2(args, sigmas, name="ScoreNetworkv2"):
     # inputs
     perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
     sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
@@ -54,6 +54,6 @@ def get_uncompiled_model_v2(args, sigmas):
     outputs = score_network_v2.RefineNetDilated(args.data_shape, args.n_filters,
                                                 sigmas, args.use_logit)([perturbed_X, sigma_idx])
     # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name="ScoreNetwork")
+    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
 
     return model
