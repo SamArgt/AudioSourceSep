@@ -3,8 +3,6 @@ Statistics MSc Project (2020): Audio Source Separation
 
 github page: https://samargt.github.io/AudioSourceSep/
 
-STATUS: WORK IN PROGRESS...
-
 ## Data
 
 We used mixture of Piano and Violin.
@@ -76,7 +74,7 @@ Code taken from https://github.com/ermongroup/ncsn and https://github.com/ermong
 This work is inspired by 3 main articles: the Glow model, the NCSN model and the BASIS algorithm
 
 
-### The Glow paper
+#### Glow
 ```bib
 @inproceedings{kingma2018glow,
   title={Glow: Generative flow with invertible 1x1 convolutions},
@@ -87,7 +85,7 @@ This work is inspired by 3 main articles: the Glow model, the NCSN model and the
 }
 ```
 
-### The NCSN paper
+#### NCSN
 ```bib
 @inproceedings{song2019generative,
   title={Generative Modeling by Estimating Gradients of the Data Distribution},
@@ -98,7 +96,7 @@ This work is inspired by 3 main articles: the Glow model, the NCSN model and the
 }
 ```
 
-### The BASIS paper
+#### BASIS
 ```bib
 @article{jayaram2020source,
   title={Source Separation with Deep Generative Priors},
