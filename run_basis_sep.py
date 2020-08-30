@@ -205,15 +205,10 @@ def basis_inner_loop(mixed, x1, x2, model1, model2, sigma_idx, sigmas, g, grad_g
                 print("grad_mixing_x1 stats: mean = {} \t std = {} \t min = {} \t max = {}".format(grad_mixing_x2_np.mean(), grad_mixing_x2_np.std(),
                                                                                                    grad_mixing_x2_np.min(), grad_mixing_x2_np.max()))
             with train_summary_writer.as_default():
-
-                if n_mixed > 5:
-                    n_display = 5
-                else:
-                    n_display = n_mixed
                 sample_mix = post_processing(mixed.numpy())
                 sample_x1 = post_processing(x1.numpy())
                 sample_x2 = post_processing(x2.numpy())
-                figure = image_grid(n_display, sample_mix, sample_x1, sample_x2, separation=True, **kwargs)
+                figure = image_grid(5, sample_mix, sample_x1, sample_x2, separation=True, **kwargs)
                 tf.summary.image("Components", train_utils.plot_to_image(figure),
                                  max_outputs=50, step=step + t)
 
@@ -280,6 +275,7 @@ def main(args):
         new_args.song_dir = args.song_dir
         new_args.inverse = args.inverse
         new_args.model_type = args.model_type
+        new_args.n_mixed = args.n_mixed
         args = new_args
 
     sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
@@ -376,13 +372,8 @@ def main(args):
 
     # display originals
     with train_summary_writer.as_default():
-        if args.n_mixed > 5:
-            args.n_display = 5
-        else:
-            args.n_display = args.n_mixed
-
         mix_post_process = post_processing(mixed.numpy())
-        figure = image_grid(args.n_display, gt1.numpy(), gt2.numpy(), mix_post_process, data_type=args.data_type,
+        figure = image_grid(5, gt1.numpy(), gt2.numpy(), mix_post_process, data_type=args.data_type,
                             separation=False, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
         tf.summary.image("Originals", train_utils.plot_to_image(figure), max_outputs=1, step=0)
         if args.data_type == "melspec":
@@ -483,6 +474,9 @@ if __name__ == "__main__":
     parser.add_argument("--inverse", action="store_true", help="Inverse spectrograms")
     # Model type
     parser.add_argument("--model_type", type=str, default="ncsn")
+
+    parser.add_argument('--n_mixed', type=int, default=30,
+                        help="number of mixture to separate")
     # config
     parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
 
@@ -494,13 +488,10 @@ if __name__ == "__main__":
     # BASIS hyperparameters
     parser.add_argument("--T", type=int, default=100,
                         help="Number of iteration in the inner loop")
-    parser.add_argument('--n_mixed', type=int, default=10,
-                        help="number of mixture to separate")
+
     parser.add_argument('--sigma1', type=float, default=1.0)
     parser.add_argument('--sigmaL', type=float, default=0.01)
     parser.add_argument('--num_classes', type=float, default=10)
-
-    
 
     # Model hyperparameters
     parser.add_argument('--n_filters', type=int, default=192,
