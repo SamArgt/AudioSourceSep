@@ -25,10 +25,10 @@ Script to train NCSN model
 Script to train Glow model
 
 ### train_noisy_glow.py
-Script to fine-tune trained glow model at different noise levels the BASIS Separation Algorithm
+Script to fine-tune trained glow model at different noise levels for the BASIS Algorithm
 
 ### run_basis_sep.py
-Script to run the BASIS Separation algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
+Script to run the BASIS algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
 
 ### melspec_inversion_basis.py
 Script to inverse the MelSpectrograms from BASIS back to the time domain. 
@@ -41,6 +41,8 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 - **bss_eval_v4.py**: Evaluation of the Separation. Code Taken from https://github.com/sigsep/bsseval and adapted to fit our use.
 - **unittest_flow_models.py**: Test the normalizing flows implementation
 - **unittest_pipeline.py**: Test the pipeline module
+- **technique1_ncsnv2.py**: Compute sigma1 according to technique 1 in http://arxiv.org/abs/2006.09011
+- **technique2and4_ncsnv2.py**: Compute num_classes and epsilon according to techniques 2 and 4 in http://arxiv.org/abs/2006.09011
 
 ## Modules
 
@@ -67,7 +69,7 @@ Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.
 - flow_tfk_models.py (deprecated) contains a keras Model class used to build a bijector from the bijectors implemented in flow_tfk_layers.py
 
 ### ncsn module
-implementation of the Score Network and the Langevin Dynamics to generate samples.
+Implementation of the Score Network and the Langevin Dynamics to generate samples.
 Code taken from https://github.com/ermongroup/ncsn and https://github.com/ermongroup/ncsnv2 and adapted to Tensorflow 2
 
 ## References
