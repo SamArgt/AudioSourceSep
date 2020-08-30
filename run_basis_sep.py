@@ -250,7 +250,7 @@ def basis_outer_loop(mixed, x1, x2, model1, model2, optimizer, sigmas,
             sample_mix = post_processing(mixed.numpy())
             sample_x1 = post_processing(x1.numpy())
             sample_x2 = post_processing(x2.numpy())
-            figure = image_grid(args.n_display, sample_mix, sample_x1, sample_x2, separation=True,
+            figure = image_grid(5, sample_mix, sample_x1, sample_x2, separation=True,
                                 data_type=args.data_type, fmin=args.fmin, fmax=args.fmax, sampling_rate=args.sampling_rate)
             tf.summary.image("Components", train_utils.plot_to_image(figure),
                              max_outputs=50, step=step * args.T)

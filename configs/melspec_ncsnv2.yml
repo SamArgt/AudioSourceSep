@@ -2,21 +2,21 @@ use_logit: False
 alpha: False
 
 version: "v2"
-ema: True
+ema: False
 
 height: 96
 width: 64
 scale: "dB"
 
-n_filters: 96
+n_filters: 128
 sigma1: 55.
 sigmaL: 0.01
-num_classes: 323
+num_classes: 325
 
 T: 5
-step_lr: 0.0000079
+step_lr: 0.000005
 
 n_epochs: 300
 optimizer: "adam"
 batch_size: 32
-learning_rate: 0.0001
+learning_rate: 0.00008

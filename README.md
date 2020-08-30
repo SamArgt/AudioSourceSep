@@ -10,7 +10,7 @@ We used mixture of Piano and Violin.
 To Transform wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
 You will need to save the melspectrograms as tfrecords files and organize them into train/ and test/ folders in order to train the Generative Models.
 
-## Scripts
+## Running Experiments
 
 ### train_ncsn.py
 Script to train NCSN model 
@@ -40,7 +40,7 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 
 ## Modules
 
-### Datasets module
+### datasets module
 #### preprocessing.py
 Set of functions to:
 - load wav files and spectrograms into tensorflow dataset
@@ -54,7 +54,7 @@ Set of functions to load datasets ready for training or for separation.
 Script to convert raw audio (wav files) into Melspectrograms.
 
 ### flow_models module
-Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.bijector.Bijector
+Implement Normalizing flow models.
 
 - **flow_builder** : build flow using Transformed Distribution from Tensorflow-probability
 - **flow_glow.py** : implementation of the Glow model
