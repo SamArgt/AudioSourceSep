@@ -2,7 +2,7 @@ use_logit: False
 alpha: False
 
 version: "v2"
-ema: False
+ema: True
 
 height: 96
 width: 64
