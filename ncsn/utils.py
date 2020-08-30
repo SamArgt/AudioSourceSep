@@ -4,9 +4,13 @@ from . import score_network, score_network_v2
 tfk = tf.keras
 
 
-def get_sigmas(sigma1, sigmaL, num_classes):
-
-    sigmas = np.exp(np.linspace(np.log(sigma1), np.log(sigmaL), num=num_classes))
+def get_sigmas(sigma1, sigmaL, num_classes, progression='geometric'):
+    if progression == 'geometric':
+        sigmas = np.exp(np.linspace(np.log(sigma1), np.log(sigmaL), num=num_classes))
+    elif progression == 'logarithmic':
+        sigmas = np.logspace(np.log(sigma1) / np.log(10), np.log(sigmaL) / np.log(10), num=num_classes)
+    else:
+        raise ValueError('progression should be geometric or logarithmic')
     return sigmas
 
 

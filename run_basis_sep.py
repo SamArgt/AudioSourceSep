@@ -278,7 +278,7 @@ def main(args):
         new_args.n_mixed = args.n_mixed
         args = new_args
 
-    sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
+    sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes, progression=args.progression)
 
     if args.model_type == "glow":
         args.restore_dict_1 = {sigma: os.path.join(abs_restore_path_1, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
@@ -492,6 +492,7 @@ if __name__ == "__main__":
     parser.add_argument('--sigma1', type=float, default=1.0)
     parser.add_argument('--sigmaL', type=float, default=0.01)
     parser.add_argument('--num_classes', type=float, default=10)
+    parser.add_argument('--progression', type=str, default='geometric')
 
     # Model hyperparameters
     parser.add_argument('--n_filters', type=int, default=192,

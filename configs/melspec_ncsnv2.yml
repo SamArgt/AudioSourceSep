@@ -12,6 +12,7 @@ n_filters: 128
 sigma1: 55.
 sigmaL: 0.01
 num_classes: 325
+progression: 'geometric'
 
 T: 5
 step_lr: 0.000005

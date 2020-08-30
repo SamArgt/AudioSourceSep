@@ -12,6 +12,8 @@ n_filters: 192
 sigma1: 1.
 sigmaL: 0.01
 num_classes: 10
+progression: 'logarithmic'
+
 
 T: 100
 step_lr: 0.00002

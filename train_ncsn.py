@@ -189,7 +189,7 @@ def main(args):
         new_args.restore = args.restore
         args = new_args
 
-    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
+    sigmas_np = get_sigmas(args.sigma1, args.sigmaL, args.num_classes, progression=args.progression)
     sigmas_tf = tf.constant(sigmas_np, dtype=tf.float32)
 
     # miscellaneous paramaters
@@ -414,6 +414,7 @@ if __name__ == '__main__':
     # Langevin Dynamics parameters
     parser.add_argument('--T', type=int, default=5)
     parser.add_argument('--step_lr', type=float, default=5.5e-6)
+    parser.add_argument('--progression', type=str, default='geometric')
 
     # Optimization parameters
     parser.add_argument('--n_epochs', type=int, default=300,
