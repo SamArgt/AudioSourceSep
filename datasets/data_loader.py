@@ -145,7 +145,7 @@ def get_song_extract(mix_path, piano_path, violin_path, duration, **kwargs):
 
         stft_mix = librosa.stft(mix_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                 window='hann', center=True, dtype=None, pad_mode='reflect')
-        stft_mixture.append(np.angle(stft_mix))
+        stft_mixture.append(stft_mix)
         stft_piano = librosa.stft(piano_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
                                   window='hann', center=True, dtype=None, pad_mode='reflect')
         stft_violin = librosa.stft(violin_extract, n_fft=n_fft, hop_length=hop_length, win_length=None,
