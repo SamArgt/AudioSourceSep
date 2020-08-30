@@ -14,6 +14,7 @@ import sys
 import matplotlib.pyplot as plt
 import soundfile as sf
 from train_utils import *
+from ncsn.utils import *
 tfd = tfp.distributions
 tfb = tfp.bijectors
 tfk = tf.keras
@@ -23,19 +24,6 @@ tfk = tf.keras
 Script for running the BASIS algorithm with pre-trained Glow or NCSN model
 
 """
-
-
-def get_uncompiled_model(args, name="ScoreNetwork"):
-    # inputs
-    perturbed_X = tfk.Input(shape=args.data_shape, dtype=tf.float32, name="perturbed_X")
-    sigma_idx = tfk.Input(shape=[], dtype=tf.int32, name="sigma_idx")
-    # outputs
-    outputs = score_network.CondRefineNetDilated(args.data_shape, args.n_filters,
-                                                 args.num_classes, args.use_logit)([perturbed_X, sigma_idx])
-    # model
-    model = tfk.Model(inputs=[perturbed_X, sigma_idx], outputs=outputs, name=name)
-
-    return model
 
 
 def restore_checkpoint(ckpt, restore_path, model, optimizer, latest=True):
@@ -369,9 +357,9 @@ def main(args):
         x2 = tf.random.uniform(mixed.shape, dtype=tf.float32)
 
         # wiener filter:
-        p_x1, p_x2 = tf.unstack(tf.nn.softmax(tf.stack([x1, x2], axis=0), axis=0), axis=0)
-        x1 = p_x1 * mixed
-        x2 = p_x2 * mixed
+        # p_x1, p_x2 = tf.unstack(tf.nn.softmax(tf.stack([x1, x2], axis=0), axis=0), axis=0)
+        # x1 = p_x1 * mixed
+        # x2 = p_x2 * mixed
 
     print("Data Loaded in {} seconds".format(round(time.time() - t0, 3)))
 
@@ -402,8 +390,12 @@ def main(args):
         model2 = flow_builder.build_glow(minibatch, L=args.L, K=args.K, n_filters=args.n_filters, dataset=args.dataset,
                                          l2_reg=args.l2_reg, mirrored_strategy=None)
     else:
-        model1 = get_uncompiled_model(args, name="model1")
-        model2 = get_uncompiled_model(args, name="model2")
+        if args.version == 'v1':
+            model1 = get_uncompiled_model(args, name="model1")
+            model2 = get_uncompiled_model(args, name="model2")
+        else:
+            model1 = get_uncompiled_model_v2(args, sigmas=sigmas, name="model1")
+            model2 = get_uncompiled_model_v2(args, sigmas=sigmas, name="model2")
 
     # set up optimizer
     optimizer = train_utils.setUp_optimizer(None, args)
