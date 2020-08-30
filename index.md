@@ -63,7 +63,8 @@
 
 ## BASIS Separation
 
-Beethoven Sonata 1: 1st minute
+Beethoven Sonata 1: 1st minute. The generative model used is the NCSN.
+The original sources and mixture are obtained with the same method as the estimated sources, i.e., inversion of the melspectrograms.
 
 ### Originals Sources
 
@@ -80,7 +81,7 @@ Beethoven Sonata 1: 1st minute
 <source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/mix.wav" type="audio/wav">
 </audio>
 
-### Separation
+### Estimated Sources
 
 <audio controls preload="auto">
 <source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/sep1.wav" type="audio/wav">
