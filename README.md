@@ -7,12 +7,8 @@ github page: https://samargt.github.io/AudioSourceSep/
 
 We used mixture of Piano and Violin.
 
-The wav files can be downloaded from: ...
-
-To Transform the wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
+To Transform wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
 You will need to save the melspectrograms as tfrecords files and organize them into train/ and test/ folders in order to train the Generative Models.
-
-You can directly download the melspectrograms in an organized folder from: ...
 
 ## Scripts
 
@@ -52,8 +48,10 @@ Set of functions to:
 - Save dataset as TFRecords and Load TFRecords as dataset
 
 #### dataloader.py
+Set of functions to load datasets ready for training or for separation.
 
 #### wav_to_spec.py
+Script to convert raw audio (wav files) into Melspectrograms.
 
 ### flow_models module
 Implement Normalizing flow models. Bijectors are implemented by subclassing tfp.bijector.Bijector
