@@ -279,6 +279,7 @@ def main(args):
         new_args.output = args.output
         new_args.song_dir = args.song_dir
         new_args.inverse = args.inverse
+        new_args.model_type = args.model_type
         args = new_args
 
     sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes)
@@ -480,7 +481,8 @@ if __name__ == "__main__":
                         3 songs: mix.wav, piano.wav and violin.wav")
 
     parser.add_argument("--inverse", action="store_true", help="Inverse spectrograms")
-
+    # Model type
+    parser.add_argument("--model_type", type=str, default="ncsn")
     # config
     parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
 
@@ -498,8 +500,7 @@ if __name__ == "__main__":
     parser.add_argument('--sigmaL', type=float, default=0.01)
     parser.add_argument('--num_classes', type=float, default=10)
 
-    # Model type
-    parser.add_argument("--model_type", type=str, default="ncsn")
+    
 
     # Model hyperparameters
     parser.add_argument('--n_filters', type=int, default=192,
