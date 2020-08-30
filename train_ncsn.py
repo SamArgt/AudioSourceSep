@@ -173,6 +173,9 @@ def train(model, optimizer, sigmas_np, mirrored_strategy, distr_train_dataset, d
                                     data="Impossible to display spectrograms because of NaN values",
                                     step=epoch)
 
+            save_path = manager.save()
+            print("Model Saved at {}".format(save_path))
+
     save_path = manager.save()
     print("Model Saved at {}".format(save_path))
 
