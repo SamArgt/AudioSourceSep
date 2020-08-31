@@ -9,13 +9,13 @@ width: 64
 scale: "dB"
 
 n_filters: 128
-sigma1: 55.
+sigma1: 30.
 sigmaL: 0.01
-num_classes: 325
+num_classes: 200
 progression: 'geometric'
 
-T: 20
-step_lr: 0.000005
+T: 8
+step_lr: 0.000006
 
 n_epochs: 500
 optimizer: "adam"
