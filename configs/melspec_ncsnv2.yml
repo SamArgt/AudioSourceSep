@@ -14,7 +14,7 @@ sigmaL: 0.01
 num_classes: 325
 progression: 'geometric'
 
-T: 5
+T: 10
 step_lr: 0.000005
 
 n_epochs: 500
