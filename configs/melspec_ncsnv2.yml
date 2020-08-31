@@ -15,9 +15,9 @@ num_classes: 200
 progression: 'geometric'
 
 T: 8
-step_lr: 0.000006
+step_lr: 0.000007
 
-n_epochs: 500
+n_epochs: 400
 optimizer: "adam"
 batch_size: 32
 learning_rate: 0.00006
