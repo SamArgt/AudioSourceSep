@@ -103,12 +103,12 @@ def single_channel_wiener_filter(psd_sources, stft_mixture):
     assert len(psd_sources.shape) == 3, psd_sources.shape
     assert psd_sources.shape[0] > 1, psd_sources.shape[0]
     try:
-        stft_complex = (psd_sources / np.sum(psd_sources, axis=0)) * stft_mixture
+        stft_complexs = (psd_sources / (np.sum(psd_sources, axis=0) + 1e-10)) * stft_mixture
     except ValueError:
         print(psd_sources.shape)
         print(np.sum(psd_sources, axis=0).shape)
         print(stft_mixture.shape)
-    return stft_complex
+    return stft_complexs
 
 
 def main(args):
