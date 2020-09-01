@@ -71,14 +71,13 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
 
             mel_stfts.append(mel_stft)
         mel_stfts = np.array(mel_stfts)
-        stft_complexs = np.zeros_like(melspecs)
         if wiener_filter and len(melspecs) > 1:
             stft_complexs = single_channel_wiener_filter(mel_stfts, stft_mixture)
         for i in range(len(melspecs)):
             if wiener_filter and len(melspecs) > 1:
                 stft_complex = stft_complexs[i]
             else:
-                stft_complex = complex_array(mel_stft, np.angle(stft_mixture))
+                stft_complex = complex_array(mel_stft[i], np.angle(stft_mixture))
             istft = librosa.istft(stft_complex, hop_length=hop_length)
             i_melspecs.append(istft)
         return i_melspecs
@@ -161,21 +160,26 @@ def main(args):
 
     if args.algorithm == 'griffin':
         inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
+
+        if args.method == 'whole':
+            sources = [x1, x2]
+            ground_truth = [gt1, gt2]
+            mix = [mix]
+        else:
+            sources = [[x1[i], x2[i]] for i in range(len(x1))]
+            ground_truth = [[gt1[i], gt2[i]] for i in range(len(gt1))]
+            mix = [[mix[i]] for i in range(len(mix))]
     elif args.algorithm == 'reuse_phase':
         inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale,
                                          wiener_filter=args.wiener_filter)
         if args.method == 'whole':
-            x1 = [x1, stft_mixture]
-            x2 = [x2, stft_mixture]
-            gt1 = [gt1, stft_mixture]
-            gt2 = [gt2, stft_mixture]
-            mix = [mix, stft_mixture]
+            sources = [[x1, x2], stft_mixture]
+            ground_truth = [[x1, x2], stft_mixture]
+            mix = [[mix], stft_mixture]
         else:
-            x1 = [[x1[i], stft_mixture[i]] for i in range(len(x1))]
-            x2 = [[x2[i], stft_mixture[i]] for i in range(len(x2))]
-            gt1 = [[gt1[i], stft_mixture[i]] for i in range(len(gt1))]
-            gt2 = [[gt2[i], stft_mixture[i]] for i in range(len(gt2))]
-            mix = [[mix[i], stft_mixture[i]] for i in range(len(mix))]
+            sources = [[[x1[i], x2[i]], stft_mixture[i]] for i in range(len(x1))]
+            ground_truth = [[[gt1[i], gt2[i]], stft_mixture[i]] for i in range(len(gt1))]
+            mix = [[[mix[i]], stft_mixture[i]] for i in range(len(mix))]
     else:
         raise ValueError('method should be griffin or reuse_phase')
 
@@ -187,7 +191,7 @@ def main(args):
     else:
         inv_spec = {'sources': [], 'ground_truth': [], 'mix': []}
         for i in range(len(x1)):
-            spec_to_invert = {'sources': [x1[i], x2[i]], 'ground_truth': [gt1[i], gt2[i]], 'mix': [mix[i]]}
+            spec_to_invert = {'sources': sources[i], 'ground_truth': ground_truth[i], 'mix': mix[i]}
             print("Start inversing Spectrograms {} / {} at {}".format(i + 1, len(x1), datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")))
             for n, spec in spec_to_invert.items():
                 t0 = time.time()
