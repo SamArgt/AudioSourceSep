@@ -123,6 +123,8 @@ def main(args):
 
     if args.output is None:
         args.output = 'inverse' + '_' + args.algorithm + '_' + args.method
+        if args.wiener_filter:
+            args.output += '_wiener_filter'
     try:
         os.mkdir(args.output)
         os.chdir(args.output)
@@ -169,6 +171,7 @@ def main(args):
             sources = [[x1[i], x2[i]] for i in range(len(x1))]
             ground_truth = [[gt1[i], gt2[i]] for i in range(len(gt1))]
             mix = [[mix[i]] for i in range(len(mix))]
+
     elif args.algorithm == 'reuse_phase':
         inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale,
                                          wiener_filter=args.wiener_filter)
