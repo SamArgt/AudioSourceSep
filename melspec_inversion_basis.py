@@ -56,13 +56,26 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
             i_melspecs: list of ndarray
         """
         melspecs, stft_mixture = inputs
+        melspecs = np.array(melspecs)
+        mel_stfts = []
         i_melspecs = []
-        for melspec in melspecs:
-            if args.scale == "dB":
-                melspec = librosa.db_to_power(melspec)
-            mel_stft = librosa.feature.inverse.mel_to_stft(melspec, sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
+        if args.scale == "dB":
+            melspecs = librosa.db_to_power(melspecs)
+
+        for i in range(len(melspecs)):
+            mel_stft = librosa.feature.inverse.mel_to_stft(melspecs[i],
+                                                           sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
             if wiener_filter and len(melspecs) > 1:
-                stft_complex = single_channel_wiener_filter(mel_stft, stft_mixture)
+                mel_stft = mel_stft ** 2
+
+            mel_stfts.append(mel_stft)
+        mel_stfts = np.array(mel_stfts)
+        stft_complexs = np.zeros_like(melspecs)
+        if wiener_filter and len(melspecs) > 1:
+            stft_complexs = single_channel_wiener_filter(mel_stfts, stft_mixture)
+        for i in range(len(melspecs)):
+            if wiener_filter and len(melspecs) > 1:
+                stft_complex = stft_complexs[i]
             else:
                 stft_complex = complex_array(mel_stft, np.angle(stft_mixture))
             istft = librosa.istft(stft_complex, hop_length=hop_length)
