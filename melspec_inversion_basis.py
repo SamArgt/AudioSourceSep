@@ -56,7 +56,8 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
             i_melspecs: list of ndarray
         """
         melspecs, stft_mixture = inputs
-        melspecs = np.array(melspecs)
+        melspecs, stft_mixture = np.array(melspecs), np.array(stft_mixture)
+
         mel_stfts = []
         i_melspecs = []
         if args.scale == "dB":
