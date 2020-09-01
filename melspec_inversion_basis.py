@@ -142,7 +142,8 @@ def main(args):
     if args.algorithm == 'griffin':
         inversion_fn = griffin_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
     elif args.algorithm == 'reuse_phase':
-        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale)
+        inversion_fn = stft_inversion_fn(sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, hop_length=hop_length, scale=args.scale,
+                                         wiener_filter=args.wiener_filter)
         if args.method == 'whole':
             x1 = [x1, stft_mixture]
             x2 = [x2, stft_mixture]
