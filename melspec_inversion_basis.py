@@ -101,7 +101,7 @@ def single_channel_wiener_filter(psd_sources, stft_mixture):
     psd_sources = np.array(psd_sources)
     assert len(psd_sources.shape) == 4, psd_sources.shape
     assert psd_sources.shape[0] > 1, psd_sources.shape[0]
-    return (psd_sources / np.mean(psd_sources, axis=0)) * stft_mixture
+    return (psd_sources / np.sum(psd_sources, axis=0)) * stft_mixture
 
 
 def main(args):
