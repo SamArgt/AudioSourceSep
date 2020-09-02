@@ -279,6 +279,7 @@ def main(args):
         args = new_args
 
     sigmas = get_sigmas(args.sigma1, args.sigmaL, args.num_classes, progression=args.progression)
+    sigmas_tf = tf.constant(sigmas, dtype=tf.float32)
 
     if args.model_type == "glow":
         args.restore_dict_1 = {sigma: os.path.join(abs_restore_path_1, "sigma_" + str(round(sigma, 2)), "tf_ckpts") for sigma in sigmas}
@@ -393,8 +394,8 @@ def main(args):
             model1 = get_uncompiled_model(args, name="model1")
             model2 = get_uncompiled_model(args, name="model2")
         else:
-            model1 = get_uncompiled_model_v2(args, sigmas=sigmas, name="model1")
-            model2 = get_uncompiled_model_v2(args, sigmas=sigmas, name="model2")
+            model1 = get_uncompiled_model_v2(args, sigmas=sigmas_tf, name="model1")
+            model2 = get_uncompiled_model_v2(args, sigmas=sigmas_tf, name="model2")
 
     # set up optimizer
     optimizer = train_utils.setUp_optimizer(None, args)
