@@ -197,9 +197,9 @@ def main(args):
 
     t_init = time.time()
     if args.method == 'whole':
-        x1_inv, x2_inv = inversion_fn([x1, x2])
-        gt1_inv, gt2_inv = inversion_fn([gt1, gt2])
-        mix_inv = inversion_fn([mix])[0]
+        x1_inv, x2_inv = inversion_fn(sources)
+        gt1_inv, gt2_inv = inversion_fn(ground_truth)
+        mix_inv = inversion_fn(mix)[0]
     else:
         inv_spec = {'sources': [], 'ground_truth': [], 'mix': []}
         for i in range(len(x1)):
