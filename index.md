@@ -92,8 +92,8 @@ The original sources and mixture are obtained with the same method as the estima
 
 After applying a Single-channel Wiener Filter
 <audio controls preload="auto">
-<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/wiener/sep1.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/swf/sep1.wav" type="audio/wav">
 </audio>
 <audio controls preload="auto">
-<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/wiener/sep2.wav" type="audio/wav">
+<source src="https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/basis_sep_results/beethoven_sonata_1_sep_1min/swf/sep2.wav" type="audio/wav">
 </audio>
