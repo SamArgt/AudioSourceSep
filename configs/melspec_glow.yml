@@ -1,0 +1,16 @@
+use_logit: False
+alpha: False
+
+height: 96
+width: 64
+scale: "dB"
+
+L: 3
+K: 40
+n_filters: 512
+learntop: True
+
+n_epochs: 500
+optimizer: "adamax"
+batch_size: 32
+learning_rate: 0.001

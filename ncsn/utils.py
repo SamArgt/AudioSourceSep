@@ -11,7 +11,7 @@ def get_sigmas(sigma1, sigmaL, num_classes, progression='geometric'):
         sigmas = np.logspace(np.log(sigma1) / np.log(10), np.log(sigmaL) / np.log(10), num=num_classes)
     else:
         raise ValueError('progression should be geometric or logarithmic')
-    return sigmas
+    return sigmas.astype(np.float32)
 
 
 def anneal_langevin_dynamics(x_mod, data_shape, model, n_samples, sigmas, n_steps_each=100, step_lr=2e-5, return_arr=False, verbose=False):

@@ -8,24 +8,42 @@ github page: https://samargt.github.io/AudioSourceSep/
 We used mixture of Piano and Violin.
 
 To Transform wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
-You will need to save the melspectrograms as tfrecords files and organize them into train/ and test/ folders in order to train the Generative Models.
+You will need to save the melspectrograms as tfrecords files and **organize them into train/ and test/ folders** in order to train the Generative Models.
 
 ## Running Experiments
 
 ### train_ncsn.py
-Script to train NCSN model 
+Script to train NCSN model
+```bash
+python train_ncsn.py --dataset [dirpath] --config configs/melspec_ncsnv1.yml
+
+```
 
 ### train_glow.py
 Script to train Glow model
+```bash
+python train_glow.py --dataset [dirpath] --config configs/melspec_glow.yml
+```
 
 ### train_noisy_glow.py
 Script to fine-tune trained glow model at different noise levels for the BASIS Algorithm
+```bash
+python train_noisy_glow.py RESTORE_PATH --dataset [dirpath] --config configs/melspec_noisy_glow.yml
+```
 
 ### run_basis_sep.py
 Script to run the BASIS algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
+```bash
+python run_basis_sep.py --dataset [dirpath] --config configs/melspec_ncsnv1.yml
+
+```
 
 ### melspec_inversion_basis.py
-Script to inverse the MelSpectrograms from BASIS back to the time domain. 
+Script to inverse the MelSpectrograms from BASIS back to the time domain.
+```bash
+python melspec_inversion_basis.py DIRPATH --wiener_filter
+
+```
 
 ## Miscellaneous
 

@@ -182,6 +182,15 @@ def train(mirrored_strategy, args, flow, optimizer, ds_dist, ds_val_dist,
 
 
 def main(args):
+
+    if args.config is not None:
+        new_args = get_config(args.config)
+        new_args.dataset = args.dataset
+        new_args.output = args.output
+        new_args.debug = args.debug
+        new_args.restore = args.restore
+        args = new_args
+
     # miscellaneous paramaters
     if args.dataset == 'mnist':
         args.data_shape = [32, 32, 1]
@@ -304,11 +313,7 @@ def main(args):
     # restore
     if args.restore is not None:
         with mirrored_strategy.scope():
-            if args.latest:
-                checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
-                assert checkpoint_restore_path is not None, abs_restore_path
-            else:
-                checkpoint_restore_path = abs_restore_path
+            checkpoint_restore_path = abs_restore_path
             status = ckpt.restore(checkpoint_restore_path)
             status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
@@ -348,6 +353,16 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default="mnist",
                         help="mnist or cifar10 or directory to tfrecords")
 
+    # Output and Restore Directory
+    parser.add_argument('--output', type=str, default='trained_flow',
+                        help='output dirpath for savings')
+    parser.add_argument('--restore', type=str, default=None,
+                        help='directory of saved weights (optional)')
+    parser.add_argument('--debug', action="store_true")
+
+    # config
+    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below', default=None)
+
     # preprocessing parameters
     parser.add_argument('--use_logit', action="store_true",
                         help="Either to use logit function to preprocess the data")
@@ -359,14 +374,6 @@ if __name__ == '__main__':
     parser.add_argument("--height", type=int, default=96)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--scale", type=str, default="dB", help="power or dB")
-
-    # Output and Restore Directory
-    parser.add_argument('--output', type=str, default='trained_flow',
-                        help='output dirpath for savings')
-    parser.add_argument('--restore', type=str, default=None,
-                        help='directory of saved weights (optional)')
-    parser.add_argument('--latest', action="store_true", help="Restore latest checkpoint from restore directory")
-    parser.add_argument('--debug', action="store_true")
 
     # Model hyperparameters
     parser.add_argument("--learntop", action="store_true",

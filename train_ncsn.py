@@ -386,7 +386,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action="store_true")
 
     # config
-    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below')
+    parser.add_argument('--config', type=str, help='path to the config file. Overwrite all other parameters below', default=None)
 
     parser.add_argument("--use_logit", action="store_true")
     parser.add_argument("--alpha", type=float, default=1e-6)
