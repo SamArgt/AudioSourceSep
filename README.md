@@ -33,11 +33,13 @@ python train_noisy_glow.py RESTORE_PATH --dataset [dirpath] --config configs/mel
 ```
 
 ### run_basis_sep.py
-Script to run the BASIS algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms
+Script to run the BASIS algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms.
+Example to separate a mixture of piano and violin:
 ```bash
-python run_basis_sep.py --dataset [dirpath] --config configs/melspec_ncsnv1.yml
+python run_basis_sep.py RESTORE_PATH_PIANO RESTORE_PATH_VIOLIN --song_dir [PATH] --model ncsn --config configs/melspec_ncsnv1.yml --output [DIRPATH]
 
 ```
+The path for song_dir should contain 3 files: mix.wav, violin.wav and piano.wav
 
 ### melspec_inversion_basis.py
 Script to inverse the MelSpectrograms from BASIS back to the time domain.

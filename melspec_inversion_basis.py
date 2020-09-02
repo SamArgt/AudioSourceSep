@@ -83,7 +83,7 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
             if use_wiener_filter:
                 stft_complex = stft_complexs[i]
             else:
-                stft_complex = complex_array(mel_stft[i], np.angle(stft_mixture))
+                stft_complex = complex_array(mel_stfts[i], np.angle(stft_mixture))
 
             istft = librosa.istft(stft_complex, hop_length=hop_length)
             i_melspecs.append(istft)
