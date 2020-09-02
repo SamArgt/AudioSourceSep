@@ -56,6 +56,8 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
             i_melspecs: list of ndarray
         """
         melspecs, stft_mixture = inputs
+        n_src = len(melspecs)
+        use_wiener_filter = wiener_filter and (n_src > 1)
         melspecs, stft_mixture = np.array(melspecs), np.array(stft_mixture)
 
         mel_stfts = []
@@ -66,21 +68,28 @@ def stft_inversion_fn(sr=16000, fmin=125, fmax=7600, n_fft=2048, hop_length=512,
         for i in range(len(melspecs)):
             mel_stft = librosa.feature.inverse.mel_to_stft(melspecs[i],
                                                            sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft)
-            if wiener_filter and len(melspecs) > 1:
+            if use_wiener_filter:
                 mel_stft = mel_stft ** 2
 
             mel_stfts.append(mel_stft)
+
         mel_stfts = np.array(mel_stfts)
-        if wiener_filter and len(melspecs) > 1:
+
+        if use_wiener_filter:
             stft_complexs = single_channel_wiener_filter(mel_stfts, stft_mixture)
+
         for i in range(len(melspecs)):
-            if wiener_filter and len(melspecs) > 1:
+
+            if use_wiener_filter:
                 stft_complex = stft_complexs[i]
             else:
                 stft_complex = complex_array(mel_stft[i], np.angle(stft_mixture))
+
             istft = librosa.istft(stft_complex, hop_length=hop_length)
             i_melspecs.append(istft)
+
         return i_melspecs
+
     return stft_inversion
 
 
@@ -233,7 +242,7 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, default=None,
                         help='output dirpath for savings')
 
-    parser.add_argument("--algorithm", type=str, default="griffin", help="griffin or reuse_phase")
+    parser.add_argument("--algorithm", type=str, default="reuse_phase", help="griffin or reuse_phase")
     parser.add_argument('--method', type=str, help="frame or whole", default="frame")
     parser.add_argument("--scale", type=str, default="dB")
     parser.add_argument('--wiener_filter', action="store_true", help="Use Single Channel Wiener Filter as post-processing")
