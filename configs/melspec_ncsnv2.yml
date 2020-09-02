@@ -17,7 +17,7 @@ progression: 'logarithmic'
 T: 8
 step_lr: 0.000007
 
-n_epochs: 400
+n_epochs: 200
 optimizer: "adam"
 batch_size: 32
 learning_rate: 0.00006
