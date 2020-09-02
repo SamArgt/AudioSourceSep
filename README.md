@@ -2,7 +2,7 @@
 Statistics MSc Project (2020): Audio Source Separation
 
 Some of the results can be seen and listened to on the github page:
-<center> https://samargt.github.io/AudioSourceSep/ <\center>
+<center> https://samargt.github.io/AudioSourceSep/ </center>
 
 ## Data
 
