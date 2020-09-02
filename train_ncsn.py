@@ -343,11 +343,7 @@ def main(args):
     # restore
     if args.restore is not None:
         with mirrored_strategy.scope():
-            if args.latest:
-                checkpoint_restore_path = tf.train.latest_checkpoint(abs_restore_path)
-                assert checkpoint_restore_path is not None, abs_restore_path
-            else:
-                checkpoint_restore_path = abs_restore_path
+            checkpoint_restore_path = abs_restore_path
             status = ckpt.restore(checkpoint_restore_path)
             status.assert_existing_objects_matched()
             assert optimizer.iterations > 0
