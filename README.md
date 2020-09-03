@@ -15,24 +15,24 @@ python datasets/wav_to_spec.py INPUT_PATH OUTPUT_PATH --use_dB --tfrecords
 
 You will need to save the melspectrograms as tfrecords files and **organize them into train/ and test/ folders** in order to train the Generative Models. The exact organization of the dataset should be:
 
-```
+<pre>
 DATASET_FOLDER/
-├── source1/
-│   ├── train/
-|   |     | source1_train1.tfrecord
-|   |     | source1_train2.tfrecord
-|   |     | ... 
+|-- source1/
+|   |-- train/
+|   |    |- source1_train1.tfrecord
+|   |    |- source1_train2.tfrecord
+|   |    |- ... 
 │   └── test/
-|         | source1_test1.tfrecord
-|         | source2_test2.tfrecord
+|         |- source1_test1.tfrecord
+|         |- source2_test2.tfrecord
 |         | ... 
 |
-├── source2/
-│   ├── train/
-│   └── test/
+|-- source2/
+|   |-- train/
+|   |-- test/
 |
-├── source3/
-```
+|-- source3/
+</pre>
 
 To train a generative model on source1 for instance, one should give the following path: DATASET_FOLDER/source1
 
