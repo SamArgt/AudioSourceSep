@@ -19,18 +19,23 @@ Script to train NCSN model
 python train_ncsn.py --dataset [dirpath] --config configs/melspec_ncsnv1.yml
 
 ```
+The model an tensorboard logs are saved automatically into trained_ncsn/ unless specified otherwise by the --output parameter
 
 ### train_glow.py
 Script to train Glow model
 ```bash
 python train_glow.py --dataset [dirpath] --config configs/melspec_glow.yml
 ```
+The model an tensorboard logs are saved automatically into trained_flows/ unless specified otherwise by the --output parameter
+
 
 ### train_noisy_glow.py
 Script to fine-tune trained glow model at different noise levels for the BASIS Algorithm
 ```bash
 python train_noisy_glow.py RESTORE_PATH --dataset [dirpath] --config configs/melspec_noisy_glow.yml
 ```
+The model an tensorboard logs are saved automatically into noise_conditioned_flows/ unless specified otherwise by the --output parameter
+
 
 ### run_basis_sep.py
 Script to run the BASIS algorithm on the MNIST, CIFAR10 dataset or MelSpectrograms.
@@ -40,6 +45,7 @@ python run_basis_sep.py RESTORE_PATH_PIANO RESTORE_PATH_VIOLIN --song_dir [PATH]
 
 ```
 The path for song_dir should contain 3 files: mix.wav, violin.wav and piano.wav
+RESTORE_PATH_PIANO and RESTORE_PATH_VIOLIN are the path to the piano and violin model checkpoints respectively.
 
 ### melspec_inversion_basis.py
 Script to inverse the MelSpectrograms from BASIS back to the time domain.
@@ -47,6 +53,7 @@ Script to inverse the MelSpectrograms from BASIS back to the time domain.
 python melspec_inversion_basis.py DIRPATH --wiener_filter
 
 ```
+DIRPATH is the path of the folder containing "results.npz", the result from running run_basis_sep.py
 
 ## Miscellaneous
 

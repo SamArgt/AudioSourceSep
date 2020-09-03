@@ -10,7 +10,7 @@ K: 40
 n_filters: 512
 learntop: True
 
-n_epochs: 500
+n_epochs: 20
 optimizer: "adamax"
 batch_size: 32
 learning_rate: 0.001
