@@ -29,12 +29,9 @@ DATASET_FOLDER/
 |
 ├── source2/
 │   ├── train/
-|   |     | ...
 │   └── test/
-|         | ...
 |
 ├── source3/
-|   |...
 ```
 
 To train a generative model on source1 for instance, one should give the following path: DATASET_FOLDER/source1
