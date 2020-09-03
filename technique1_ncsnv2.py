@@ -20,7 +20,7 @@ def main(args):
         return X
 
     train_dataset = ds_train.map(map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
-    train_list = (list(train_dataset.as_numpy_iterator()))
+    train_list = (list(train_dataset.take(2000).as_numpy_iterator()))
 
     print("Number of spectrograms in training set: {}".format(len(train_list)))
 
