@@ -22,10 +22,10 @@ DATASET_FOLDER/
 |   |    |- source1_train1.tfrecord
 |   |    |- source1_train2.tfrecord
 |   |    |- ... 
-│   └── test/
+|   |-- test/
 |         |- source1_test1.tfrecord
 |         |- source2_test2.tfrecord
-|         | ... 
+|         |- ... 
 |
 |-- source2/
 |   |-- train/
