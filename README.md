@@ -19,26 +19,24 @@ You will need to save the melspectrograms as tfrecords files and **organize them
 DATASET_FOLDER/
 ├── source1/
 │   ├── train/
-|   |     +-- source1_train1.tfrecord
-|   |     +-- source1_train2.tfrecord
-|   |     +-- ... 
+|   |     | source1_train1.tfrecord
+|   |     | source1_train2.tfrecord
+|   |     | ... 
 │   └── test/
-|         +-- source1_test1.tfrecord
-|         +-- source2_test2.tfrecord
-|         +-- ... 
+|         | source1_test1.tfrecord
+|         | source2_test2.tfrecord
+|         | ... 
 |
 ├── source2/
 │   ├── train/
-|   |     +-- ...
+|   |     | ...
 │   └── test/
-|         +-- ...
+|         | ...
 |
 ├── source3/
-|   +--...
-|
-+---...   
-│
+|   |...
 ```
+
 To train a generative model on source1 for instance, one should give the following path: DATASET_FOLDER/source1
 
 ## Running Experiments
