@@ -9,7 +9,32 @@ Some of the results can be seen and listened to on the github page:
 We used mixture of Piano and Violin.
 
 To Transform wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
-You will need to save the melspectrograms as tfrecords files and **organize them into train/ and test/ folders** in order to train the Generative Models.
+You will need to save the melspectrograms as tfrecords files and **organize them into train/ and test/ folders** in order to train the Generative Models. The exact organization of the dataset should be:
+
+```
+DATASET_FOLDER/
+├── source1/
+│   ├── train/
+|   |     |-- source1_train1.tfrecord
+|   |     |-- source1_train2.tfrecord
+|   |     |-- ... 
+│   └── test/
+|         |-- source1_test1.tfrecord
+|         |-- source2_test2.tfrecord
+|         |-- ... 
+|
+├── source2/
+│   ├── train/
+|   |     |-- ...
+│   └── test/
+|         |-- ...
+├── source3/
+|   |--...
+|
+|---...   
+│
+```
+To train a generative model on a source1 for instance, one should give the following path: DATASET_FOLDER/source1
 
 ## Running Experiments
 
@@ -19,7 +44,7 @@ Script to train NCSN model
 python train_ncsn.py --dataset [dirpath] --config configs/melspec_ncsnv1.yml
 
 ```
-The model an tensorboard logs are saved automatically into trained_ncsn/ unless specified otherwise by the --output parameter
+The model an tensorboard logs are saved automatically into trained_ncsn/ unless specified otherwise by the --output parameter.
 
 ### train_glow.py
 Script to train Glow model
