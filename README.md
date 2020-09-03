@@ -8,7 +8,11 @@ Some of the results can be seen and listened to on the github page:
 
 We used mixture of Piano and Violin.
 
-To Transform wav files into melspectrograms, use  wav_to_spec.py from the pipeline module.
+To Transform wav files into melspectrograms, use  wav_to_spec.py from the datasets module.
+```bash
+python datasets/wav_to_spec.py INPUT_PATH OUTPUT_PATH --use_dB --tfrecords
+```
+
 You will need to save the melspectrograms as tfrecords files and **organize them into train/ and test/ folders** in order to train the Generative Models. The exact organization of the dataset should be:
 
 ```
