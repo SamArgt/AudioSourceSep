@@ -111,7 +111,7 @@ Implement Normalizing flow models.
 
 - **flow_builder** : build flow using Transformed Distribution from Tensorflow-probability
 - **flow_glow.py** : implementation of the Glow model
-- **flow_realnvp.py** implementaion of the Real NVP model
+- **flow_realnvp.py** implementaion of the Real NVP model https://arxiv.org/abs/1605.08803
 - **flow_tfp_bijectors.py** contains basic bijectors used in complex models
 - **flow_tfk_layers.py** contains tf.keras.layers.Layer used for the affine coupling layers. Contains also bijectors implemented with keras (used to compare performances with the tfp implementation)
 - **utils.py** : functions such as print_summary to print the trainable variables of the flow models implemented above.
