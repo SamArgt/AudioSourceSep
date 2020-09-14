@@ -115,6 +115,7 @@ Implement Normalizing flow models.
 - **flow_tfp_bijectors.py** contains basic bijectors used in complex models
 - **flow_tfk_layers.py** contains tf.keras.layers.Layer used for the affine coupling layers. Contains also bijectors implemented with keras (used to compare performances with the tfp implementation)
 - **utils.py** : functions such as print_summary to print the trainable variables of the flow models implemented above.
+- **flow_pp.py**: Implementation of the Flow++ model (not tested) https://arxiv.org/abs/1902.00275
 - flow_tfk_models.py (deprecated) contains a keras Model class used to build a bijector from the bijectors implemented in flow_tfk_layers.py
 
 ### ncsn module
