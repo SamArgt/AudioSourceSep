@@ -90,7 +90,7 @@ class Flowpp_cifar10(tfp.bijectors.Bijector):
 
         super(Flowpp_cifar10, self).__init__(forward_min_event_ndims=3)
 
-        self.preprocessing = Preprocessing(input_shape, use_logit=True, uniform_noise=False, alpha=0.05)
+        self.preprocessing = ImgPreprocessing(input_shape, use_logit=True, uniform_noise=False, alpha=0.05)
         minibatch_updated = self.preprocessing.forward(minibatch)
 
         self.flow_block1 = FlowppBlock(input_shape, minibatch_updated, 4, split="checkerboard", n_components=n_components,
