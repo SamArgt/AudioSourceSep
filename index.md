@@ -1,6 +1,6 @@
 # MSc Statistics Project - Audio Source Separation
 
-Link to the Thesis PDF: https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/Audio_Source_Separation_MSc_Thesis.pdf
+[Thesis](https://raw.githubusercontent.com/SamArgt/AudioSourceSep/master/Audio_Source_Separation_MSc_Thesis.pdf)
 
 ## NCSN Results
 
