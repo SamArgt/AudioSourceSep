@@ -4,6 +4,15 @@ Statistics MSc Project (2020): Audio Source Separation
 Some of the results can be seen and listened to on the github page:
 <center> https://samargt.github.io/AudioSourceSep/ </center>
 
+## Requirements
+- tensorflow 2.2.0 
+- tensorflow-addons 0.10.0
+- tensorflow-datasets 2.1.0
+- tensorflow-probability 0.9.0
+- librosa 0.7.2
+- pandas 1.1.3
+- numpy 1.16.2
+
 ## Data
 
 We used mixture of Piano and Violin.
